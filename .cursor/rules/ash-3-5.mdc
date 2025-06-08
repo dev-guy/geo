@@ -4,6 +4,40 @@ globs:
 alwaysApply: false
 ---
 <-- usage-rules-start -->
+<-- igniter-start -->
+## igniter usage
+# Rules for working with Igniter
+
+## Understanding Igniter
+
+Igniter is a code generation and project patching framework that enables semantic manipulation of Elixir codebases. It provides tools for creating intelligent generators that can both create new files and modify existing ones safely. Igniter works with AST (Abstract Syntax Trees) through Sourceror.Zipper to make precise, context-aware changes to your code.
+
+## Available Modules
+
+### Project-Level Modules (`Igniter.Project.*`)
+
+- **`Igniter.Project.Application`** - Working with Application modules and application configuration
+- **`Igniter.Project.Config`** - Modifying Elixir config files (config.exs, runtime.exs, etc.)
+- **`Igniter.Project.Deps`** - Managing dependencies declared in mix.exs
+- **`Igniter.Project.Formatter`** - Interacting with .formatter.exs files
+- **`Igniter.Project.IgniterConfig`** - Managing .igniter.exs configuration files
+- **`Igniter.Project.MixProject`** - Updating project configuration in mix.exs
+- **`Igniter.Project.Module`** - Creating and managing modules with proper file placement
+- **`Igniter.Project.TaskAliases`** - Managing task aliases in mix.exs
+- **`Igniter.Project.Test`** - Working with test and test support files
+
+### Code-Level Modules (`Igniter.Code.*`)
+
+- **`Igniter.Code.Common`** - General purpose utilities for working with Sourceror.Zipper
+- **`Igniter.Code.Function`** - Working with function definitions and calls
+- **`Igniter.Code.Keyword`** - Manipulating keyword lists
+- **`Igniter.Code.List`** - Working with lists in AST
+- **`Igniter.Code.Map`** - Manipulating maps
+- **`Igniter.Code.Module`** - Working with module definitions and usage
+- **`Igniter.Code.String`** - Utilities for string literals
+- **`Igniter.Code.Tuple`** - Working with tuples
+
+<-- igniter-end -->
 <-- ash_ai-start -->
 ## ash_ai usage
 # Rules for working with Ash AI
@@ -25,7 +59,7 @@ Vectorization allows you to convert text data into embeddings that can be used f
 
 ### Setting Up Vectorization
 
-Add vectorization to a resource by including the `AshAi` eize block:
+Add vectorization to a resource by including the `AshAi` extension and defining a vectorize block:
 
 ```elixir
 defmodule MyApp.Artist do
@@ -213,6 +247,32 @@ action :analyze_sentiment, :atom do
 end
 ```
 
+### Dynamic LLM Configuration
+
+For runtime configuration (like environment variables), use a function to define the LLM:
+
+```elixir
+action :analyze_sentiment, :atom do
+  argument :text, :string, allow_nil?: false
+
+  run prompt(
+    fn _input, _context ->
+      LangChain.ChatModels.ChatOpenAI.new!(%{
+        model: "gpt-4o",
+        # this can also be configured in application config, see langchain docs for more.
+        api_key: System.get_env("OPENAI_API_KEY"),
+        endpoint: System.get_env("OPENAI_ENDPOINT")
+      })
+    end,
+    tools: false
+  )
+end
+```
+
+The function receives:
+1. `input` - The action input
+2. `context` - The execution context
+
 ### Best Practices for Prompt-Backed Actions
 
 - Write clear, detailed descriptions for the action and its arguments
@@ -276,1251 +336,6 @@ When testing AI components:
 - Verify tool access and permissions work as expected
 
 <-- ash_ai-end -->
-<-- ash-start -->
-## ash usage
-# Rules for working with Ash
-
-## Understanding Ash
-
-Ash is an opinionated, composable framework for building applications in Elixir. It provides a declarative approach to modeling your domain with resources at the center. Read documentation  *before* attempting to use it's features. Do not assume that you have prior knowledge of the framework or its conventions.
-
-## Code Structure & Organization
-
-- Organize code around domains and resources
-- Each resource should be focused and well-named
-- Create domain-specific actions rather than generic CRUD operations
-- Put business logic inside actions rather than in external modules
-- Use resources to model your domain entities
-
-## Code Interfaces
-
-Use code interfaces on domains to define the contract for calling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ash/code-interfaces.html/).
-
-Define code interfaces on the domain, like this:
-
-```elixir
-resource ResourceName do
-  define :fun_name, action: :action_name
-end
-```
-
-For more complex interfaces with custom transformations:
-
-```elixir
-define :custom_action do
-  action :action_name
-  args [:arg1, :arg2]
-
-  custom_input :arg1, MyType do
-    transform do
-      to :target_field
-      using &MyModule.transform_function/1
-    end
-  end
-end
-```
-
-Prefer using the primary read action for "get" style code interfaces, and using `get_by` when the field you are looking up by is the primary key or has an `identity` on the resource.
-
-```elixir
-resource ResourceName do
-  define :get_thing, action: :read, get_by: [:id]
-end
-```
-
-**Avoid direct Ash calls in web modules** - Don't use `Ash.get!/2` and `Ash.load!/2` directly in LiveViews/Controllers, similar to avoiding `Repo.get/2` outside context modules:
-
-```elixir
-# BAD - in LiveView/Controller
-group = MyApp.Resource |> Ash.get!(id) |> Ash.load!(rel: [:nested])
-
-# GOOD - use code interface with get_by
-resource DashboardGroup do
-  define :get_by_id, action: :read, get_by: [:id]
-end
-
-# Then call: MyApp.Domain.get_dashboard_group_by_id!(id, load: [rel: [:nested]])
-```
-
-Code interfaces automatically support options like `load:` and `query:` options for dynamic loading and filtering.
-
-**Using Scopes in LiveViews** - When using `Ash.Scope`, the scope will typically be assigned to `scope` in LiveViews and used like so:
-
-```elixir
-# In your LiveView
-MyApp.Blog.create_post!("new post", scope: socket.assigns.scope)
-```
-
-Inside action hooks and callbacks, use the provided `context` parameter as your scope instead:
-
-```elixir
-|> Ash.Changeset.before_transaction(fn changeset, context ->
-  MyApp.ExternalService.reserve_inventory(changeset, scope: context)
-  changeset
-end)
-```
-
-### Authorization Functions
-
-For each action defined in a code interface, Ash automatically generates corresponding authorization check functions:
-
-- `can_action_name?(actor, params \\ %{}, opts \\ [])` - Returns `true`/`false` for authorization checks
-- `can_action_name(actor, params \\ %{}, opts \\ [])` - Returns `{:ok, true/false}` or `{:error, reason}`
-
-Example usage:
-```elixir
-# Check if user can create a post
-if MyApp.Blog.can_create_post?(current_user) do
-  # Show create button
-end
-
-# Check if user can update a specific post
-if MyApp.Blog.can_update_post?(current_user, post) do
-  # Show edit button
-end
-
-# Check if user can destroy a specific comment
-if MyApp.Blog.can_destroy_comment?(current_user, comment) do
-  # Show delete button
-end
-```
-
-These functions are particularly useful for conditional rendering of UI elements based on user permissions.
-
-## Actions
-
-- Create specific, well-named actions rather than generic ones
-- Put all business logic inside action definitions
-- Use hooks like `Ash.Changeset.after_action/2`, `Ash.Changeset.before_action/2` to add additional logic
-  inside the same transaction.
-- Use hooks like `Ash.Changeset.after_transaction/2`, `Ash.Changeset.before_transaction/2` to add additional logic
-  inside the same transaction.
-- Use action arguments for inputs that need validation
-- Use preparations to modify queries before execution
-- Use changes to modify changesets before execution
-- Use validations to validate changesets before execution
-- Prefer domain code interfaces to call actions instead of directly building queries/changesets and calling functions in the `Ash` module
-- A resource could be *only generic actions*. This can be useful when you are using a resource only to model behavior.
-
-## Querying Data
-
-Use `Ash.Query` to build queries for reading data from your resources. The query module provides a declarative way to filter, sort, and load data.
-
-**Important**: You must `require Ash.Query` if you want to use `Ash.Query.filter/2`, as it is a macro.
-
-```elixir
-defmodule MyApp.SomeModule do
-  require Ash.Query
-
-  def get_active_posts do
-    MyApp.Post
-    |> Ash.Query.filter(status == :active)
-    |> MyApp.Blog.read!()
-  end
-end
-```
-
-Common query operations:
-
-- **Filter**: `Ash.Query.filter(query, field == value)`
-- **Sort**: `Ash.Query.sort(query, field: :asc)`
-- **Load relationships**: `Ash.Query.load(query, [:author, :comments])`
-- **Limit**: `Ash.Query.limit(query, 10)`
-- **Offset**: `Ash.Query.offset(query, 20)`
-
-## Error Handling
-
-Functions to call actions, like `Ash.create` and code interfaces like `MyApp.Accounts.register_user` all return ok/error tuples. All have `!` variations, like `Ash.create!` and `MyApp.Accounts.register_user!`. Use the `!` variations when you want to "let it crash", like if looking something up that should definitely exist, or calling an action that should always succeed. Always prefer the raising `!` variation over something like `{:ok, user} = MyApp.Accounts.register_user(...)`.
-
-All Ash code returns errors in the form of `{:error, error_class}`. Ash categorizes errors into four main classes:
-
-1. **Forbidden** (`Ash.Error.Forbidden`) - Occurs when a user attempts an action they don't have permission to perform
-2. **Invalid** (`Ash.Error.Invalid`) - Occurs when input data doesn't meet validation requirements
-3. **Framework** (`Ash.Error.Framework`) - Occurs when there's an issue with how Ash is being used
-4. **Unknown** (`Ash.Error.Unknown`) - Occurs for unexpected errors that don't fit the other categories
-
-These error classes help you catch and handle errors at an appropriate level of granularity. An error class will always be the "worst" (highest in the above list) error class from above. Each error class can contain multiple underlying errors, accessible via the `errors` field on the exception.
-
-### Using Validations
-
-Validations ensure that data meets your business requirements before it gets processed by an action. Unlike changes, validations cannot modify the changeset - they can only validate it or add errors.
-
-- Use **built-in validations** (defined in `Ash.Resource.Validation.Builtins`) for common validation patterns:
-  ```elixir
-  validate match(:email, "@")
-  validate compare(:age, greater_than_or_equal_to: 18)
-  validate present(:first_name)
-  validate one_of(:status, [:active, :inactive, :pending])
-  ```
-
-- Add **custom error messages** to make validation errors user-friendly:
-  ```elixir
-  validate compare(:age, greater_than_or_equal_to: 18) do
-    message "You must be at least 18 years old to sign up"
-  end
-  ```
-
-- Apply validations **conditionally** using `where`:
-  ```elixir
-  validate present(:phone_number) do
-    where present(:contact_method)
-    where eq(:contact_method, "phone")
-    message "Phone number is required when phone is selected as contact method"
-  end
-  ```
-
-- Create **action-specific validations** inside your action definitions:
-  ```elixir
-  actions do
-    create :sign_up do
-      validate present([:email, :password])
-      validate match(:email, "@")
-    end
-  end
-  ```
-
-- Add **global validations** that apply to multiple action types:
-  ```elixir
-  validations do
-    validate present([:title, :body]), on: [:create, :update]
-    validate absent(:admin_note), on: :create, where: not_actor_attribute(:is_admin, true)
-  end
-  ```
-
-- Create **custom validation modules** for complex validation logic:
-  ```elixir
-  defmodule MyApp.Validations.UniqueUsername do
-    use Ash.Resource.Validation
-
-    @impl true
-    def init(opts), do: {:ok, opts}
-
-    @impl true
-    def validate(changeset, _opts, _context) do
-      # Validation logic here
-      # Return :ok or {:error, message}
-    end
-  end
-
-  # Usage in resource:
-  validate {MyApp.Validations.UniqueUsername, []}
-  ```
-
-- Make validations **atomic** when possible to ensure they work correctly with direct database operations by implementing the `atomic/3` callback in custom validation modules.
-
-```elixir
-defmodule MyApp.Validations.IsEven do
-  # transform and validate opts
-
-  use Ash.Resource.Validation
-
-  @impl true
-  def init(opts) do
-    if is_atom(opts[:attribute]) do
-      {:ok, opts}
-    else
-      {:error, "attribute must be an atom!"}
-    end
-  end
-
-  @impl true
-  # This is optional, but useful to have in addition to validation
-  # so you get early feedback for validations that can otherwise
-  # only run in the datalayer
-  def validate(changeset, opts, _context) do
-    value = Ash.Changeset.get_attribute(changeset, opts[:attribute])
-
-    if is_nil(value) || (is_number(value) && rem(value, 2) == 0) do
-      :ok
-    else
-      {:error, field: opts[:attribute], message: "must be an even number"}
-    end
-  end
-
-  @impl true
-  def atomic(changeset, opts, context) do
-    {:atomic,
-      # the list of attributes that are involved in the validation
-      [opts[:attribute]],
-      # the condition that should cause the error
-      # here we refer to the new value or the current value
-      expr(rem(^atomic_ref(opts[:attribute]), 2) != 0),
-      # the error expression
-      expr(
-        error(^InvalidAttribute, %{
-          field: ^opts[:attribute],
-          # the value that caused the error
-          value: ^atomic_ref(opts[:attribute]),
-          # the message to display
-          message: ^(context.message || "%{field} must be an even number"),
-          vars: %{field: ^opts[:attribute]}
-        })
-      )
-    }
-  end
-end
-```
-
-- **Avoid redundant validations** - Don't add validations that duplicate attribute constraints:
-  ```elixir
-  # WRONG - redundant validation
-  attribute :name, :string do
-    allow_nil? false
-    constraints min_length: 1
-  end
-
-  validate present(:name) do  # Redundant! allow_nil? false already handles this
-    message "Name is required"
-  end
-
-  validate attribute_does_not_equal(:name, "") do  # Redundant! min_length: 1 already handles this
-    message "Name cannot be empty"
-  end
-
-  # CORRECT - let attribute constraints handle basic validation
-  attribute :name, :string do
-    allow_nil? false
-    constraints min_length: 1
-  end
-  ```
-
-### Using Changes
-
-Changes allow you to modify the changeset before it gets processed by an action. Unlike validations, changes can manipulate attribute values, add attributes, or perform other data transformations.
-
-- Use **built-in changes** (defined in `Ash.Resource.Change.Builtins`) for common transformation patterns:
-```elixir
-change set_attribute(:status, "pending")
-change relate_actor(:user)
-change atomic_update(:counter, expr(^counter + 1))
-```
-
-- Apply changes **conditionally** using `where`:
-```elixir
-change set_attribute(:paid, true) do
-  where attribute_equals(:payment_method, "free")
-end
-
-change relate_actor(:creator) do
-  where present(:actor)
-end
-```
-
-- Create **action-specific changes** inside your action definitions:
-```elixir
-actions do
-  create :sign_up do
-    change set_attribute(:joined_at, expr(now()))
-    change increment(:visit_count)
-    change optimistic_lock(:version)
-    change debug_log("Processing signup")
-  end
-end
-```
-
-- Add **global changes** that apply to multiple action types:
-```elixir
-changes do
-  change set_attribute(:updated_at, expr(now())), on: :update
-  change set_attribute(:inserted_at, expr(now())), on: :create
-  change prevent_change(:secret_field), on: [:update, :destroy]
-  change manage_relationship(:related_items, :items), on: [:create, :update]
-end
-```
-
-- Create **custom change modules** for reusable transformation logic:
-  ```elixir
-  defmodule MyApp.Changes.SlugifyTitle do
-    use Ash.Resource.Change
-
-    def change(changeset, _opts, _context) do
-      title = Ash.Changeset.get_attribute(changeset, :title)
-
-      if title do
-        slug = title |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")
-        Ash.Changeset.change_attribute(changeset, :slug, slug)
-      else
-        changeset
-      end
-    end
-  end
-
-  # Usage in resource:
-  change {MyApp.Changes.SlugifyTitle, []}
-  ```
-
-- Create a **change module with lifecycle hooks** to handle complex multi-step operations:
-
-```elixir
-defmodule MyApp.Changes.ProcessOrder do
-  use Ash.Resource.Change
-
-  def change(changeset, _opts, context) do
-    changeset
-    |> Ash.Changeset.before_transaction(fn changeset ->
-      # Runs before the transaction starts
-      # Use for external API calls, logging, etc.
-      MyApp.ExternalService.reserve_inventory(changeset, scope: context)
-      changeset
-    end)
-    |> Ash.Changeset.before_action(fn changeset ->
-      # Runs inside the transaction before the main action
-      # Use for related database changes in the same transaction
-      Ash.Changeset.change_attribute(changeset, :processed_at, DateTime.utc_now())
-    end)
-    |> Ash.Changeset.after_action(fn changeset, result ->
-      # Runs inside the transaction after the main action, only on success
-      # Use for related database changes that depend on the result
-      MyApp.Inventory.update_stock_levels(result, scope: context)
-      {changeset, result}
-    end)
-    |> Ash.Changeset.after_transaction(fn changeset,
-      {:ok, result} ->
-        # Runs after the transaction completes (success or failure)
-        # Use for notifications, external systems, etc.
-        MyApp.Mailer.send_order_confirmation(result, scope: context)
-        {changeset, result}
-
-      {:error, error} ->
-        # Runs after the transaction completes (success or failure)
-        # Use for notifications, external systems, etc.
-        MyApp.Mailer.send_order_issue_notice(result, scope: context)
-        {:error, error}
-    end)
-  end
-end
-
-# Usage in resource:
-change {MyApp.Changes.ProcessOrder, []}
-```
-
-## Anonymous Functions
-
-Prefer to put code in its own module and refer to that in changes, preparations, validations etc.
-
-For example, prefer this:
-
-```elixir
-# in
-defmodule MyApp.MyDomain.MyResource.Changes.SlugifyName do
-  use Ash.Resource.Change
-
-  def change(changeset, _, _) do
-    Ash.Changeset.before_action(changeset, fn changeset, _ ->
-      slug = MyApp.Slug.get()
-      Ash.Changeset.force_change_attribute(changeset, :slug, slug)
-    end)
-  end
-end
-
-change MyApp.MyDomain.MyResource.Changes.SlugifyName
-```
-
-### Action Types
-
-- **Read**: For retrieving records
-- **Create**: For creating records
-- **Update**: For changing records
-- **Destroy**: For removing records
-- **Generic**: For custom operations that don't fit the other types
-
-## Relationships
-
-Relationships describe connections between resources and are a core component of Ash. Define relationships in the `relationships` block of a resource.
-
-### Best Practices for Relationships
-
-- Be descriptive with relationship names (e.g., use `:authored_posts` instead of just `:posts`)
-- Configure foreign key constraints in your data layer if they have them (see `references` in AshPostgres)
-- Always choose the appropriate relationship type based on your domain model
-
-### Types of Relationships
-
-#### belongs_to
-
-Use when a resource "belongs to" another resource. This adds a foreign key to the source resource.
-
-```elixir
-relationships do
-  belongs_to :owner, MyApp.User do
-    # Customize the foreign key attribute (defaults to :owner_id)
-    source_attribute :custom_name
-
-    # Customize the type (defaults to :uuid)
-    attribute_type :integer
-
-    # Control whether the attribute is public
-    attribute_public? true
-
-    # Set constraints on the relationship
-    allow_nil? false
-    primary_key? false
-  end
-end
-```
-
-#### has_one
-
-Use when a resource "has one" of another resource. The foreign key is on the destination resource.
-
-```elixir
-relationships do
-  has_one :profile, MyApp.Profile do
-    # These are typically used with defaults
-    source_attribute :id  # Default
-    destination_attribute :user_id  # Default is <resource_name>_id
-  end
-end
-```
-
-#### has_many
-
-Use when a resource "has many" of another resource. The foreign key is on the destination resource.
-
-```elixir
-relationships do
-  has_many :posts, MyApp.Post do
-    # Similar to has_one but returns a list of related records
-    source_attribute :id  # Default
-    destination_attribute :user_id  # Default is <resource_name>_id
-
-    # Filter the related records
-    filter expr(published == true)
-
-    # Sort the related records
-    sort published_at: :desc
-  end
-end
-```
-
-#### many_to_many
-
-Use when many resources can be related to many other resources. Requires a join resource.
-
-```elixir
-relationships do
-  many_to_many :tags, MyApp.Tag do
-    through MyApp.PostTag
-    source_attribute_on_join_resource :post_id
-    destination_attribute_on_join_resource :tag_id
-  end
-end
-```
-
-The join resource must be defined separately:
-
-```elixir
-defmodule MyApp.PostTag do
-  use Ash.Resource,
-    data_layer: AshPostgres.DataLayer
-
-  attributes do
-    uuid_primary_key :id
-    # Add additional attributes if you need metadata on the relationship
-    attribute :added_at, :utc_datetime_usec do
-      default &DateTime.utc_now/0
-    end
-  end
-
-  relationships do
-    belongs_to :post, MyApp.Post, primary_key?: true, allow_nil?: false
-    belongs_to :tag, MyApp.Tag, primary_key?: true, allow_nil?: false
-  end
-
-  actions do
-    defaults [:read, :destroy, create: :*, update: :*]
-  end
-end
-```
-
-### Loading Relationships
-
-Load relationships either in a query or directly on records:
-
-```elixir
-# In a query
-MyApp.Post
-|> Ash.Query.load(:author)
-|> Ash.Query.load(comments: [:author])
-|> MyDomain.read!()
-
-# On records
-post = MyDomain.get_post!(id)
-post_with_author = Ash.load!(post, :author)
-
-# Complex loading with customized queries
-MyApp.Post
-|> Ash.Query.load(comments:
-  MyApp.Comment
-  |> Ash.Query.filter(is_approved == true)
-  |> Ash.Query.sort(created_at: :desc)
-  |> Ash.Query.limit(5)
-)
-|> MyDomain.read!()
-```
-
-Prefer to use the `strict?` option when loading to only load necessary fields on related data.
-
-```Elixir
-MyApp.Post
-|> Ash.Query.load([comments: [:title]], strict?: true)
-```
-
-### Managing Relationships
-
-Use `manage_relationship` to handle related data in actions:
-
-```elixir
-actions do
-  update :update do
-    # Define argument for the related data
-    argument :comments, {:array, :map} do
-      allow_nil? false
-    end
-
-    argument :new_tags, {:array, :map}
-
-    # Link argument to relationship management
-    change manage_relationship(:comments, type: :append)
-
-    # For different argument and relationship names
-    argument :new_tags, {:array, :map}
-    change manage_relationship(:new_tags, :tags, type: :append)
-  end
-end
-```
-
-#### Built in relationship management types
-
-- `:create` - Create new related records
-- `:append` - Add existing records to the relationship
-- `:remove` - Remove specific related records from the relationship
-- `:append_and_remove` - Add related records from the relationship, removing any not provided.
-- `:direct_control` - Fully replace all related records with the provided data, creating anything new, deleting anything not provided, and updating any existing records.
-
-#### Practical Examples
-
-Creating a post with tags:
-```elixir
-MyDomain.create_post!(%{
-  title: "New Post",
-  body: "Content here...",
-  tags: [%{name: "elixir"}, %{name: "ash"}]  # Creates new tags
-})
-
-# Updating a post to replace its tags
-MyDomain.update_post!(post, %{
-  tags: [tag1.id, tag2.id]  # Replaces tags with existing ones by ID
-})
-```
-
-## Generating Code
-
-Use `mix ash.gen.*` tasks as a basis for code generation when possible. Check the task docs with `mix help <task>`.
-Be sure to use `--yes` to bypass confirmation prompts. Use `--yes --dry-run` to preview the changes.
-
-## Data Layers
-
-Data layers determine how resources are stored and retrieved. Examples of data layers:
-
-- **Postgres**: For storing resources in PostgreSQL (via `AshPostgres`)
-- **ETS**: For in-memory storage (`Ash.DataLayer.Ets`)
-- **Mnesia**: For distributed storage (`Ash.DataLayer.Mnesia`)
-- **Embedded**: For resources embedded in other resources (`data_layer: :embedded`) (typically JSON under the hood)
-- **Ash.DataLayer.Simple**: For resources that aren't persisted at all. Leave off the data layer, as this is the default.
-
-Specify a data layer when defining a resource:
-
-```elixir
-defmodule MyApp.Post do
-  use Ash.Resource,
-    domain: MyApp.Blog,
-    data_layer: AshPostgres.DataLayer
-
-  postgres do
-    table "posts"
-    repo MyApp.Repo
-  end
-
-  # ... attributes, relationships, etc.
-end
-```
-
-For embedded resources:
-
-```elixir
-defmodule MyApp.Address do
-  use Ash.Resource,
-    data_layer: :embedded
-
-  attributes do
-    attribute :street, :string
-    attribute :city, :string
-    attribute :state, :string
-    attribute :zip, :string
-  end
-end
-```
-
-Each data layer has its own configuration options and capabilities. Refer to the rules & documentation of the specific data layer package for more details.
-
-## Migrations and Schema Changes
-
-After creating or modifying Ash code, run `mix ash.codegen <short_name_describing_changes>` to ensure any required additional changes are made (like migrations are generated).
-
-## Authorization
-
-- When performing administrative actions, you can bypass authorization with `authorize?: false`
-- To run actions as a particular user, look that user up and pass it as the `actor` option
-- Always set the actor on the query/changeset/input, not when calling the action
-- Use policies to define authorization rules
-
-```elixir
-# Good
-Post
-|> Ash.Query.for_read(:read, %{}, actor: current_user)
-|> Ash.read!()
-
-# BAD, DO NOT DO THIS
-Post
-|> Ash.Query.for_read(:read, %{})
-|> Ash.read!(actor: current_user)
-```
-
-### Policies
-
-To use policies, add the `Ash.Policy.Authorizer` to your resource:
-
-```elixir
-defmodule MyApp.Post do
-  use Ash.Resource,
-    domain: MyApp.Blog,
-    authorizers: [Ash.Policy.Authorizer]
-
-  # Rest of resource definition...
-end
-```
-
-### Policy Basics
-
-Policies determine what actions on a resource are permitted for a given actor. Define policies in the `policies` block:
-
-```elixir
-policies do
-  # A simple policy that applies to all read actions
-  policy action_type(:read) do
-    # Authorize if record is public
-    authorize_if expr(public == true)
-
-    # Authorize if actor is the owner
-    authorize_if relates_to_actor_via(:owner)
-  end
-
-  # A policy for create actions
-  policy action_type(:create) do
-    # Only allow active users to create records
-    forbid_unless actor_attribute_equals(:active, true)
-
-    # Ensure the record being created relates to the actor
-    authorize_if relating_to_actor(:owner)
-  end
-end
-```
-
-### Policy Evaluation Flow
-
-Policies evaluate from top to bottom with the following logic:
-
-1. All policies that apply to an action must pass for the action to be allowed
-2. Within each policy, checks evaluate from top to bottom
-3. The first check that produces a decision determines the policy result
-4. If no check produces a decision, the policy defaults to forbidden
-
-### IMPORTANT: Policy Check Logic
-
-**the first check that yields a result determines the policy outcome**
-
-```elixir
-# WRONG - This is OR logic, not AND logic!
-policy action_type(:update) do
-  authorize_if actor_attribute_equals(:admin?, true)    # If this passes, policy passes
-  authorize_if relates_to_actor_via(:owner)           # Only checked if first fails
-end
-```
-
-To require BOTH conditions in that exmaple, you would use `forbid_unless` for the first condition:
-
-```elixir
-# CORRECT - This requires BOTH conditions
-policy action_type(:update) do
-  forbid_unless actor_attribute_equals(:admin?, true)  # Must be admin
-  authorize_if relates_to_actor_via(:owner)           # AND must be owner
-end
-```
-
-Alternative patterns for AND logic:
-- Use multiple separate policies (each must pass independently)
-- Use a single complex expression with `expr(condition1 and condition2)`
-- Use `forbid_unless` for required conditions, then `authorize_if` for the final check
-
-### Bypass Policies
-
-Use bypass policies to allow certain actors to bypass other policy restrictions. This should be used almost exclusively for admin bypasses.
-
-```elixir
-policies do
-  # Bypass policy for admins - if this passes, other policies don't need to pass
-  bypass actor_attribute_equals(:admin, true) do
-    authorize_if always()
-  end
-
-  # Regular policies follow...
-  policy action_type(:read) do
-    # ...
-  end
-end
-```
-
-### Field Policies
-
-Field policies control access to specific fields (attributes, calculations, aggregates):
-
-```elixir
-field_policies do
-  # Only supervisors can see the salary field
-  field_policy :salary do
-    authorize_if actor_attribute_equals(:role, :supervisor)
-  end
-
-  # Allow access to all other fields
-  field_policy :* do
-    authorize_if always()
-  end
-end
-```
-
-### Policy Checks
-
-There are two main types of checks used in policies:
-
-1. **Simple checks** - Return true/false answers (e.g., "is the actor an admin?")
-2. **Filter checks** - Return filters to apply to data (e.g., "only show records owned by the actor")
-
-You can use built-in checks or create custom ones:
-
-```elixir
-# Built-in checks
-authorize_if actor_attribute_equals(:role, :admin)
-authorize_if relates_to_actor_via(:owner)
-authorize_if expr(public == true)
-
-# Custom check module
-authorize_if MyApp.Checks.ActorHasPermission
-```
-
-#### Custom Simple Check Example
-
-Create a custom simple check by implementing `Ash.Policy.SimpleCheck`:
-
-```elixir
-defmodule MyApp.Checks.ActorHasRequiredRole do
-  use Ash.Policy.SimpleCheck
-
-  # Provide a description for logging and debugging
-  def describe(opts) do
-    "actor has required role: #{opts[:role] || "admin"}"
-  end
-
-  # Implement the check logic - must return true or false
-  def match?(%{role: actor_role} = _actor, _context, opts) do
-    required_role = opts[:role] || :admin
-    actor_role == required_role
-  end
-
-  # Handle case when actor doesn't have role attribute
-  def match?(_, _, _), do: false
-end
-
-# Usage in policies
-policy action_type(:read) do
-  # Pass options to the check
-  authorize_if {MyApp.Checks.ActorHasRequiredRole, role: :manager}
-end
-```
-
-#### Custom Filter Check Example
-
-Create a custom filter check by implementing `Ash.Policy.FilterCheck`:
-
-```elixir
-defmodule MyApp.Checks.VisibleToUserLevel do
-  use Ash.Policy.FilterCheck
-
-  # Provide a description (optional as it can be derived from the filter)
-  def describe(opts) do
-    "records with visibility level at or below actor's level"
-  end
-
-  # Return an expression that filters the records
-  def filter(actor, _authorizer, _opts) do
-    # This filter will only show records with visibility_level
-    # less than or equal to the actor's user_level
-    expr(visibility_level <= ^actor.user_level)
-  end
-end
-
-# Usage in policies
-policy action_type(:read) do
-  authorize_if MyApp.Checks.VisibleToUserLevel
-end
-```
-
-## Calculations
-
-Calculations allow you to define derived values based on a resource's attributes or related data. Define calculations in the `calculations` block of a resource:
-
-```elixir
-calculations do
-  # Simple expression calculation
-  calculate :full_name, :string, expr(first_name <> " " <> last_name)
-
-  # Expression with conditions
-  calculate :status_label, :string, expr(
-    cond do
-      status == :active -> "Active"
-      status == :pending -> "Pending Review"
-      true -> "Inactive"
-    end
-  )
-
-  # Using module calculations for more complex logic
-  calculate :risk_score, :integer, {MyApp.Calculations.RiskScore, min: 0, max: 100}
-end
-```
-
-### Expression Calculations
-
-Expression calculations use Ash expressions and can be pushed down to the data layer when possible:
-
-```elixir
-calculations do
-  # Simple string concatenation
-  calculate :full_name, :string, expr(first_name <> " " <> last_name)
-
-  # Math operations
-  calculate :total_with_tax, :decimal, expr(amount * (1 + tax_rate))
-
-  # Date manipulation
-  calculate :days_since_created, :integer, expr(
-    date_diff(^now(), inserted_at, :day)
-  )
-end
-```
-
-### Module Calculations
-
-For complex calculations, create a module that implements `Ash.Resource.Calculation`:
-
-```elixir
-defmodule MyApp.Calculations.FullName do
-  use Ash.Resource.Calculation
-
-  # Validate and transform options
-  @impl{:ok, Map.put_new(opts, :separator, " ")}
-  end
-
-  # Specify what data needs to be loaded
-  @impl true
-  def load(_query, _opts, _context) do
-    [:first_name, :last_name]
-  end
-
-  # Implement the calculation logic
-  @impl true
-  def calculate(records, opts, _context) do
-    Enum.map(records, fn record ->
-      [record.first_name, record.last_name]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.join(opts.separator)
-    end)
-  end
-end
-
-# Usage in a resource
-calculations do
-  calculate :full_name, :string, {MyApp.Calculations.FullName, separator: ", "}
-end
-```
-
-### Calculations with Arguments
-
-You can define calculations that accept arguments:
-
-```elixir
-calculations do
-  calculate :full_name, :string, expr(first_name <> ^arg(:separator) <> last_name) do
-    argument :separator, :string do
-      allow_nil? false
-      default " "
-      constraints [allow_empty?: true, trim?: false]
-    end
-  end
-end
-```
-
-### Using Calculations
-
-Load calculations in queries or on records:
-
-```elixir
-# In a query
-User
-|> Ash.Query.load(:full_name)
-|> MyDomain.read!()
-
-# With arguments
-User
-|> Ash.Query.load(full_name: [separator: ", "])
-|> MyDomain.read!()
-
-# On existing records
-users = MyDomain.list_users!()
-users_with_calcs = Ash.load!(users, :full_name)
-
-# Filter and sort by calculations
-User
-|> Ash.Query.filter(full_name(separator: " ") == "John Doe")
-|> Ash.Query.sort(full_name: {%{separator: " "}, :asc})
-|> MyDomain.read!()
-```
-
-### Code Interface for Calculations
-
-Define calculation functions on your domain for standalone use:
-
-```elixir
-# In your domain
-resource User do
-  define_calculation :full_name, args: [:first_name, :last_name, {:optional, :separator}]
-end
-
-# Then call it directly
-MyDomain.full_name("John", "Doe", ", ")  # Returns "John, Doe"
-```
-
-## Aggregates
-
-Aggregates allow you to retrieve summary information over groups of related data, like counts, sums, or averages. Define aggregates in the `aggregates` block of a resource:
-
-```elixir
-aggregates do
-  # Count the number of published posts for a user
-  count :published_post_count, :posts do
-    filter expr(published == true)
-  end
-
-  # Sum the total amount of all orders
-  sum :total_sales, :orders, :amount
-
-  # Check if a user has any admin roles
-  exists :is_admin, :roles do
-    filter expr(name == "admin")
-  end
-end
-```
-
-### Aggregate Types
-
-- **count**: Counts related items meeting criteria
-- **sum**: Sums a field across related items
-- **exists**: Returns boolean indicating if matching related items exist
-- **first**: Gets the first related value matching criteria
-- **list**: Lists the related values for a specific field
-- **max**: Gets the maximum value of a field
-- **min**: Gets the minimum value of a field
-- **avg**: Gets the average value of a field
-
-### Using Aggregates
-
-Load aggregates in queries or on records:
-
-```elixir
-# In a query
-User
-|> Ash.Query.load(:published_post_count)
-|> MyDomain.read!()
-
-# On existing records
-users = MyDomain.list_users!()
-users_with_counts = Ash.load!(users, :published_post_count)
-```
-
-Filter and sort by aggregates:
-
-```elixir
-# Filter users with more than 5 published posts
-User
-|> Ash.Query.filter(published_post_count > 5)
-|> MyDomain.read!()
-
-# Sort users by their post count
-User
-|> Ash.Query.sort(published_post_count: :desc)
-|> MyDomain.read!()
-```
-
-### Join Filters
-
-For complex aggregates involving multiple relationships, use join filters:
-
-```elixir
-aggregates do
-  sum :redeemed_deal_amount, [:redeems, :deal], :amount do
-    # Filter on the aggregate as a whole
-    filter expr(redeems.redeemed == true)
-
-    # Apply filters to specific relationship steps
-    join_filter :redeems, expr(redeemed == true)
-    join_filter [:redeems, :deal], expr(active == parent(require_active))
-  end
-end
-```
-
-### Inline Aggregates
-
-Use aggregates inline within expressions:
-
-```elixir
-calculate :grade_percentage, :decimal, expr(
-  count(answers, query: [filter: expr(correct == true)]) * 100 /
-  count(answers)
-)
-```
-
-## Testing
-
-When testing resources:
-- Test your domain actions through the code interface
-- Use test utilities in `Ash.Test`
-- Test authorization policies work as expected using `Ash.can?`
-- Use `authorize?: false` in tests where authorization is not the focus
-- Write generators using `Ash.Generator`
-- Prefer to use raising versions of functions whenever possible, as opposed to pattern matching
-
-<-- ash-end -->
-<-- ash_json_api-start -->
-## ash_json_api usage
-# Rules for working with AshJsonApi
-
-## Understanding AshJsonApi
-
-AshJsonApi is a package for integrating Ash Framework with the JSON:API specification. It provides tools for generating JSON:API compliant endpoints from your Ash resources. AshJsonApi allows you to expose your Ash resources through a standardized RESTful API, supporting all JSON:API features like filtering, sorting, pagination, includes, and relationships.
-
-## Domain Configuration
-
-AshJsonApi works by extending your Ash domains and resources with JSON:API capabilities. First, add the AshJsonApi extension to your domain.
-
-### Setting Up Your Domain
-
-```elixir
-defmodule MyApp.Blog do
-  use Ash.Domain,
-    extensions: [
-      AshJsonApi.Domain
-    ]
-
-  json_api do
-    # Define JSON:API-specific settings for this domain
-    authorize? true
-
-    # You can define routes at the domain level
-    routes do
-      base_route "/posts", MyApp.Blog.Post do
-        get :read
-        index :read
-        post :create
-        patch :update
-        delete :destroy
-      end
-    end
-  end
-
-  resources do
-    resource MyApp.Blog.Post
-    resource MyApp.Blog.Comment
-  end
-end
-```
-
-## Resource Configuration
-
-Each resource that you want to expose via JSON:API needs to include the AshJsonApi.Resource extension.
-
-### Setting Up Resources
-
-```elixir
-defmodule MyApp.Blog.Post do
-  use Ash.Resource,
-    domain: MyApp.Blog,
-    extensions: [AshJsonApi.Resource]
-
-  attributes do
-    uuid_primary_key :id
-    attribute :title, :string
-    attribute :body, :string
-    attribute :published, :boolean
-  end
-
-  relationships do
-    belongs_to :author, MyApp.Accounts.User
-    has_many :comments, MyApp.Blog.Comment
-  end
-
-  json_api do
-    # The JSON:API type name (required)
-    type "post"
-  end
-
-  actions do
-    defaults [:create, :read, :update, :destroy]
-
-    read :list_published do
-      filter expr(published == true)
-    end
-
-    update :publish do
-      accept []
-      change set_attribute(:published, true)
-    end
-  end
-end
-```
-
-## Route Types
-
-AshJsonApi supports various route types according to the JSON:API spec:
-
-- `get` - Fetch a single resource by ID
-- `index` - List resources, with support for filtering, sorting, and pagination
-- `post` - Create a new resource
-- `patch` - Update an existing resource
-- `delete` - Destroy an existing resource
-- `related` - Fetch related resources (e.g., `/posts/123/comments`)
-- `relationship` - Fetch relationship data (e.g., `/posts/123/relationships/comments`)
-- `post_to_relationship` - Add to a relationship
-- `patch_relationship` - Replace a relationship
-- `delete_from_relationship` - Remove from a relationship
-
-## JSON:API Pagination, Filtering, and Sorting
-
-AshJsonApi supports standard JSON:API query parameters:
-
-- Filter: `?filter[attribute]=value`
-- Sort: `?sort=attribute,-other_attribute` (descending with `-`)
-- Pagination: `?page[number]=2&page[size]=10`
-- Includes: `?include=author,comments.author`
-
-<-- ash_json_api-end -->
 <-- ash_phoenix-start -->
 ## ash_phoenix usage
 # Rules for working with AshPhoenix
@@ -1746,618 +561,1038 @@ end
 3. **Update resources before editing**: When building forms for updating resources, load the resource with all required relationships using `Ash.load!/2` before creating the form.
 
 <-- ash_phoenix-end -->
-<-- ash_oban-start -->
-## ash_oban usage
-# Rules for working with AshOban
+<-- ash-start -->
+## ash usage
+# Rules for working with Ash
 
-## Understanding AshOban
+## Understanding Ash
 
-AshOban is a package that integrates the Ash Framework with Oban, a robust job processing system for Elixir. It enables you to define triggers that can execute background jobs based on specific conditions in your Ash resources, as well as schedule periodic actions. AshOban is particularly useful for handling asynchronous tasks, background processing, and scheduled operations in your Ash application.
+Ash is an opinionated, composable framework for building applications in Elixir. It provides a declarative approach to modeling your domain with resources at the center. Read documentation  *before* attempting to use it's features. Do not assume that you have prior knowledge of the framework or its conventions.
 
-## Setting Up AshOban
+## Code Structure & Organization
 
-To use AshOban with an Ash resource, add AshOban to the extensions list:
+- Organize code around domains and resources
+- Each resource should be focused and well-named
+- Create domain-specific actions rather than generic CRUD operations
+- Put business logic inside actions rather than in external modules
+- Use resources to model your domain entities
+
+## Code Interfaces
+
+Use code interfaces on domains to define the contract for calling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ash/code-interfaces.html).
+
+Define code interfaces on the domain, like this:
 
 ```elixir
-use Ash.Resource,
-  extensions: [AshOban]
+resource ResourceName do
+  define :fun_name, action: :action_name
+end
 ```
 
-## Defining Triggers
-
-Triggers are the primary way to define background jobs in AshOban. They can be configured to run when certain conditions are met on your resources. They work
-by running a scheduler job on the given cron job.
-
-### Basic Trigger
+For more complex interfaces with custom transformations:
 
 ```elixir
-oban do
-  triggers do
-    trigger :process do
-      action :process
-      scheduler_cron "*/5 * * * *"
-      where expr(processed != true)
-      worker_read_action :read
-      worker_module_name MyApp.Workers.Process
-      scheduler_module_name MyApp.Schedulers.Process
+define :custom_action do
+  action :action_name
+  args [:arg1, :arg2]
+
+  custom_input :arg1, MyType do
+    transform do
+      to :target_field
+      using &MyModule.transform_function/1
     end
   end
 end
 ```
 
-### Trigger Configuration Options
-
-- `action` - The action to be triggered (required)
-- `where` - The filter expression to determine if something should be triggered
-- `worker_read_action` - The read action to use when fetching individual records
-- `read_action` - The read action to use when querying records (must support keyset pagination)
-- `worker_module_name` - The module name for the generated worker (important for job stability)
-- `scheduler_module_name` - The module name for the generated scheduler
-- `max_attempts` - How many times to attempt the job (default: 1)
-- `queue` - The queue to place the worker job in (defaults to trigger name)
-- `trigger_once?` - Ensures that jobs that complete quickly aren't rescheduled (default: false)
-
-## Scheduled Actions
-
-Scheduled actions allow you to run periodic tasks according to a cron schedule:
+Prefer using the primary read action for "get" style code interfaces, and using `get_by` when the field you are looking up by is the primary key or has an `identity` on the resource.
 
 ```elixir
-oban do
-  scheduled_actions do
-    schedule :daily_report, "0 8 * * *" do
-      action :generate_report
-      worker_module_name MyApp.Workers.DailyReport
-    end
+resource ResourceName do
+  define :get_thing, action: :read, get_by: [:id]
+end
+```
+
+**Avoid direct Ash calls in web modules** - Don't use `Ash.get!/2` and `Ash.load!/2` directly in LiveViews/Controllers, similar to avoiding `Repo.get/2` outside context modules:
+
+```elixir
+# BAD - in LiveView/Controller
+group = MyApp.Resource |> Ash.get!(id) |> Ash.load!(rel: [:nested])
+
+# GOOD - use code interface with get_by
+resource DashboardGroup do
+  define :get_by_id, action: :read, get_by: [:id]
+end
+
+# Then call:
+MyApp.Domain.get_dashboard_group_by_id!(id, load: [rel: [:nested]])
+```
+
+**Code interface options** - Prefer passing options directly to code interface functions rather than building queries manually:
+
+```elixir
+# PREFERRED - Concise and idiomatic
+posts = MyApp.Blog.list_posts!(
+  filter: [status: :published],
+  load: [author: :profile, comments: [:author]],
+  sort: [published_at: :desc],
+  limit: 10
+)
+
+# Complex scenarios use the query option
+users = MyApp.Accounts.list_users!(
+  query: [filter: [active: true], load: [:profile], sort: [created_at: :desc]]
+)
+
+# AVOID - Verbose manual query building
+query = MyApp.Post |> Ash.Query.filter(...) |> Ash.Query.load(...)
+posts = MyApp.Blog.read!(query)
+```
+
+Supported options: `load:`, `filter:`, `sort:`, `limit:`, `offset:`, `query:`, `page:`, `stream?:`
+
+**Using Scopes in LiveViews** - When using `Ash.Scope`, the scope will typically be assigned to `scope` in LiveViews and used like so:
+
+```elixir
+# In your LiveView
+MyApp.Blog.create_post!("new post", scope: socket.assigns.scope)
+```
+
+Inside action hooks and callbacks, use the provided `context` parameter as your scope instead:
+
+```elixir
+|> Ash.Changeset.before_transaction(fn changeset, context ->
+  MyApp.ExternalService.reserve_inventory(changeset, scope: context)
+  changeset
+end)
+```
+
+### Authorization Functions
+
+For each action defined in a code interface, Ash automatically generates corresponding authorization check functions:
+
+- `can_action_name?(actor, params \\ %{}, opts \\ [])` - Returns `true`/`false` for authorization checks
+- `can_action_name(actor, params \\ %{}, opts \\ [])` - Returns `{:ok, true/false}` or `{:error, reason}`
+
+Example usage:
+```elixir
+# Check if user can create a post
+if MyApp.Blog.can_create_post?(current_user) do
+  # Show create button
+end
+
+# Check if user can update a specific post
+if MyApp.Blog.can_update_post?(current_user, post) do
+  # Show edit button
+end
+
+# Check if user can destroy a specific comment
+if MyApp.Blog.can_destroy_comment?(current_user, comment) do
+  # Show delete button
+end
+```
+
+These functions are particularly useful for conditional rendering of UI elements based on user permissions.
+
+## Actions
+
+- Create specific, well-named actions rather than generic ones
+- Put all business logic inside action definitions
+- Use hooks like `Ash.Changeset.after_action/2`, `Ash.Changeset.before_action/2` to add additional logic
+  inside the same transaction.
+- Use hooks like `Ash.Changeset.after_transaction/2`, `Ash.Changeset.before_transaction/2` to add additional logic
+  outside the transaction.
+- Use action arguments for inputs that need validation
+- Use preparations to modify queries before execution
+- Use changes to modify changesets before execution
+- Use validations to validate changesets before execution
+- Prefer domain code interfaces to call actions instead of directly building queries/changesets and calling functions in the `Ash` module
+- A resource could be *only generic actions*. This can be useful when you are using a resource only to model behavior.
+
+## Querying Data
+
+Use `Ash.Query` to build queries for reading data from your resources. The query module provides a declarative way to filter, sort, and load data.
+
+**Important**: You must `require Ash.Query` if you want to use `Ash.Query.filter/2`, as it is a macro.
+
+```elixir
+defmodule MyApp.SomeModule do
+  require Ash.Query
+
+  def get_active_posts do
+    MyApp.Post
+    |> Ash.Query.filter(status == :active)
+    |> MyApp.Blog.read!()
   end
 end
 ```
 
-### Scheduled Action Configuration Options
+Common query operations:
 
-- `cron` - The schedule in crontab notation
-- `action` - The generic or create action to call when the schedule is triggered
-- `action_input` - Inputs to supply to the action when it is called
-- `worker_module_name` - The module name for the generated worker
-- `queue` - The queue to place the job in
-- `max_attempts` - How many times to attempt the job (default: 1)
+- **Filter**: `Ash.Query.filter(query, field == value)`
+- **Sort**: `Ash.Query.sort(query, field: :asc)`
+- **Load relationships**: `Ash.Query.load(query, [:author, :comments])`
+- **Limit**: `Ash.Query.limit(query, 10)`
+- **Offset**: `Ash.Query.offset(query, 20)`
 
-## Triggering Jobs Programmatically
+## Error Handling
 
-You can trigger jobs programmatically using `run_oban_trigger` in your actions:
+Functions to call actions, like `Ash.create` and code interfaces like `MyApp.Accounts.register_user` all return ok/error tuples. All have `!` variations, like `Ash.create!` and `MyApp.Accounts.register_user!`. Use the `!` variations when you want to "let it crash", like if looking something up that should definitely exist, or calling an action that should always succeed. Always prefer the raising `!` variation over something like `{:ok, user} = MyApp.Accounts.register_user(...)`.
+
+All Ash code returns errors in the form of `{:error, error_class}`. Ash categorizes errors into four main classes:
+
+1. **Forbidden** (`Ash.Error.Forbidden`) - Occurs when a user attempts an action they don't have permission to perform
+2. **Invalid** (`Ash.Error.Invalid`) - Occurs when input data doesn't meet validation requirements
+3. **Framework** (`Ash.Error.Framework`) - Occurs when there's an issue with how Ash is being used
+4. **Unknown** (`Ash.Error.Unknown`) - Occurs for unexpected errors that don't fit the other categories
+
+These error classes help you catch and handle errors at an appropriate level of granularity. An error class will always be the "worst" (highest in the above list) error class from above. Each error class can contain multiple underlying errors, accessible via the `errors` field on the exception.
+
+### Using Validations
+
+Validations ensure that data meets your business requirements before it gets processed by an action. Unlike changes, validations cannot modify the changeset - they can only validate it or add errors.
+
+Common validation patterns:
 
 ```elixir
-update :process_item do
-  accept [:item_id]
-  change set_attribute(:processing, true)
-  change run_oban_trigger(:process_data)
+# Built-in validations with custom messages
+validate compare(:age, greater_than_or_equal_to: 18) do
+  message "You must be at least 18 years old"
+end
+validate match(:email, "@")
+validate one_of(:status, [:active, :inactive, :pending])
+
+# Conditional validations
+validate present(:phone_number) do
+  where present(:contact_method) and eq(:contact_method, "phone")
+end
+
+# Action-specific vs global validations
+actions do
+  create :sign_up do
+    validate present([:email, :password])  # Only for this action
+  end
+end
+
+validations do
+  validate present([:title, :body]), on: [:create, :update]  # Multiple actions
 end
 ```
 
-Or directly using the AshOban API:
+- Create **custom validation modules** for complex validation logic:
+  ```elixir
+  defmodule MyApp.Validations.UniqueUsername do
+    use Ash.Resource.Validation
+
+    @impl true
+    def init(opts), do: {:ok, opts}
+
+    @impl true
+    def validate(changeset, _opts, _context) do
+      # Validation logic here
+      # Return :ok or {:error, message}
+    end
+  end
+
+  # Usage in resource:
+  validate {MyApp.Validations.UniqueUsername, []}
+  ```
+
+- Make validations **atomic** when possible to ensure they work correctly with direct database operations by implementing the `atomic/3` callback in custom validation modules.
 
 ```elixir
-# Run a trigger for a specific record
-AshOban.run_trigger(record, :process_data)
+defmodule MyApp.Validations.IsEven do
+  # transform and validate opts
 
-# Run a trigger for multiple records
-AshOban.run_triggers(records, :process_data)
-
-# Schedule a trigger or scheduled action
-AshOban.schedule(MyApp.Resource, :process_data, actor: current_user)
-```
-
-## Working with Actors
-
-AshOban can persist the actor that triggered a job, making it available when the job runs:
-
-### Setting up Actor Persistence
-
-```elixir
-# Define an actor persister module
-defmodule MyApp.ObanActorPersister do
-  @behaviour AshOban.PersistActor
+  use Ash.Resource.Validation
 
   @impl true
-  def store(actor) do
-    # Convert actor to a format that can be stored in JSON
-    Jason.encode!(actor)
+  def init(opts) do
+    if is_atom(opts[:attribute]) do
+      {:ok, opts}
+    else
+      {:error, "attribute must be an atom!"}
+    end
   end
 
   @impl true
-  def lookup(actor_json) do
-    # Convert the stored JSON back to an actor
-    case Jason.decode(actor_json) do
-      {:ok, data} -> {:ok, MyApp.Accounts.get_user!(data["id"])}
-      error -> error
+  # This is optional, but useful to have in addition to validation
+  # so you get early feedback for validations that can otherwise
+  # only run in the datalayer
+  def validate(changeset, opts, _context) do
+    value = Ash.Changeset.get_attribute(changeset, opts[:attribute])
+
+    if is_nil(value) || (is_number(value) && rem(value, 2) == 0) do
+      :ok
+    else
+      {:error, field: opts[:attribute], message: "must be an even number"}
     end
   end
-end
 
-# Configure it
-config :ash_oban, :actor_persister, MyApp.ObanActorPersister
-```
-
-### Using Actor in Triggers
-
-```elixir
-# Specify actor_persister for a specific trigger
-trigger :process do
-  action :process
-  actor_persister MyApp.ObanActorPersister
-end
-
-# Pass the actor when triggering a job
-AshOban.run_trigger(record, :process, actor: current_user)
-```
-
-## Multi-tenancy Support
-
-AshOban supports multi-tenancy in your Ash application:
-
-```elixir
-oban do
-  # Global tenant configuration
-  list_tenants [1, 2, 3]  # or a function that returns tenants
-
-  triggers do
-    trigger :process do
-      # Override tenants for a specific trigger
-      list_tenants fn -> [2] end
-      action :process
-    end
+  @impl true
+  def atomic(changeset, opts, context) do
+    {:atomic,
+      # the list of attributes that are involved in the validation
+      [opts[:attribute]],
+      # the condition that should cause the error
+      # here we refer to the new value or the current value
+      expr(rem(^atomic_ref(opts[:attribute]), 2) != 0),
+      # the error expression
+      expr(
+        error(^InvalidAttribute, %{
+          field: ^opts[:attribute],
+          # the value that caused the error
+          value: ^atomic_ref(opts[:attribute]),
+          # the message to display
+          message: ^(context.message || "%{field} must be an even number"),
+          vars: %{field: ^opts[:attribute]}
+        })
+      )
+    }
   end
 end
 ```
 
-## Debugging and Error Handling
+- **Avoid redundant validations** - Don't add validations that duplicate attribute constraints:
+  ```elixir
+  # WRONG - redundant validation
+  attribute :name, :string do
+    allow_nil? false
+    constraints min_length: 1
+  end
 
-AshOban provides options for debugging and handling errors:
+  validate present(:name) do  # Redundant! allow_nil? false already handles this
+    message "Name is required"
+  end
+
+  validate attribute_does_not_equal(:name, "") do  # Redundant! min_length: 1 already handles this
+    message "Name cannot be empty"
+  end
+
+  # CORRECT - let attribute constraints handle basic validation
+  attribute :name, :string do
+    allow_nil? false
+    constraints min_length: 1
+  end
+  ```
+
+### Using Changes
+
+Changes allow you to modify the changeset before it gets processed by an action. Unlike validations, changes can manipulate attribute values, add attributes, or perform other data transformations.
+
+Common change patterns:
 
 ```elixir
-trigger :process do
-  action :process
-  # Enable detailed debug logging for this trigger
-  debug? true
+# Built-in changes with conditions
+change set_attribute(:status, "pending")
+change relate_actor(:creator) do
+  where present(:actor)
+end
+change atomic_update(:counter, expr(^counter + 1))
 
-  # Configure error handling
-  log_errors? true
-  log_final_error? true
+# Action-specific vs global changes
+actions do
+  create :sign_up do
+    change set_attribute(:joined_at, expr(now()))  # Only for this action
+  end
+end
 
-  # Define an action to call after the last attempt has failed
-  on_error :mark_failed
+changes do
+  change set_attribute(:updated_at, expr(now())), on: :update  # Multiple actions
+  change manage_relationship(:items, type: :append), on: [:create, :update]
 end
 ```
 
-You can also enable global debug logging:
+- Create **custom change modules** for reusable transformation logic:
+  ```elixir
+  defmodule MyApp.Changes.SlugifyTitle do
+    use Ash.Resource.Change
 
-```elixir
-config :ash_oban, :debug_all_triggers?, true
-```
+    def change(changeset, _opts, _context) do
+      title = Ash.Changeset.get_attribute(changeset, :title)
 
-## Best Practices
-
-1. **Always define module names** - Use explicit `worker_module_name` and `scheduler_module_name` to prevent issues when refactoring.
-
-2. **Use meaningful trigger names** - Choose clear, descriptive names for your triggers that reflect their purpose.
-
-3. **Handle errors gracefully** - Use the `on_error` option to define how to handle records that fail processing repeatedly.
-
-4. **Use appropriate queues** - Organize your jobs into different queues based on priority and resource requirements.
-
-5. **Optimize read actions** - Ensure that read actions used in triggers support keyset pagination for efficient processing.
-
-6. **Design for idempotency** - Jobs should be designed to be safely retried without causing data inconsistencies.
-
-<-- ash_oban-end -->
-<-- igniter-start -->
-## igniter usage
-# Rules for working with Igniter
-
-## Understanding Igniter
-
-Igniter is a code generation and project patching framework that enables semantic manipulation of Elixir codebases. It provides tools for creating intelligent generators that can both create new files and modify existing ones safely. Igniter works with AST (Abstract Syntax Trees) through Sourceror.Zipper to make precise, context-aware changes to your code.
-
-## Available Modules
-
-### Project-Level Modules (`Igniter.Project.*`)
-
-- **`Igniter.Project.Application`** - Working with Application modules and application configuration
-- **`Igniter.Project.Config`** - Modifying Elixir config files (config.exs, runtime.exs, etc.)
-- **`Igniter.Project.Deps`** - Managing dependencies declared in mix.exs
-- **`Igniter.Project.Formatter`** - Interacting with .formatter.exs files
-- **`Igniter.Project.IgniterConfig`** - Managing .igniter.exs configuration files
-- **`Igniter.Project.MixProject`** - Updating project configuration in mix.exs
-- **`Igniter.Project.Module`** - Creating and managing modules with proper file placement
-- **`Igniter.Project.TaskAliases`** - Managing task aliases in mix.exs
-- **`Igniter.Project.Test`** - Working with test and test support files
-
-### Code-Level Modules (`Igniter.Code.*`)
-
-- **`Igniter.Code.Common`** - General purpose utilities for working with Sourceror.Zipper
-- **`Igniter.Code.Function`** - Working with function definitions and calls
-- **`Igniter.Code.Keyword`** - Manipulating keyword lists
-- **`Igniter.Code.List`** - Working with lists in AST
-- **`Igniter.Code.Map`** - Manipulating maps
-- **`Igniter.Code.Module`** - Working with module definitions and usage
-- **`Igniter.Code.String`** - Utilities for string literals
-- **`Igniter.Code.Tuple`** - Working with tuples
-
-<-- igniter-end -->
-<-- ash_authentication-start -->
-## ash_authentication usage
-# AshAuthentication Usage Rules
-
-## Core Concepts
-- **Strategies**: password, OAuth2, magic_link, api_key authentication methods
-- **Tokens**: JWT for stateless authentication
-- **UserIdentity**: links users to OAuth2 providers
-- **Add-ons**: confirmation, logout-everywhere functionality
-- **Actions**: auto-generated by strategies (register, sign_in, etc.), can be overridden on the resource
-
-## Key Principles
-- Always use secrets management - never hardcode credentials
-- Enable tokens for magic_link, confirmation, OAuth2
-- UserIdentity resource optional for OAuth2 (required for multiple providers per user)
-- API keys require strict policy controls and expiration management
-- Use prefixes for API keys to enable secret scanning compliance
-- Check existing strategies: `AshAuthentication.Info.strategies/1`
-
-## Strategy Selection
-
-**Password** - Email/password authentication
-- Requires: `:email`, `:hashed_password` attributes, unique identity
-
-**Magic Link** - Passwordless email authentication
-- Requires: `:email` attribute, sender implementation, tokens enabled
-
-**API Key** - Token-based authentication for APIs
-- Requires: API key resource, relationship to user, sign-in action
-
-**OAuth2** - Social/enterprise login (GitHub, Google, Auth0, Apple, OIDC, Slack)
-- Requires: custom actions, secrets
-- Optional: UserIdentity resource (for multiple providers per user)
-
-## Password Strategy
-
-```elixir
-authentication do
-  strategies do
-    password :password do
-      identity_field :email
-      hashed_password_field :hashed_password
-      resettable do
-        sender MyApp.PasswordResetSender
+      if title do
+        slug = title |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")
+        Ash.Changeset.change_attribute(changeset, :slug, slug)
+      else
+        changeset
       end
     end
   end
-end
 
-# Required attributes:
-attributes do
-  attribute :email, :ci_string, allow_nil?: false, public?: true
-  attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
-end
+  # Usage in resource:
+  change {MyApp.Changes.SlugifyTitle, []}
+  ```
 
-identities do
-  identity :unique_email, [:email]
-end
-```
-
-## Magic Link Strategy
+- Create a **change module with lifecycle hooks** to handle complex multi-step operations:
 
 ```elixir
-authentication do
-  strategies do
-    magic_link do
-      identity_field :email
-      sender MyApp.MagicLinkSender
-    end
+defmodule MyApp.Changes.ProcessOrder do
+  use Ash.Resource.Change
+
+  def change(changeset, _opts, context) do
+    changeset
+    |> Ash.Changeset.before_transaction(fn changeset ->
+      # Runs before the transaction starts
+      # Use for external API calls, logging, etc.
+      MyApp.ExternalService.reserve_inventory(changeset, scope: context)
+      changeset
+    end)
+    |> Ash.Changeset.before_action(fn changeset ->
+      # Runs inside the transaction before the main action
+      # Use for related database changes in the same transaction
+      Ash.Changeset.change_attribute(changeset, :processed_at, DateTime.utc_now())
+    end)
+    |> Ash.Changeset.after_action(fn changeset, result ->
+      # Runs inside the transaction after the main action, only on success
+      # Use for related database changes that depend on the result
+      MyApp.Inventory.update_stock_levels(result, scope: context)
+      {changeset, result}
+    end)
+    |> Ash.Changeset.after_transaction(fn changeset,
+      {:ok, result} ->
+        # Runs after the transaction completes (success or failure)
+        # Use for notifications, external systems, etc.
+        MyApp.Mailer.send_order_confirmation(result, scope: context)
+        {changeset, result}
+
+      {:error, error} ->
+        # Runs after the transaction completes (success or failure)
+        # Use for notifications, external systems, etc.
+        MyApp.Mailer.send_order_issue_notice(result, scope: context)
+        {:error, error}
+    end)
   end
 end
 
-# Sender implementation required:
-defmodule MyApp.MagicLinkSender do
-  use AshAuthentication.Sender
+# Usage in resource:
+change {MyApp.Changes.ProcessOrder, []}
+```
 
-  def send(user_or_email, token, _opts) do
-    MyApp.Emails.deliver_magic_link(user_or_email, token)
+## Anonymous Functions
+
+Prefer to put code in its own module and refer to that in changes, preparations, validations etc.
+
+For example, prefer this:
+
+```elixir
+# in
+defmodule MyApp.MyDomain.MyResource.Changes.SlugifyName do
+  use Ash.Resource.Change
+
+  def change(changeset, _, _) do
+    Ash.Changeset.before_action(changeset, fn changeset, _ ->
+      slug = MyApp.Slug.get()
+      Ash.Changeset.force_change_attribute(changeset, :slug, slug)
+    end)
+  end
+end
+
+change MyApp.MyDomain.MyResource.Changes.SlugifyName
+```
+
+### Action Types
+
+- **Read**: For retrieving records
+- **Create**: For creating records
+- **Update**: For changing records
+- **Destroy**: For removing records
+- **Generic**: For custom operations that don't fit the other types
+
+## Relationships
+
+Relationships describe connections between resources and are a core component of Ash. Define relationships in the `relationships` block of a resource.
+
+### Best Practices for Relationships
+
+- Be descriptive with relationship names (e.g., use `:authored_posts` instead of just `:posts`)
+- Configure foreign key constraints in your data layer if they have them (see `references` in AshPostgres)
+- Always choose the appropriate relationship type based on your domain model
+
+#### Relationship Types
+
+```elixir
+relationships do
+  # belongs_to - adds foreign key to source resource
+  belongs_to :owner, MyApp.User do
+    allow_nil? false
+    attribute_type :integer  # defaults to :uuid
+  end
+
+  # has_one - foreign key on destination resource
+  has_one :profile, MyApp.Profile
+
+  # has_many - foreign key on destination resource, returns list
+  has_many :posts, MyApp.Post do
+    filter expr(published == true)
+    sort published_at: :desc
+  end
+
+  # many_to_many - requires join resource
+  many_to_many :tags, MyApp.Tag do
+    through MyApp.PostTag
+    source_attribute_on_join_resource :post_id
+    destination_attribute_on_join_resource :tag_id
   end
 end
 ```
 
-## API Key Strategy
+The join resource must be defined separately:
 
 ```elixir
-# 1. Create API key resource
-defmodule MyApp.Accounts.ApiKey do
+defmodule MyApp.PostTag do
   use Ash.Resource,
-    data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
-
-  actions do
-    defaults [:read, :destroy]
-
-    create :create do
-      primary? true
-      accept [:user_id, :expires_at]
-      change {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: :myapp, hash: :api_key_hash}
-    end
-  end
+    data_layer: AshPostgres.DataLayer
 
   attributes do
     uuid_primary_key :id
-    attribute :api_key_hash, :binary, allow_nil?: false, sensitive?: true
-    attribute :expires_at, :utc_datetime_usec, allow_nil?: false
+    # Add additional attributes if you need metadata on the relationship
+    attribute :added_at, :utc_datetime_usec do
+      default &DateTime.utc_now/0
+    end
   end
 
   relationships do
-    belongs_to :user, MyApp.Accounts.User, allow_nil?: false
+    belongs_to :post, MyApp.Post, primary_key?: true, allow_nil?: false
+    belongs_to :tag, MyApp.Tag, primary_key?: true, allow_nil?: false
   end
 
-  calculations do
-    calculate :valid, :boolean, expr(expires_at > now())
-  end
-
-  identities do
-    identity :unique_api_key, [:api_key_hash]
-  end
-
-  policies do
-    bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-      authorize_if always()
-    end
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
   end
 end
+```
 
-# 2. Add strategy to user resource
-authentication do
-  strategies do
-    api_key do
-      api_key_relationship :valid_api_keys
-      api_key_hash_attribute :api_key_hash
-    end
-  end
-end
+### Loading Relationships
 
-# 3. Add relationship to user
-relationships do
-  has_many :valid_api_keys, MyApp.Accounts.ApiKey do
-    filter expr(valid)
-  end
-end
+```elixir
+# Using code interface options (preferred)
+post = MyDomain.get_post!(id, load: [:author, comments: [:author]])
 
-# 4. Add sign-in action to user
+# Complex loading with filters
+posts = MyDomain.list_posts!(
+  query: [load: [comments: [filter: [is_approved: true], limit: 5]]]
+)
+
+# Manual query building (for complex cases)
+MyApp.Post
+|> Ash.Query.load(comments: MyApp.Comment |> Ash.Query.filter(is_approved == true))
+|> Ash.read!()
+
+# Loading on existing records
+Ash.load!(post, :author)
+```
+
+Prefer to use the `strict?` option when loading to only load necessary fields on related data.
+
+```Elixir
+MyApp.Post
+|> Ash.Query.load([comments: [:title]], strict?: true)
+```
+
+### Managing Relationships
+
+Use `manage_relationship` to handle related data in actions:
+
+```elixir
 actions do
-  read :sign_in_with_api_key do
-    argument :api_key, :string, allow_nil?: false
-    prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
-  end
-end
-```
-
-**Security considerations:**
-- API keys are hashed for storage security
-- Use policies to restrict API key access to specific actions
-- Check `user.__metadata__[:using_api_key?]` to detect API key authentication
-- Access the API key via `user.__metadata__[:api_key]` for permission checks
-
-## OAuth2 Strategies
-
-**Supported providers:** github, google, auth0, apple, oidc, slack
-
-**Required for all OAuth2:**
-- Custom `register_with_[provider]` action
-- Secrets management
-- Tokens enabled
-
-**Optional for all OAuth2:**
-- UserIdentity resource (for multiple providers per user)
-
-### OAuth2 Configuration Pattern
-```elixir
-# Strategy configuration
-authentication do
-  strategies do
-    github do  # or google, auth0, apple, oidc, slack
-      client_id MyApp.Secrets
-      client_secret MyApp.Secrets
-      redirect_uri MyApp.Secrets
-      # auth0 also needs: base_url
-      # apple also needs: team_id, private_key_id, private_key_path
-      # oidc also needs: openid_configuration_uri
-      identity_resource MyApp.Accounts.UserIdentity
+  update :update do
+    # Define argument for the related data
+    argument :comments, {:array, :map} do
+      allow_nil? false
     end
-  end
-end
 
-# Required action (replace 'github' with provider name)
-actions do
-  create :register_with_github do
-    argument :user_info, :map, allow_nil?: false
-    argument :oauth_tokens, :map, allow_nil?: false
-    upsert? true
-    upsert_identity :unique_email
+    argument :new_tags, {:array, :map}
 
-    change AshAuthentication.GenerateTokenChange
+    # Link argument to relationship management
+    change manage_relationship(:comments, type: :append)
 
-    # If UserIdentity resource is being used
-    change AshAuthentication.Strategy.OAuth2.IdentityChange
-
-    change fn changeset, _ctx ->
-      user_info = Ash.Changeset.get_argument(changeset, :user_info)
-      Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
-    end
+    # For different argument and relationship names
+    argument :new_tags, {:array, :map}
+    change manage_relationship(:new_tags, :tags, type: :append)
   end
 end
 ```
 
-## Add-ons
+#### Built in relationship management types
 
-### Confirmation
+- `:create` - Create new related records
+- `:append` - Add existing records to the relationship
+- `:remove` - Remove specific related records from the relationship
+- `:append_and_remove` - Add related records from the relationship, removing any not provided.
+- `:direct_control` - Fully replace all related records with the provided data, creating anything new, deleting anything not provided, and updating any existing records.
+
+#### Practical Examples
+
+Creating a post with tags:
 ```elixir
-authentication do
-  tokens do
-    enabled? true
-    token_resource MyApp.Accounts.Token
+MyDomain.create_post!(%{
+  title: "New Post",
+  body: "Content here...",
+  tags: [%{name: "elixir"}, %{name: "ash"}]  # Creates new tags
+})
+
+# Updating a post to replace its tags
+MyDomain.update_post!(post, %{
+  tags: [tag1.id, tag2.id]  # Replaces tags with existing ones by ID
+})
+```
+
+## Generating Code
+
+Use `mix ash.gen.*` tasks as a basis for code generation when possible. Check the task docs with `mix help <task>`.
+Be sure to use `--yes` to bypass confirmation prompts. Use `--yes --dry-run` to preview the changes.
+
+## Data Layers
+
+Data layers determine how resources are stored and retrieved. Examples of data layers:
+
+- **Postgres**: For storing resources in PostgreSQL (via `AshPostgres`)
+- **ETS**: For in-memory storage (`Ash.DataLayer.Ets`)
+- **Mnesia**: For distributed storage (`Ash.DataLayer.Mnesia`)
+- **Embedded**: For resources embedded in other resources (`data_layer: :embedded`) (typically JSON under the hood)
+- **Ash.DataLayer.Simple**: For resources that aren't persisted at all. Leave off the data layer, as this is the default.
+
+Specify a data layer when defining a resource:
+
+```elixir
+defmodule MyApp.Post do
+  use Ash.Resource,
+    domain: MyApp.Blog,
+    data_layer: AshPostgres.DataLayer
+
+  postgres do
+    table "posts"
+    repo MyApp.Repo
   end
 
-  add_ons do
-    confirmation :confirm do
-      monitor_fields [:email]
-      sender MyApp.ConfirmationSender
-    end
+  # ... attributes, relationships, etc.
+end
+```
+
+For embedded resources:
+
+```elixir
+defmodule MyApp.Address do
+  use Ash.Resource,
+    data_layer: :embedded
+
+  attributes do
+    attribute :street, :string
+    attribute :city, :string
+    attribute :state, :string
+    attribute :zip, :string
   end
 end
 ```
 
-### Log Out Everywhere
+Each data layer has its own configuration options and capabilities. Refer to the rules & documentation of the specific data layer package for more details.
+
+## Migrations and Schema Changes
+
+After creating or modifying Ash code, run `mix ash.codegen <short_name_describing_changes>` to ensure any required additional changes are made (like migrations are generated). The name of the migration should be lower_snake_case. In a longer running dev session it's usually better to use `mix ash.codegen --dev` as you go and at the end run the final codegen with a sensible name describing all the changes made in the session.
+
+## Authorization
+
+- When performing administrative actions, you can bypass authorization with `authorize?: false`
+- To run actions as a particular user, look that user up and pass it as the `actor` option
+- Always set the actor on the query/changeset/input, not when calling the action
+- Use policies to define authorization rules
+
 ```elixir
-authentication do
-  tokens do
-    store_all_tokens? true
-  end
+# Good
+Post
+|> Ash.Query.for_read(:read, %{}, actor: current_user)
+|> Ash.read!()
 
-  add_ons do
-    log_out_everywhere do
-      apply_on_password_change? true
-    end
-  end
-end
-```
-
-## Working with Authentication
-
-### Strategy Protocol
-```elixir
-# Get and use strategies
-strategy = AshAuthentication.Info.strategy!(MyApp.User, :password)
-{:ok, user} = AshAuthentication.Strategy.action(strategy, :sign_in, params)
-
-# List strategies
-strategies = AshAuthentication.Info.strategies(MyApp.User)
-```
-
-### Token Operations
-```elixir
-# User/subject conversion
-subject = AshAuthentication.user_to_subject(user)
-{:ok, user} = AshAuthentication.subject_to_user(subject, MyApp.User)
-
-# Token management
-AshAuthentication.TokenResource.revoke(MyApp.Token, token)
+# BAD, DO NOT DO THIS
+Post
+|> Ash.Query.for_read(:read, %{})
+|> Ash.read!(actor: current_user)
 ```
 
 ### Policies
+
+To use policies, add the `Ash.Policy.Authorizer` to your resource:
+
+```elixir
+defmodule MyApp.Post do
+  use Ash.Resource,
+    domain: MyApp.Blog,
+    authorizers: [Ash.Policy.Authorizer]
+
+  # Rest of resource definition...
+end
+```
+
+### Policy Basics
+
+Policies determine what actions on a resource are permitted for a given actor. Define policies in the `policies` block:
+
 ```elixir
 policies do
-  bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+  # A simple policy that applies to all read actions
+  policy action_type(:read) do
+    # Authorize if record is public
+    authorize_if expr(public == true)
+
+    # Authorize if actor is the owner
+    authorize_if relates_to_actor_via(:owner)
+  end
+
+  # A policy for create actions
+  policy action_type(:create) do
+    # Only allow active users to create records
+    forbid_unless actor_attribute_equals(:active, true)
+
+    # Ensure the record being created relates to the actor
+    authorize_if relating_to_actor(:owner)
+  end
+end
+```
+
+### Policy Evaluation Flow
+
+Policies evaluate from top to bottom with the following logic:
+
+1. All policies that apply to an action must pass for the action to be allowed
+2. Within each policy, checks evaluate from top to bottom
+3. The first check that produces a decision determines the policy result
+4. If no check produces a decision, the policy defaults to forbidden
+
+### IMPORTANT: Policy Check Logic
+
+**the first check that yields a result determines the policy outcome**
+
+```elixir
+# WRONG - This is OR logic, not AND logic!
+policy action_type(:update) do
+  authorize_if actor_attribute_equals(:admin?, true)    # If this passes, policy passes
+  authorize_if relates_to_actor_via(:owner)           # Only checked if first fails
+end
+```
+
+To require BOTH conditions in that exmaple, you would use `forbid_unless` for the first condition:
+
+```elixir
+# CORRECT - This requires BOTH conditions
+policy action_type(:update) do
+  forbid_unless actor_attribute_equals(:admin?, true)  # Must be admin
+  authorize_if relates_to_actor_via(:owner)           # AND must be owner
+end
+```
+
+Alternative patterns for AND logic:
+- Use multiple separate policies (each must pass independently)
+- Use a single complex expression with `expr(condition1 and condition2)`
+- Use `forbid_unless` for required conditions, then `authorize_if` for the final check
+
+### Bypass Policies
+
+Use bypass policies to allow certain actors to bypass other policy restrictions. This should be used almost exclusively for admin bypasses.
+
+```elixir
+policies do
+  # Bypass policy for admins - if this passes, other policies don't need to pass
+  bypass actor_attribute_equals(:admin, true) do
+    authorize_if always()
+  end
+
+  # Regular policies follow...
+  policy action_type(:read) do
+    # ...
+  end
+end
+```
+
+### Field Policies
+
+Field policies control access to specific fields (attributes, calculations, aggregates):
+
+```elixir
+field_policies do
+  # Only supervisors can see the salary field
+  field_policy :salary do
+    authorize_if actor_attribute_equals(:role, :supervisor)
+  end
+
+  # Allow access to all other fields
+  field_policy :* do
     authorize_if always()
   end
 end
 ```
 
-## Common Implementation Patterns
+### Policy Checks
 
-### Pattern: Multiple Authentication Methods
-When users need multiple ways to authenticate:
+There are two main types of checks used in policies:
+
+1. **Simple checks** - Return true/false answers (e.g., "is the actor an admin?")
+2. **Filter checks** - Return filters to apply to data (e.g., "only show records owned by the actor")
+
+You can use built-in checks or create custom ones:
 
 ```elixir
-authentication do
-  tokens do
-    enabled? true
-    token_resource MyApp.Accounts.Token
+# Built-in checks
+authorize_if actor_attribute_equals(:role, :admin)
+authorize_if relates_to_actor_via(:owner)
+authorize_if expr(public == true)
+
+# Custom check module
+authorize_if MyApp.Checks.ActorHasPermission
+```
+
+#### Custom Policy Checks
+
+Create custom checks by implementing `Ash.Policy.SimpleCheck` or `Ash.Policy.FilterCheck`:
+
+```elixir
+# Simple check - returns true/false
+defmodule MyApp.Checks.ActorHasRole do
+  use Ash.Policy.SimpleCheck
+
+  def match?(%{role: actor_role}, _context, opts) do
+    actor_role == (opts[:role] || :admin)
+  end
+  def match?(_, _, _), do: false
+end
+
+# Filter check - returns query filter
+defmodule MyApp.Checks.VisibleToUserLevel do
+  use Ash.Policy.FilterCheck
+
+  def filter(actor, _authorizer, _opts) do
+    expr(visibility_level <= ^actor.user_level)
+  end
+end
+
+# Usage
+policy action_type(:read) do
+  authorize_if {MyApp.Checks.ActorHasRole, role: :manager}
+  authorize_if MyApp.Checks.VisibleToUserLevel
+end
+```
+
+## Calculations
+
+Calculations allow you to define derived values based on a resource's attributes or related data. Define calculations in the `calculations` block of a resource:
+
+```elixir
+calculations do
+  # Simple expression calculation
+  calculate :full_name, :string, expr(first_name <> " " <> last_name)
+
+  # Expression with conditions
+  calculate :status_label, :string, expr(
+    cond do
+      status == :active -> "Active"
+      status == :pending -> "Pending Review"
+      true -> "Inactive"
+    end
+  )
+
+  # Using module calculations for more complex logic
+  calculate :risk_score, :integer, {MyApp.Calculations.RiskScore, min: 0, max: 100}
+end
+```
+
+### Expression Calculations
+
+Expression calculations use Ash expressions and can be pushed down to the data layer when possible:
+
+```elixir
+calculations do
+  # Simple string concatenation
+  calculate :full_name, :string, expr(first_name <> " " <> last_name)
+
+  # Math operations
+  calculate :total_with_tax, :decimal, expr(amount * (1 + tax_rate))
+
+  # Date manipulation
+  calculate :days_since_created, :integer, expr(
+    date_diff(^now(), inserted_at, :day)
+  )
+end
+```
+
+### Module Calculations
+
+For complex calculations, create a module that implements `Ash.Resource.Calculation`:
+
+```elixir
+defmodule MyApp.Calculations.FullName do
+  use Ash.Resource.Calculation
+
+  # Validate and transform options
+  @impl true
+  def init(opts) do
+    {:ok, Map.put_new(opts, :separator, " ")}
   end
 
-  strategies do
-    password :password do
-      identity_field :email
-      hashed_password_field :hashed_password
-    end
+  # Specify what data needs to be loaded
+  @impl true
+  def load(_query, _opts, _context) do
+    [:first_name, :last_name]
+  end
 
-    github do
-      client_id MyApp.Secrets
-      client_secret MyApp.Secrets
-      redirect_uri MyApp.Secrets
-      identity_resource MyApp.Accounts.UserIdentity
-    end
+  # Implement the calculation logic
+  @impl true
+  def calculate(records, opts, _context) do
+    Enum.map(records, fn record ->
+      [record.first_name, record.last_name]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(opts.separator)
+    end)
+  end
+end
 
-    magic_link do
-      identity_field :email
-      sender MyApp.MagicLinkSender
+# Usage in a resource
+calculations do
+  calculate :full_name, :string, {MyApp.Calculations.FullName, separator: ", "}
+end
+```
+
+### Calculations with Arguments
+
+You can define calculations that accept arguments:
+
+```elixir
+calculations do
+  calculate :full_name, :string, expr(first_name <> ^arg(:separator) <> last_name) do
+    argument :separator, :string do
+      allow_nil? false
+      default " "
+      constraints [allow_empty?: true, trim?: false]
     end
   end
 end
 ```
 
-### Pattern: OAuth2 with User Registration
-When new users can register via OAuth2:
+### Using Calculations
 
 ```elixir
-actions do
-  create :register_with_github do
-    argument :user_info, :map, allow_nil?: false
-    argument :oauth_tokens, :map, allow_nil?: false
-    upsert? true
-    upsert_identity :email
+# Using code interface options (preferred)
+users = MyDomain.list_users!(load: [full_name: [separator: ", "]])
 
-    change AshAuthentication.GenerateTokenChange
-    change fn changeset, _ctx ->
-      user_info = Ash.Changeset.get_argument(changeset, :user_info)
+# Filtering and sorting
+users = MyDomain.list_users!(
+  query: [
+    filter: [full_name: [separator: " ", value: "John Doe"]],
+    sort: [full_name: {[separator: " "], :asc}]
+  ]
+)
 
-      changeset
-      |> Ash.Changeset.change_attribute(:email, user_info["email"])
-      |> Ash.Changeset.change_attribute(:name, user_info["name"])
-    end
+# Manual query building (for complex cases)
+User |> Ash.Query.load(full_name: [separator: ", "]) |> Ash.read!()
+
+# Loading on existing records
+Ash.load!(users, :full_name)
+```
+
+### Code Interface for Calculations
+
+Define calculation functions on your domain for standalone use:
+
+```elixir
+# In your domain
+resource User do
+  define_calculation :full_name, args: [:first_name, :last_name, {:optional, :separator}]
+end
+
+# Then call it directly
+MyDomain.full_name("John", "Doe", ", ")  # Returns "John, Doe"
+```
+
+## Aggregates
+
+Aggregates allow you to retrieve summary information over groups of related data, like counts, sums, or averages. Define aggregates in the `aggregates` block of a resource:
+
+```elixir
+aggregates do
+  # Count the number of published posts for a user
+  count :published_post_count, :posts do
+    filter expr(published == true)
+  end
+
+  # Sum the total amount of all orders
+  sum :total_sales, :orders, :amount
+
+  # Check if a user has any admin roles
+  exists :is_admin, :roles do
+    filter expr(name == "admin")
   end
 end
 ```
 
-### Pattern: Custom Token Configuration
-When you need specific token behavior:
+### Aggregate Types
+
+- **count**: Counts related items meeting criteria
+- **sum**: Sums a field across related items
+- **exists**: Returns boolean indicating if matching related items exist
+- **first**: Gets the first related value matching criteria
+- **list**: Lists the related values for a specific field
+- **max**: Gets the maximum value of a field
+- **min**: Gets the minimum value of a field
+- **avg**: Gets the average value of a field
+
+### Using Aggregates
 
 ```elixir
-authentication do
-  tokens do
-    enabled? true
-    token_resource MyApp.Accounts.Token
-    signing_secret MyApp.Secrets
-    token_lifetime {24, :hours}
-    store_all_tokens? true  # For logout-everywhere functionality
-    require_token_presence_for_authentication? false
+# Using code interface options (preferred)
+users = MyDomain.list_users!(
+  load: [:published_post_count, :total_sales],
+  query: [
+    filter: [published_post_count: [greater_than: 5]],
+    sort: [published_post_count: :desc]
+  ]
+)
+
+# Manual query building (for complex cases)
+User |> Ash.Query.filter(published_post_count > 5) |> Ash.read!()
+
+# Loading on existing records
+Ash.load!(users, :published_post_count)
+```
+
+### Join Filters
+
+For complex aggregates involving multiple relationships, use join filters:
+
+```elixir
+aggregates do
+  sum :redeemed_deal_amount, [:redeems, :deal], :amount do
+    # Filter on the aggregate as a whole
+    filter expr(redeems.redeemed == true)
+
+    # Apply filters to specific relationship steps
+    join_filter :redeems, expr(redeemed == true)
+    join_filter [:redeems, :deal], expr(active == parent(require_active))
   end
 end
 ```
 
-## Customizing Authentication Actions
+### Inline Aggregates
 
-When customizing generated authentication actions (register, sign_in, etc.):
+Use aggregates inline within expressions:
 
-**Key Security Rules:**
-- Always mark credentials with `sensitive?: true` (passwords, API keys, tokens)
-- Use `public?: false` for internal fields and highly sensitive PII
-- Use `public?: true` for identity fields and UI display data
-- Include required authentication changes (`GenerateTokenChange`, `HashPasswordChange`, etc.)
-
-**Argument Handling:**
-- All arguments must be used in `accept` or `change set_attribute()`
-- Use `allow_nil?: false` for required arguments
-- OAuth2 data must be extracted in changes, not accepted directly
-
-**Example Custom Registration:**
 ```elixir
-create :register_with_password do
-  argument :password, :string, allow_nil?: false, sensitive?: true
-  argument :first_name, :string, allow_nil?: false
-
-  accept [:email, :first_name]
-
-  change AshAuthentication.GenerateTokenChange
-  change AshAuthentication.Strategy.Password.HashPasswordChange
-end
+calculate :grade_percentage, :decimal, expr(
+  count(answers, query: [filter: expr(correct == true)]) * 100 /
+  count(answers)
+)
 ```
 
-For more guidance, see the "Customizing Authentication Actions" section in the getting started guide.
-<-- ash_authentication-end -->
+## Testing
+
+When testing resources:
+- Test your domain actions through the code interface
+- Use test utilities in `Ash.Test`
+- Test authorization policies work as expected using `Ash.can?`
+- Use `authorize?: false` in tests where authorization is not the focus
+- Write generators using `Ash.Generator`
+- Prefer to use raising versions of functions whenever possible, as opposed to pattern matching
+
+<-- ash-end -->
 <-- ash_postgres-start -->
 ## ash_postgres usage
 # Rules for working with AshPostgres
