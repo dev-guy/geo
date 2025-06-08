@@ -1,5 +1,6 @@
 defmodule GeoWeb.Router do
   use GeoWeb, :router
+  import Phoenix.LiveView.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -15,9 +16,8 @@ defmodule GeoWeb.Router do
   end
 
   scope "/", GeoWeb do
-    pipe_through :browser
-
-    get "/", PageController, :home
+    # pipe_through :browser
+    live "/", HomeLive, :index
   end
 
   # Other scopes may use custom stacks.
