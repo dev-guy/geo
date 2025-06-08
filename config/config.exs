@@ -45,7 +45,10 @@ config :spark,
 
 config :geo,
   ecto_repos: [Geo.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  ash_domains: [
+    Geo.Geography
+  ]
 
 # Configures the endpoint
 config :geo, GeoWeb.Endpoint,

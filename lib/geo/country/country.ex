@@ -1,4 +1,4 @@
-defmodule Geo.Country do
+defmodule Geo.Country.Country do
   use Geo.Resources.BaseResource,
     otp_app: :healthcompass_directory,
     domain: Geo.Geography,

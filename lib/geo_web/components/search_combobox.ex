@@ -4,14 +4,16 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   This module provides components to display search combobox/select inputs with various styles, colors,
   sizes, and configurations. The main component, `search_combobox/1`, acts as a container for select options,
-  and allows users to search, filter and select items from a dropdown list.
+  and allows users to search, filter and select items from a dropdown list with
+  group-based collapse and sort functionality
 
   The search combobox component supports features like:
-  - Search filtering of options
+  - Search filtering of options (always enabled)
   - Single and multiple selection modes
   - Custom option rendering
   - Keyboard navigation
   - Accessibility support
+  - Dynamic group collapsing and sorting
   """
 
   use Phoenix.Component
@@ -25,7 +27,7 @@ defmodule GeoWeb.Components.SearchCombobox do
   such as searchable options, multiple selection, and grouped items.
 
   It supports various customization options including:
-  - Searchable options with filter functionality
+  - Searchable options with filter functionality (always enabled)
   - Single or multiple selection modes
   - Option grouping with labels
   - Custom styling with color themes and variants
@@ -34,6 +36,7 @@ defmodule GeoWeb.Components.SearchCombobox do
   - Form field integration
   - Custom placeholders and descriptions
   - Start section slots for icons or additional content
+  - Dynamic group collapsing and sorting
 
 
    ## Example usage:
@@ -65,7 +68,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     </.search_combobox>
 
     # Multiple selection with custom rendering
-    <.search_combobox multiple searchable placeholder="Select fruits">
+    <.search_combobox multiple placeholder="Select fruits">
       <:option value="apple">
         <div class="flex items-center gap-2">
           <span>🍎</span>
@@ -79,6 +82,40 @@ defmodule GeoWeb.Components.SearchCombobox do
         </div>
       </:option>
     </.search_combobox>
+
+    # Group-based collapse and sort
+    group_states = %{
+      "Fruits" => %{collapsed: false, sort_icon: "hero-chevron-up"},
+      "Vegetables" => %{collapsed: true, sort_icon: "hero-chevron-down"},
+      "Grains" => %{collapsed: false, sort_icon: "hero-chevron-up"}
+    }
+
+    <.search_combobox
+      enable_group_sorting={true}
+      group_states={group_states}
+      toggle_group_sort_event="toggle_group_sort"
+      toggle_group_collapse_event="toggle_group_collapse">
+      <:option group="Fruits" value="apple">Apple</:option>
+      <:option group="Fruits" value="banana">Banana</:option>
+      <:option group="Vegetables" value="carrot">Carrot</:option>
+      <:option group="Grains" value="rice">Rice</:option>
+    </.search_combobox>
+
+    # Event Handlers
+    def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
+      current_icon = get_in(socket.assigns.group_states, [group_name, :sort_icon])
+      new_icon = if current_icon == "hero-chevron-up", do: "hero-chevron-down", else: "hero-chevron-up"
+
+      new_group_states = put_in(socket.assigns.group_states, [group_name, :sort_icon], new_icon)
+      {:noreply, assign(socket, :group_states, new_group_states)}
+    end
+
+    def handle_event("toggle_group_collapse", %{"group" => group_name}, socket) do
+      current_collapsed = get_in(socket.assigns.group_states, [group_name, :collapsed])
+      new_group_states = put_in(socket.assigns.group_states, [group_name, :collapsed], !current_collapsed)
+
+      {:noreply, assign(socket, :group_states, new_group_states)}
+    end
   ```
   """
 
@@ -106,7 +143,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   attr :search_placeholder, :string,
     default: "Search..",
-    doc: "Custom CSS class for additional styling"
+    doc: "Placeholder text for the search input"
 
   attr :color, :string, default: "natural", doc: "Determines color theme"
   attr :variant, :string, default: "base", doc: "Determines variant theme"
@@ -116,22 +153,14 @@ defmodule GeoWeb.Components.SearchCombobox do
   attr :padding, :string, default: "small", doc: "Padding size"
   attr :height, :string, default: "h-fit max-h-40", doc: "Dropdown height"
   attr :description, :string, default: nil, doc: "Determines a short description"
-  attr :searchable, :boolean, default: false, doc: "Determines a short description"
   attr :multiple, :boolean, default: false, doc: "Multiple selections in the combobox"
   attr :search_event, :string, default: nil, doc: "Phoenix event to trigger when searching"
 
-  # New attributes for group sorting
-  attr :enable_group_sorting, :boolean, default: false, doc: "Enable sorting controls for search groups"
-  attr :code_sort_order, :string, default: "asc", doc: "Sort order for search code group (asc/desc)"
-  attr :name_sort_order, :string, default: "asc", doc: "Sort order for search name group (asc/desc)"
-  attr :toggle_iso_code_sort_event, :string, default: "toggle_iso_code_sort", doc: "Event name for toggling code sort order"
-  attr :toggle_name_sort_event, :string, default: "toggle_name_sort", doc: "Event name for toggling name sort order"
-
-  # New attributes for group collapsing
-  attr :iso_code_group_collapsed, :boolean, default: false, doc: "Whether the ISO code group is collapsed"
-  attr :name_group_collapsed, :boolean, default: false, doc: "Whether the name group is collapsed"
-  attr :toggle_iso_code_group_event, :string, default: "toggle_iso_code_group", doc: "Event name for toggling ISO code group collapse state"
-  attr :toggle_name_group_event, :string, default: "toggle_name_group", doc: "Event name for toggling name group collapse state"
+  # New attributes for dynamic group management
+  attr :enable_group_sorting, :boolean, default: false, doc: "Enable sorting controls for groups"
+  attr :group_states, :map, default: %{}, doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
+  attr :toggle_group_sort_event, :string, default: "toggle_group_sort", doc: "Event name for toggling group sort order"
+  attr :toggle_group_collapse_event, :string, default: "toggle_group_collapse", doc: "Event name for toggling group collapse state"
 
   slot :start_section, required: false, doc: "Renders heex content in start of an element" do
     attr :class, :string, doc: "Custom CSS class for additional styling"
@@ -297,7 +326,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2"
             hidden
           >
-            <div :if={@searchable} class="mt-1 mb-2 mx-1.5">
+            <div class="mt-1 mb-2 mx-1.5">
               <input
                 type="text"
                 role="searchbox"
@@ -318,198 +347,91 @@ defmodule GeoWeb.Components.SearchCombobox do
               scrollbar_width="w-[4px]"
             >
               <div class="px-1.5">
-                <%= if @enable_group_sorting && (!Enum.empty?(@grouped_countries.iso_code_group) || !Enum.empty?(@grouped_countries.name_group)) do %>
-                  <!-- By search Code Group -->
-                  <div :if={!Enum.empty?(@grouped_countries.iso_code_group)} class={["option-group", @option_group_class]}>
-                    <div class="group-label font-semibold my-2 flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <button
-                          type="button"
-                          phx-click={@toggle_iso_code_group_event}
-                          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                          title="Toggle group visibility"
-                        >
-                          <%= if Map.get(assigns, :iso_code_group_collapsed, false) do %>
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          <% else %>
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          <% end %>
-                        </button>
-                        <span>By search Code</span>
-                      </div>
-                      <button
-                        type="button"
-                        phx-click={@toggle_iso_code_sort_event}
-                        class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Toggle iso code sort order"
-                      >
-                        <span class="mr-1">Sort</span>
-                        <%= if Map.get(assigns, :code_sort_order, "asc") == "asc" do %>
-                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 15l4-4 4 4" />
-                          </svg>
-                        <% else %>
-                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 9l-4 4-4-4" />
-                          </svg>
-                        <% end %>
-                      </button>
-                    </div>
-
-                    <div :if={!@iso_code_group_collapsed} class="transition-all duration-200 ease-in-out">
-                      <.option
-                        :for={search <- @grouped_countries.iso_code_group}
-                        value={search.value}
-                      >
-                        {search.label}
-                      </.option>
-                    </div>
-                  </div>
-
-                  <!-- By search Name Group -->
-                  <div :if={!Enum.empty?(@grouped_countries.name_group)} class={["option-group mt-4", @option_group_class]}>
-                    <div class="group-label font-semibold my-2 flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <button
-                          type="button"
-                          phx-click={@toggle_name_group_event}
-                          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                          title="Toggle group visibility"
-                        >
-                          <%= if @name_group_collapsed do %>
-                            <.icon name="hero-chevron-right" class="h-4 w-4" />
-                          <% else %>
-                            <.icon name="hero-chevron-down" class="h-4 w-4" />
-                          <% end %>
-                        </button>
-                        <span>By Name</span>
-                      </div>
-                      <button
-                        type="button"
-                        phx-click={@toggle_name_sort_event}
-                        class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Toggle name sort order"
-                      >
-                        <span class="mr-1">Sort</span>
-                        <%= if @name_sort_order == "asc" do %>
-                          <.icon name="hero-chevron-up" class="h-4 w-4" />
-                        <% else %>
-                          <.icon name="hero-chevron-down" class="h-4 w-4" />
-                        <% end %>
-                      </button>
-                    </div>
-
-                    <div :if={!@name_group_collapsed} class="transition-all duration-200 ease-in-out">
-                      <.option
-                        :for={search <- @grouped_countries.name_group}
-                        value={search.value}
-                      >
-                        {search.label}
-                      </.option>
-                    </div>
-                  </div>
-                <% else %>
-                  <!-- Handle slots with group sorting functionality -->
-                  <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
-                    <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
-                      <%= if !is_nil(group_label) do %>
-                        <div class={["option-group", if(group_label == "By search Name", do: "mt-4"), @option_group_class]}>
-                          <div class="group-label font-semibold my-2 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                phx-click={if group_label == "By search Code", do: @toggle_iso_code_group_event, else: @toggle_name_group_event}
-                                class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                title="Toggle group visibility"
-                              >
-                                <%= if (group_label == "By search Code" && @iso_code_group_collapsed) || (group_label == "By search Name" && @name_group_collapsed) do %>
-                                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                                  </svg>
-                                <% else %>
-                                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                <% end %>
-                              </button>
-                              <span>{group_label}</span>
-                            </div>
+                <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
+                  <!-- Dynamic Groups with Sorting and Collapsing -->
+                  <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
+                    <%= if !is_nil(group_label) do %>
+                      <div class={["option-group", if(group_label != Enum.group_by(@option, & &1[:group]) |> Enum.to_list() |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                        <div class="group-label font-semibold my-2 flex items-center justify-between">
+                          <div class="flex items-center gap-2">
                             <button
                               type="button"
-                              phx-click={if group_label == "By search Code", do: @toggle_iso_code_sort_event, else: @toggle_name_sort_event}
+                              phx-click={@toggle_group_collapse_event}
+                              phx-value-group={group_label}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title={"Toggle #{String.downcase(group_label)} sort order"}
+                              title="Toggle group visibility"
                             >
-                              <span class="mr-1">Sort</span>
-                              <%= if (group_label == "By search Code" && @code_sort_order == "asc") || (group_label == "By search Name" && @name_sort_order == "asc") do %>
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 15l4-4 4 4" />
-                                </svg>
+                              <%= if get_in(@group_states, [group_label, :collapsed]) do %>
+                                <.icon name="hero-chevron-right" class="h-4 w-4" />
                               <% else %>
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 9l-4 4-4-4" />
-                                </svg>
+                                <.icon name="hero-chevron-down" class="h-4 w-4" />
                               <% end %>
                             </button>
+                            <span>{group_label}</span>
                           </div>
-
-                          <div
-                            :if={!((group_label == "By search Code" && @iso_code_group_collapsed) || (group_label == "By search Name" && @name_group_collapsed))}
-                            class="transition-all duration-200 ease-in-out"
-                          >
-                            <.option
-                              :for={option <- grouped_options}
-                              value={option[:value]}
-                              disabled={option[:disabled]}
-                              class={option[:class]}
+                          <%= if length(grouped_options) > 1 do %>
+                            <button
+                              type="button"
+                              phx-click={@toggle_group_sort_event}
+                              phx-value-group={group_label}
+                              class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                              title={"Toggle #{group_label} sort order"}
                             >
-                              {render_slot(option)}
-                            </.option>
-                          </div>
+                              <span class="mr-1">Sort</span>
+                              <.icon name={get_in(@group_states, [group_label, :sort_icon]) || "hero-chevron-up"} class="h-4 w-4" />
+                            </button>
+                          <% end %>
                         </div>
-                      <% end %>
-                    <% end %>
-                  <% else %>
-                    <!-- Regular ungrouped display -->
-                    <.option :for={{label, value} <- @options} :if={@options} value={value}>
-                      {label}
-                    </.option>
 
-                    <div
-                      :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
-                      :if={!is_nil(group_label)}
-                      class={["option-group", @option_group_class]}
-                    >
-                      <div class="group-label font-semibold my-2">{group_label}</div>
-
-                      <div>
-                        <.option
-                          :for={option <- grouped_options}
-                          value={option[:value]}
-                          disabled={option[:disabled]}
-                          class={option[:class]}
-                        >
-                          {render_slot(option)}
-                        </.option>
+                        <div :if={!get_in(@group_states, [group_label, :collapsed])} class="transition-all duration-200 ease-in-out">
+                          <.option
+                            :for={option <- grouped_options}
+                            value={option[:value]}
+                            disabled={option[:disabled]}
+                            class={option[:class]}
+                          >
+                            {render_slot(option)}
+                          </.option>
+                        </div>
                       </div>
-                    </div>
-
-                    <.option
-                      :for={option <- Enum.filter(@option, &is_nil(&1[:group]))}
-                      value={option[:value]}
-                      disabled={option[:disabled]}
-                      class={option[:class]}
-                    >
-                      {render_slot(option)}
-                    </.option>
+                    <% end %>
                   <% end %>
+                <% else %>
+                  <!-- Regular ungrouped or non-sortable display -->
+                  <.option :for={{label, value} <- @options} :if={@options} value={value}>
+                    {label}
+                  </.option>
+
+                  <div
+                    :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
+                    :if={!is_nil(group_label)}
+                    class={["option-group", @option_group_class]}
+                  >
+                    <div class="group-label font-semibold my-2">{group_label}</div>
+
+                    <div>
+                      <.option
+                        :for={option <- grouped_options}
+                        value={option[:value]}
+                        disabled={option[:disabled]}
+                        class={option[:class]}
+                      >
+                        {render_slot(option)}
+                      </.option>
+                    </div>
+                  </div>
+
+                  <.option
+                    :for={option <- Enum.filter(@option, &is_nil(&1[:group]))}
+                    value={option[:value]}
+                    disabled={option[:disabled]}
+                    class={option[:class]}
+                  >
+                    {render_slot(option)}
+                  </.option>
                 <% end %>
 
-                <div :if={@searchable} class="no-results text-center hidden">
+                <div class="no-results text-center hidden">
                   {gettext("Nothing found!")}
                 </div>
               </div>
@@ -530,15 +452,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       |> assign_new(:options, fn -> [] end)
       |> assign_new(:option, fn -> [] end)
       |> assign_new(:value, fn -> Map.get(assigns, :value) end)
-
-    # Prepare grouped search data if group sorting is enabled
-    grouped_countries = if assigns[:enable_group_sorting] do
-      prepare_search_groups(assigns[:options] || [], assigns[:enable_group_sorting], assigns[:code_sort_order], assigns[:name_sort_order])
-    else
-      %{iso_code_group: [], name_group: []}
-    end
-
-    assigns = assign(assigns, :grouped_countries, grouped_countries)
 
     ~H"""
     <div key={@key} class={[
@@ -655,7 +568,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2"
             hidden
           >
-            <div :if={@searchable} class="mt-1 mb-2 mx-1.5">
+            <div class="mt-1 mb-2 mx-1.5">
               <input
                 type="text"
                 role="searchbox"
@@ -676,198 +589,91 @@ defmodule GeoWeb.Components.SearchCombobox do
               scrollbar_width="w-[4px]"
             >
               <div class="px-1.5">
-                <%= if @enable_group_sorting && (!Enum.empty?(@grouped_countries.iso_code_group) || !Enum.empty?(@grouped_countries.name_group)) do %>
-                  <!-- By search Code Group -->
-                  <div :if={!Enum.empty?(@grouped_countries.iso_code_group)} class={["option-group", @option_group_class]}>
-                    <div class="group-label font-semibold my-2 flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <button
-                          type="button"
-                          phx-click={@toggle_iso_code_group_event}
-                          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                          title="Toggle group visibility"
-                        >
-                          <%= if Map.get(assigns, :iso_code_group_collapsed, false) do %>
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          <% else %>
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          <% end %>
-                        </button>
-                        <span>By search Code</span>
-                      </div>
-                      <button
-                        type="button"
-                        phx-click={@toggle_iso_code_sort_event}
-                        class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Toggle iso code sort order"
-                      >
-                        <span class="mr-1">Sort</span>
-                        <%= if Map.get(assigns, :code_sort_order, "asc") == "asc" do %>
-                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 15l4-4 4 4" />
-                          </svg>
-                        <% else %>
-                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 9l-4 4-4-4" />
-                          </svg>
-                        <% end %>
-                      </button>
-                    </div>
-
-                    <div :if={!@iso_code_group_collapsed} class="transition-all duration-200 ease-in-out">
-                      <.option
-                        :for={search <- @grouped_countries.iso_code_group}
-                        value={search.value}
-                      >
-                        {search.label}
-                      </.option>
-                    </div>
-                  </div>
-
-                  <!-- By search Name Group -->
-                  <div :if={!Enum.empty?(@grouped_countries.name_group)} class={["option-group mt-4", @option_group_class]}>
-                    <div class="group-label font-semibold my-2 flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <button
-                          type="button"
-                          phx-click={@toggle_name_group_event}
-                          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                          title="Toggle group visibility"
-                        >
-                          <%= if @name_group_collapsed do %>
-                            <.icon name="hero-chevron-right" class="h-4 w-4" />
-                          <% else %>
-                            <.icon name="hero-chevron-down" class="h-4 w-4" />
-                          <% end %>
-                        </button>
-                        <span>By Name</span>
-                      </div>
-                      <button
-                        type="button"
-                        phx-click={@toggle_name_sort_event}
-                        class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Toggle name sort order"
-                      >
-                        <span class="mr-1">Sort</span>
-                        <%= if @name_sort_order == "asc" do %>
-                          <.icon name="hero-chevron-up" class="h-4 w-4" />
-                        <% else %>
-                          <.icon name="hero-chevron-down" class="h-4 w-4" />
-                        <% end %>
-                      </button>
-                    </div>
-
-                    <div :if={!@name_group_collapsed} class="transition-all duration-200 ease-in-out">
-                      <.option
-                        :for={search <- @grouped_countries.name_group}
-                        value={search.value}
-                      >
-                        {search.label}
-                      </.option>
-                    </div>
-                  </div>
-                <% else %>
-                  <!-- Handle slots with group sorting functionality -->
-                  <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
-                    <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
-                      <%= if !is_nil(group_label) do %>
-                        <div class={["option-group", if(group_label == "By search Name", do: "mt-4"), @option_group_class]}>
-                          <div class="group-label font-semibold my-2 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                phx-click={if group_label == "By search Code", do: @toggle_iso_code_group_event, else: @toggle_name_group_event}
-                                class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                title="Toggle group visibility"
-                              >
-                                <%= if (group_label == "By search Code" && @iso_code_group_collapsed) || (group_label == "By search Name" && @name_group_collapsed) do %>
-                                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                                  </svg>
-                                <% else %>
-                                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                <% end %>
-                              </button>
-                              <span>{group_label}</span>
-                            </div>
+                <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
+                  <!-- Dynamic Groups with Sorting and Collapsing -->
+                  <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
+                    <%= if !is_nil(group_label) do %>
+                      <div class={["option-group", if(group_label != Enum.group_by(@option, & &1[:group]) |> Enum.to_list() |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                        <div class="group-label font-semibold my-2 flex items-center justify-between">
+                          <div class="flex items-center gap-2">
                             <button
                               type="button"
-                              phx-click={if group_label == "By search Code", do: @toggle_iso_code_sort_event, else: @toggle_name_sort_event}
+                              phx-click={@toggle_group_collapse_event}
+                              phx-value-group={group_label}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title={"Toggle #{String.downcase(group_label)} sort order"}
+                              title="Toggle group visibility"
                             >
-                              <span class="mr-1">Sort</span>
-                              <%= if (group_label == "By search Code" && @code_sort_order == "asc") || (group_label == "By search Name" && @name_sort_order == "asc") do %>
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 15l4-4 4 4" />
-                                </svg>
+                              <%= if get_in(@group_states, [group_label, :collapsed]) do %>
+                                <.icon name="hero-chevron-right" class="h-4 w-4" />
                               <% else %>
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 9l-4 4-4-4" />
-                                </svg>
+                                <.icon name="hero-chevron-down" class="h-4 w-4" />
                               <% end %>
                             </button>
+                            <span>{group_label}</span>
                           </div>
-
-                          <div
-                            :if={!((group_label == "By search Code" && @iso_code_group_collapsed) || (group_label == "By search Name" && @name_group_collapsed))}
-                            class="transition-all duration-200 ease-in-out"
-                          >
-                            <.option
-                              :for={option <- grouped_options}
-                              value={option[:value]}
-                              disabled={option[:disabled]}
-                              class={option[:class]}
+                          <%= if length(grouped_options) > 1 do %>
+                            <button
+                              type="button"
+                              phx-click={@toggle_group_sort_event}
+                              phx-value-group={group_label}
+                              class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                              title={"Toggle #{group_label} sort order"}
                             >
-                              {render_slot(option)}
-                            </.option>
-                          </div>
+                              <span class="mr-1">Sort</span>
+                              <.icon name={get_in(@group_states, [group_label, :sort_icon]) || "hero-chevron-up"} class="h-4 w-4" />
+                            </button>
+                          <% end %>
                         </div>
-                      <% end %>
-                    <% end %>
-                  <% else %>
-                    <!-- Regular ungrouped display -->
-                    <.option :for={{label, value} <- @options} :if={@options} value={value}>
-                      {label}
-                    </.option>
 
-                    <div
-                      :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
-                      :if={!is_nil(group_label)}
-                      class={["option-group", @option_group_class]}
-                    >
-                      <div class="group-label font-semibold my-2">{group_label}</div>
-
-                      <div>
-                        <.option
-                          :for={option <- grouped_options}
-                          value={option[:value]}
-                          disabled={option[:disabled]}
-                          class={option[:class]}
-                        >
-                          {render_slot(option)}
-                        </.option>
+                        <div :if={!get_in(@group_states, [group_label, :collapsed])} class="transition-all duration-200 ease-in-out">
+                          <.option
+                            :for={option <- grouped_options}
+                            value={option[:value]}
+                            disabled={option[:disabled]}
+                            class={option[:class]}
+                          >
+                            {render_slot(option)}
+                          </.option>
+                        </div>
                       </div>
-                    </div>
-
-                    <.option
-                      :for={option <- Enum.filter(@option, &is_nil(&1[:group]))}
-                      value={option[:value]}
-                      disabled={option[:disabled]}
-                      class={option[:class]}
-                    >
-                      {render_slot(option)}
-                    </.option>
+                    <% end %>
                   <% end %>
+                <% else %>
+                  <!-- Regular ungrouped or non-sortable display -->
+                  <.option :for={{label, value} <- @options} :if={@options} value={value}>
+                    {label}
+                  </.option>
+
+                  <div
+                    :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
+                    :if={!is_nil(group_label)}
+                    class={["option-group", @option_group_class]}
+                  >
+                    <div class="group-label font-semibold my-2">{group_label}</div>
+
+                    <div>
+                      <.option
+                        :for={option <- grouped_options}
+                        value={option[:value]}
+                        disabled={option[:disabled]}
+                        class={option[:class]}
+                      >
+                        {render_slot(option)}
+                      </.option>
+                    </div>
+                  </div>
+
+                  <.option
+                    :for={option <- Enum.filter(@option, &is_nil(&1[:group]))}
+                    value={option[:value]}
+                    disabled={option[:disabled]}
+                    class={option[:class]}
+                  >
+                    {render_slot(option)}
+                  </.option>
                 <% end %>
 
-                <div :if={@searchable} class="no-results text-center hidden">
+                <div class="no-results text-center hidden">
                   {gettext("Nothing found!")}
                 </div>
               </div>
@@ -1373,60 +1179,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       Gettext.dngettext(GeoWeb.Gettext, "errors", msg, msg, count, opts)
     else
       Gettext.dgettext(GeoWeb.Gettext, "errors", msg, opts)
-    end
-  end
-
-  defp prepare_search_groups(options, enable_group_sorting, code_sort_order, name_sort_order) do
-    if enable_group_sorting && !Enum.empty?(options) do
-      # Convert options to a consistent format
-      countries = Enum.map(options, fn
-        {label, value} -> %{label: label, value: value}
-        value when is_binary(value) -> %{label: value, value: value}
-      end)
-
-      # Sort by search code
-      code_sorted = case code_sort_order do
-        "desc" -> Enum.sort_by(countries, fn search ->
-          # Extract search code from label if it exists (format: "🇺🇸 United States (US)")
-          case Regex.run(~r/\(([A-Z]{2,3})\)$/, search.label) do
-            [_, code] -> code
-            _ -> search.value
-          end
-        end, :desc)
-        _ -> Enum.sort_by(countries, fn search ->
-          case Regex.run(~r/\(([A-Z]{2,3})\)$/, search.label) do
-            [_, code] -> code
-            _ -> search.value
-          end
-        end, :asc)
-      end
-
-      # Sort by search name
-      name_sorted = case name_sort_order do
-        "desc" -> Enum.sort_by(countries, fn search ->
-          # Extract search name from label (format: "🇺🇸 United States (US)")
-          case Regex.run(~r/^(?:\S+\s+)?(.+?)\s+\([A-Z]{2,3}\)$/, search.label) do
-            [_, name] -> name
-            _ -> search.label
-          end
-        end, :desc)
-        _ -> Enum.sort_by(countries, fn search ->
-          case Regex.run(~r/^(?:\S+\s+)?(.+?)\s+\([A-Z]{2,3}\)$/, search.label) do
-            [_, name] -> name
-            _ -> search.label
-          end
-        end, :asc)
-      end
-
-      %{
-        iso_code_group: code_sorted,
-        name_group: name_sorted
-      }
-    else
-      %{
-        iso_code_group: [],
-        name_group: []
-      }
     end
   end
 end

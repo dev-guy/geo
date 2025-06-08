@@ -63,7 +63,7 @@ defmodule Geo.Country.Cache do
         timer_ref = schedule_refresh()
         {:ok, %{state | refresh_timer_ref: timer_ref}}
 
-      {:error, reason} ->
+            {:error, reason} ->
         Logger.error("Failed to load countries: #{inspect(reason)}")
         {:stop, reason}
     end
@@ -154,7 +154,7 @@ defmodule Geo.Country.Cache do
 
   defp load_countries do
     try do
-      countries = Geo.Geography.get_all_countries!()
+      countries = Geo.Geography.list!()
 
       # Sort by name for countries_by_name
       countries_by_name = Enum.sort_by(countries, fn country ->
