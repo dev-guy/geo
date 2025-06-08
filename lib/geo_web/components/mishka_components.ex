@@ -14,6 +14,7 @@ defmodule GeoWeb.Components.MishkaComponents do
 
       import GeoWeb.Components.Icon, only: [icon: 1]
       import GeoWeb.Components.ScrollArea, only: [scroll_area: 1]
+      import GeoWeb.Components.SearchCombobox, only: [search_combobox: 1]
     end
   end
 end

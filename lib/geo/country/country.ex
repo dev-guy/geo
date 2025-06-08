@@ -68,11 +68,11 @@ defmodule Geo.Country.Country do
       change Geo.Resources.Changes.SlugifyName
     end
 
-    action :search_countries, :string do
+    action :search, :string do
       argument :query, :string, allow_nil?: true, default: nil
 
       run fn %{arguments: %{query: query}}, _context ->
-        {:ok, Geo.Geography.CountryCache.search!(query)}
+        {:ok, Geo.Geography.Country.Cache.search!(query)}
       end
     end
   end
