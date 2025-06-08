@@ -1,4 +1,4 @@
-defmodule Geo.Repo.Migrations.MigrateResources1 do
+defmodule :"Elixir.Geo.Repo.Migrations.Add Country resource" do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
