@@ -171,6 +171,16 @@ const SearchCombobox = {
         triggerButton.removeEventListener('keydown', this.boundTriggerKeyHandler);
       }
 
+      // Ensure the trigger can receive focus and keyboard events
+      if (!triggerButton.hasAttribute('tabindex')) {
+        triggerButton.setAttribute('tabindex', '0');
+      }
+
+      // Set role if not already set
+      if (!triggerButton.hasAttribute('role')) {
+        triggerButton.setAttribute('role', 'combobox');
+      }
+
       // Create bound handlers
       this.boundTriggerHandler = this.handleTriggerClick.bind(this);
       this.boundTriggerKeyHandler = this.handleTriggerKeydown.bind(this);
@@ -382,8 +392,14 @@ const SearchCombobox = {
       this.triggerButton.setAttribute('aria-expanded', 'true');
       this.dropdownWasOpen = true; // Track state
 
-      // Focus search input if available
+      // Send search event with empty string when dropdown opens, but only if search input is empty
       const searchInput = this.el.querySelector('.search-combobox-search-input');
+      if (searchInput && (!searchInput.value || searchInput.value.trim() === '')) {
+        this.searchTerm = ''; // Clear stored search term
+        this.sendSearchEvent('');
+      }
+
+      // Focus search input if available
       if (searchInput) {
         setTimeout(() => searchInput.focus(), 10);
       }
@@ -402,17 +418,101 @@ const SearchCombobox = {
   },
 
   handleTriggerKeydown(event) {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
+
     // Handle keyboard events for the div trigger (since it's no longer a button)
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.handleTriggerClick(event);
     } else if (event.key === 'Escape') {
       // Close dropdown if open
-      const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
-      if (dropdown && !dropdown.hasAttribute('hidden')) {
+      if (isDropdownOpen) {
         dropdown.setAttribute('hidden', 'true');
         this.triggerButton.setAttribute('aria-expanded', 'false');
         this.dropdownWasOpen = false;
+      }
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      // Open dropdown if closed and navigate options
+      event.preventDefault();
+      if (!isDropdownOpen) {
+        this.openDropdownAndFocusSearch();
+      }
+      // TODO: Add option navigation logic if needed
+    } else if (this.isPrintableCharacter(event.key, event) && !isDropdownOpen) {
+      // If a printable character is typed and dropdown is closed, open it and start typing
+      console.log(`SearchCombobox: Opening dropdown and starting typing with character: "${event.key}"`);
+      event.preventDefault();
+      this.openDropdownAndStartTyping(event.key);
+    }
+  },
+
+    isPrintableCharacter(key, event) {
+    // Check if the key is a printable character (letters, numbers, symbols)
+    // Exclude special keys like Tab, Shift, Control, etc.
+    return key.length === 1 &&
+           !event.ctrlKey &&
+           !event.altKey &&
+           !event.metaKey &&
+           key !== ' '; // Space is handled separately above
+  },
+
+    openDropdownAndFocusSearch() {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+
+    if (dropdown && searchInput) {
+      console.log('SearchCombobox: Opening dropdown and focusing search input');
+      // Open dropdown
+      dropdown.removeAttribute('hidden');
+      this.triggerButton.setAttribute('aria-expanded', 'true');
+      this.dropdownWasOpen = true;
+
+      // Send search event with empty string when dropdown opens, but only if search input is empty
+      if (!searchInput.value || searchInput.value.trim() === '') {
+        this.searchTerm = ''; // Clear stored search term
+        this.sendSearchEvent('');
+      }
+
+      // Focus search input
+      setTimeout(() => searchInput.focus(), 10);
+
+      // Add document click listener to close when clicking outside
+      if (!this.boundDocumentClickHandler) {
+        this.boundDocumentClickHandler = this.handleDocumentClick.bind(this);
+        document.addEventListener('click', this.boundDocumentClickHandler);
+      }
+    }
+  },
+
+    openDropdownAndStartTyping(character) {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+
+    if (dropdown && searchInput) {
+      console.log(`SearchCombobox: Opening dropdown and starting typing with: "${character}"`);
+      // Open dropdown
+      dropdown.removeAttribute('hidden');
+      this.triggerButton.setAttribute('aria-expanded', 'true');
+      this.dropdownWasOpen = true;
+
+      // Set the character in the search input and focus it
+      searchInput.value = character;
+      this.searchTerm = character;
+
+      setTimeout(() => {
+        searchInput.focus();
+        // Position cursor at the end
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+
+        // Trigger the search with the new character
+        this.handleSearchInput({ target: searchInput });
+      }, 10);
+
+      // Add document click listener to close when clicking outside
+      if (!this.boundDocumentClickHandler) {
+        this.boundDocumentClickHandler = this.handleDocumentClick.bind(this);
+        document.addEventListener('click', this.boundDocumentClickHandler);
       }
     }
   },
@@ -494,19 +594,24 @@ const SearchCombobox = {
     // Debounce the search request (300ms delay for better responsiveness)
     this.debounceTimer = setTimeout(() => {
       console.log(`Sending search for: "${this.searchTerm}"`);
-
-      // Check if there's a phx-target attribute on the search combobox
-      const searchCombobox = this.el.closest('[phx-target]');
-      if (searchCombobox) {
-        const target = searchCombobox.getAttribute('phx-target');
-        console.log(`Sending search event to target: ${target}`);
-        // Send to the specific component
-        this.pushEventTo(target, this.searchEventName, { value: this.searchTerm });
-      } else {
-        // Send to the parent LiveView (default behavior)
-        this.pushEvent(this.searchEventName, { value: this.searchTerm });
-      }
+      this.sendSearchEvent(this.searchTerm);
     }, 300);
+  },
+
+  sendSearchEvent(searchTerm) {
+    console.log(`Sending search event with term: "${searchTerm}"`);
+
+    // Check if there's a phx-target attribute on the search combobox
+    const searchCombobox = this.el.closest('[phx-target]');
+    if (searchCombobox) {
+      const target = searchCombobox.getAttribute('phx-target');
+      console.log(`Sending search event to target: ${target}`);
+      // Send to the specific component
+      this.pushEventTo(target, this.searchEventName, { value: searchTerm });
+    } else {
+      // Send to the parent LiveView (default behavior)
+      this.pushEvent(this.searchEventName, { value: searchTerm });
+    }
   },
 
   setupDropdownObserver() {

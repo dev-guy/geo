@@ -720,6 +720,8 @@ defmodule GeoWeb.Components.SearchCombobox do
       class={[
         "search-combobox-option cursor-pointer rounded flex justify-between items-center",
         "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white",
+        "[&[data-combobox-selected]]:bg-blue-100 [&[data-combobox-selected]]:text-blue-800",
+        "dark:[&[data-combobox-selected]]:bg-blue-900 dark:[&[data-combobox-selected]]:text-blue-200",
         @class
       ]}
       data-combobox-value={@encoded_value}

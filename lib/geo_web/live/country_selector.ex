@@ -142,19 +142,42 @@ defmodule GeoWeb.CountrySelector do
     # Trim the query
     query = String.trim(query)
 
-    # If query is empty, use original countries
+    # If query is empty, use original countries and restore original sort orders
     if query == "" do
-      socket = assign(socket, :current_countries, socket.assigns.original_countries)
+      # Restore original sort orders from the full country list
+      all_countries = Geo.Geography.selector_search_countries!()
+      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(all_countries, :iso_code)
+      {name_sort_orders, name_sort_order} = determine_sort_orders(all_countries, :name)
+
+      socket =
+        socket
+        |> assign(:current_countries, socket.assigns.original_countries)
+        |> assign(:iso_code_sort_orders, iso_code_sort_orders)
+        |> assign(:name_sort_orders, name_sort_orders)
+        |> assign(:iso_code_sort_order, iso_code_sort_order)
+        |> assign(:name_sort_order, name_sort_order)
+
       {:noreply, socket}
     else
       try do
         search_results = Geo.Geography.selector_search_countries!(query)
 
-        # Apply current sort orders to the results - both groups use the same data but different sorting
-        filtered_iso = sort_group(search_results, :iso_code, socket.assigns.iso_code_sort_order)
-        filtered_name = sort_group(search_results, :name, socket.assigns.name_sort_order)
+        # Recalculate sort orders based on the search results
+        {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(search_results, :iso_code)
+        {name_sort_orders, name_sort_order} = determine_sort_orders(search_results, :name)
 
-        socket = assign(socket, :current_countries, %{iso_code_group: filtered_iso, name_group: filtered_name})
+        # Apply the determined sort orders to the results
+        filtered_iso = sort_group(search_results, :iso_code, iso_code_sort_order)
+        filtered_name = sort_group(search_results, :name, name_sort_order)
+
+        socket =
+          socket
+          |> assign(:current_countries, %{iso_code_group: filtered_iso, name_group: filtered_name})
+          |> assign(:iso_code_sort_orders, iso_code_sort_orders)
+          |> assign(:name_sort_orders, name_sort_orders)
+          |> assign(:iso_code_sort_order, iso_code_sort_order)
+          |> assign(:name_sort_order, name_sort_order)
+
         {:noreply, socket}
       rescue
         _error ->

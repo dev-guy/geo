@@ -32,13 +32,6 @@ defmodule Geo.Country.Cache do
   end
 
   @doc """
-  Get all countries.
-  """
-  def all_countries! do
-    GenServer.call(@name, :all_countries)
-  end
-
-  @doc """
   Get a country by its ISO code. Returns the Country resource or raises an error if not found.
   """
   def get_by_iso_code!(iso_code) do
@@ -64,10 +57,10 @@ defmodule Geo.Country.Cache do
     Logger.info("Starting CountryCache, loading countries from database...")
 
     case load_countries() do
-      {:ok, countries_by_name, countries_by_iso_code} ->
+      {:ok, countries_by_iso_code, countries_by_name} ->
         state = %{
-          countries_by_name: countries_by_name,
           countries_by_iso_code: countries_by_iso_code,
+          countries_by_name: countries_by_name,
           # Track the timer reference
           refresh_timer_ref: nil
         }
@@ -96,11 +89,6 @@ defmodule Geo.Country.Cache do
     {iso_results, name_results} = do_search_all(state)
     Logger.info("CountryCache.search_all returning {#{length(iso_results)}, #{length(name_results)}} results")
     {:reply, {iso_results, name_results}, state}
-  end
-
-  @impl true
-  def handle_call(:all_countries, _from, state) do
-    {:reply, state.countries_by_name, state}
   end
 
   @impl true
@@ -198,11 +186,9 @@ defmodule Geo.Country.Cache do
     # Convert the incoming query into an Ash.CiString for case-insensitive exact compares
     query_down = String.downcase(query)
 
-    countries = state.countries_by_name
-
     # 1. Exact ISO‐Code matches (case‐insensitive)
     exact_iso_code =
-      Enum.filter(countries, fn country ->
+      Enum.filter(state.countries_by_iso_code, fn country ->
         Comp.equal?(country.iso_code, query)
       end)
 
@@ -212,7 +198,7 @@ defmodule Geo.Country.Cache do
       if String.length(query) > 3 do
         []
       else
-        Enum.filter(countries, fn country ->
+        Enum.filter(state.countries_by_iso_code, fn country ->
           iso_str = Ash.CiString.to_comparable_string(country.iso_code)
 
           String.starts_with?(iso_str, query_down) and
@@ -222,25 +208,29 @@ defmodule Geo.Country.Cache do
 
     # 3. Exact Name matches (case‐insensitive), excluding any that matched in ISO
     exact_name =
-      Enum.filter(countries, fn country ->
-        Comp.equal?(country.name, query)
+      exact_iso_code ++
+      Enum.filter(state.countries_by_name, fn country ->
+        Comp.equal?(country.name, query) and
+          !Comp.equal?(country.iso_code, query)
       end)
 
     # 4. Starts with
     starts_with_name =
-      Enum.filter(countries, fn country ->
+      Enum.filter(state.countries_by_name, fn country ->
         name_str = Ash.CiString.to_comparable_string(country.name)
 
         String.starts_with?(name_str, query_down) and
+          !Comp.equal?(country.iso_code, query) and
           !Comp.equal?(country.name, query)
       end)
 
     # 5. Partial Name matches (case‐insensitive), excluding any that matched earlier
     partial_name =
-      Enum.filter(countries, fn country ->
+      Enum.filter(state.countries_by_name, fn country ->
         name_str = Ash.CiString.to_comparable_string(country.name)
 
         String.contains?(name_str, query_down) and
+          !Comp.equal?(country.iso_code, query) and
           !Comp.equal?(country.name, query) and
           !String.starts_with?(name_str, query_down)
       end)
@@ -271,6 +261,8 @@ defmodule Geo.Country.Cache do
     end)
 
     updated_name_results = name_results ++ countries_to_add_to_name
+
+    Logger.info("CountryCache.search returning #{inspect(updated_name_results)}")
 
     # Return without any sorting - just the original order from filtering
     {updated_iso_code_results, updated_name_results}
