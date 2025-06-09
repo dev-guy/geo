@@ -369,7 +369,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                             </button>
                             <span>{group_label}</span>
                           </div>
-                          <%= if length(grouped_options) > 1 do %>
+                          <%= if get_in(@group_states, [group_label, :sort_icon]) do %>
                             <button
                               type="button"
                               phx-click={@toggle_group_sort_event}
@@ -378,7 +378,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               title={"Toggle #{group_label} sort order"}
                             >
                               <span class="mr-1">Sort</span>
-                              <.icon name={get_in(@group_states, [group_label, :sort_icon]) || "hero-chevron-up"} class="h-4 w-4" />
+                              <.icon name={get_in(@group_states, [group_label, :sort_icon])} class="h-4 w-4" />
                             </button>
                           <% end %>
                         </div>
@@ -611,7 +611,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                             </button>
                             <span>{group_label}</span>
                           </div>
-                          <%= if length(grouped_options) > 1 do %>
+                          <%= if get_in(@group_states, [group_label, :sort_icon]) do %>
                             <button
                               type="button"
                               phx-click={@toggle_group_sort_event}
@@ -620,7 +620,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               title={"Toggle #{group_label} sort order"}
                             >
                               <span class="mr-1">Sort</span>
-                              <.icon name={get_in(@group_states, [group_label, :sort_icon]) || "hero-chevron-up"} class="h-4 w-4" />
+                              <.icon name={get_in(@group_states, [group_label, :sort_icon])} class="h-4 w-4" />
                             </button>
                           <% end %>
                         </div>
