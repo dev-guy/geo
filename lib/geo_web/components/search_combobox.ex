@@ -367,6 +367,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               type="button"
                               phx-click={@toggle_group_collapse_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title="Toggle group visibility"
                             >
@@ -383,6 +384,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               type="button"
                               phx-click={@toggle_group_sort_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title={"Toggle #{group_label} sort order"}
                             >
@@ -613,6 +615,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               type="button"
                               phx-click={@toggle_group_collapse_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title="Toggle group visibility"
                             >
@@ -629,6 +632,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               type="button"
                               phx-click={@toggle_group_sort_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title={"Toggle #{group_label} sort order"}
                             >

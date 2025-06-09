@@ -71,6 +71,7 @@ defmodule GeoWeb.CountrySelector do
           enable_group_sorting={true}
           toggle_group_sort_event="toggle_group_sort"
           toggle_group_collapse_event="toggle_group_collapse"
+          group_event_target={@myself}
           group_states={@group_states}
         >
         <:selection :if={@selected_country}>
