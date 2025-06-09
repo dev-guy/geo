@@ -10,7 +10,7 @@ defmodule Geo.Geography do
       define :list_countries, action: :read
       # TODO: Re-enable when selector_search action is fixed
       define :selector_search_countries, action: :selector_search, args: [{:optional, :query}]
-      define :get_by_iso_code_cached, action: :read, get_by: [:iso_code]
+      define :get_country_iso_code_cached, action: :read, get_by: [:iso_code]
     end
   end
 end

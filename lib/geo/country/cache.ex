@@ -182,9 +182,8 @@ defmodule Geo.Country.Cache do
       end)
 
       # Sort by ISO code for countries_by_iso_code
-      countries_by_iso_code = Enum.sort_by(countries, fn country ->
-        Ash.CiString.value(country.iso_code)
-      end)
+      # Default Ash sort
+      countries_by_iso_code = countries
 
       Logger.info("Loaded #{length(countries_by_name)} countries from database")
       {:ok, countries_by_name, countries_by_iso_code}
@@ -279,10 +278,6 @@ defmodule Geo.Country.Cache do
 
   defp do_search_all(state) do
     # For empty search, return all countries in both lists without any sorting
-    countries_by_name = state.countries_by_name
-    countries_by_iso = state.countries_by_iso_code
-
-    # Return both lists in their original loaded order
-    {countries_by_iso, countries_by_name}
+    {state.countries_by_iso_code, state.countries_by_name}
   end
 end

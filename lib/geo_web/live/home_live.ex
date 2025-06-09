@@ -5,7 +5,7 @@ defmodule GeoWeb.HomeLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:selected_country, nil)
+     |> assign(:selected_country, Geo.Geography.get_country_iso_code_cached!("AU"))
     }
   end
 
@@ -22,7 +22,7 @@ defmodule GeoWeb.HomeLive do
       <h1 class="text-3xl font-bold mb-4">Welcome to Geo!</h1>
       <.live_component
         module={GeoWeb.CountrySelector}
-        id="country"
+        id="country-selector-v2"
         selected_country={@selected_country}
       />
 

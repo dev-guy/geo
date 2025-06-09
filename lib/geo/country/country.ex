@@ -12,13 +12,19 @@ defmodule Geo.Country.Country.ManualSelectorSearch do
 
   def read(ash_query, _ecto_query, _opts, _context) do
     query = ash_query.arguments[:query]
-    {iso_results, name_results} = Geo.Country.Cache.search!(query)
 
-    # Combine results and remove duplicates (some countries might appear in both lists)
-    all_results = (iso_results ++ name_results)
-    |> Enum.uniq_by(& &1.id)
-
-    {:ok, all_results}
+    if query == nil or String.trim(query) == "" do
+      # For empty queries, return countries sorted by name (the default for selector)
+      # This ensures the "original" order is name-sorted, giving consistent behavior
+      {_iso_results, name_results} = Geo.Country.Cache.search!(query)
+      {:ok, name_results}
+    else
+      # For search queries, combine and deduplicate as before
+      {iso_results, name_results} = Geo.Country.Cache.search!(query)
+      all_results = (iso_results ++ name_results)
+      |> Enum.uniq_by(& &1.id)
+      {:ok, all_results}
+    end
   end
 end
 
@@ -62,7 +68,7 @@ defmodule Geo.Country.Country do
   end
 
   preparations do
-    prepare build(sort: [name: :asc])
+    prepare build(sort: [iso_code: :asc])
   end
 
   actions do

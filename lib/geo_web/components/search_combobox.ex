@@ -158,6 +158,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   # New attributes for dynamic group management
   attr :enable_group_sorting, :boolean, default: false, doc: "Enable sorting controls for groups"
+  attr :sort_groups, :boolean, default: true, doc: "Whether to sort groups alphabetically (true) or preserve original order (false)"
   attr :group_states, :map, default: %{}, doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
   attr :toggle_group_sort_event, :string, default: "toggle_group_sort", doc: "Event name for toggling group sort order"
   attr :toggle_group_collapse_event, :string, default: "toggle_group_collapse", doc: "Event name for toggling group collapse state"
@@ -358,9 +359,9 @@ defmodule GeoWeb.Components.SearchCombobox do
               <div class="px-1.5">
                 <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
                   <!-- Dynamic Groups with Sorting and Collapsing -->
-                  <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
+                  <%= for {group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) do %>
                     <%= if !is_nil(group_label) do %>
-                      <div class={["option-group", if(group_label != Enum.group_by(@option, & &1[:group]) |> Enum.to_list() |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                      <div class={["option-group", if(group_label != (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
                         <div class="group-label font-semibold my-2 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <button
@@ -414,7 +415,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
 
                   <div
-                    :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
+                    :for={{group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group]))}
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
@@ -606,9 +607,9 @@ defmodule GeoWeb.Components.SearchCombobox do
               <div class="px-1.5">
                 <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
                   <!-- Dynamic Groups with Sorting and Collapsing -->
-                  <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
+                  <%= for {group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) do %>
                     <%= if !is_nil(group_label) do %>
-                      <div class={["option-group", if(group_label != Enum.group_by(@option, & &1[:group]) |> Enum.to_list() |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                      <div class={["option-group", if(group_label != (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
                         <div class="group-label font-semibold my-2 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <button
@@ -662,7 +663,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
 
                   <div
-                    :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
+                    :for={{group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group]))}
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
@@ -1217,4 +1218,27 @@ defmodule GeoWeb.Components.SearchCombobox do
     Enum.map(value, &encode_value/1)
   end
   defp encode_current_value(value), do: encode_value(value)
+
+  # Helper function to group by while preserving the order of first appearance
+  defp group_by_preserving_order(enumerable, key_fun) do
+    enumerable
+    |> Enum.reduce({[], %{}}, fn item, {acc, seen} ->
+      key = key_fun.(item)
+      if Map.has_key?(seen, key) do
+        # Key already exists, add to existing group
+        updated_acc = Enum.map(acc, fn {k, items} ->
+          if k == key do
+            {k, items ++ [item]}
+          else
+            {k, items}
+          end
+        end)
+        {updated_acc, seen}
+      else
+        # New key, add new group
+        {acc ++ [{key, [item]}], Map.put(seen, key, true)}
+      end
+    end)
+    |> elem(0)
+  end
 end

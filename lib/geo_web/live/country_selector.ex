@@ -1,10 +1,17 @@
 defmodule GeoWeb.CountrySelector do
   use GeoWeb, :live_component
 
-  @impl true
+    @impl true
   def update(assigns, socket) do
     # Convert selected_country from Ash resource to internal format if needed
     assigns = convert_selected_country_to_internal_format(assigns)
+
+    # Set default group_order if not provided - but ensure it's always :name if not explicitly set
+    assigns = if Map.has_key?(assigns, :group_order) do
+      assigns
+    else
+      Map.put(assigns, :group_order, :name)
+    end
 
     if socket.assigns[:original_countries] do
       {:ok, assign(socket, assigns)}
@@ -38,22 +45,46 @@ defmodule GeoWeb.CountrySelector do
     end
   end
 
-  @impl true
+    @impl true
   def render(assigns) do
-    # Build group_states with sort icons based on availability
-    # Note: Order matters here - "By Name" should come first in the dropdown
-    group_states = %{
-      "By Name" => %{
-        collapsed: assigns.name_group_collapsed,
-        sort_icon: if(length(assigns.name_sort_orders) > 0, do: get_sort_icon(assigns.name_sort_order), else: nil)
-      },
-      "By Country Code" => %{
-        collapsed: assigns.iso_code_group_collapsed,
-        sort_icon: if(length(assigns.iso_code_sort_orders) > 0, do: get_sort_icon(assigns.iso_code_sort_order), else: nil)
-      }
-    }
+        # Build group_states with sort icons based on availability
+    # Order is controlled by group_order assign
+        group_states = case assigns.group_order do
+      :iso_code ->
+        %{
+          "By Country Code" => %{
+            collapsed: assigns.iso_code_group_collapsed,
+            sort_icon: if(length(assigns.iso_code_sort_orders) > 0, do: get_sort_icon(assigns.iso_code_sort_order), else: nil)
+          },
+          "By Name" => %{
+            collapsed: assigns.name_group_collapsed,
+            sort_icon: if(length(assigns.name_sort_orders) > 0, do: get_sort_icon(assigns.name_sort_order), else: nil)
+          }
+        }
+      _ -> # defaults to :name
+        %{
+          "By Name" => %{
+            collapsed: assigns.name_group_collapsed,
+            sort_icon: if(length(assigns.name_sort_orders) > 0, do: get_sort_icon(assigns.name_sort_order), else: nil)
+          },
+          "By Country Code" => %{
+            collapsed: assigns.iso_code_group_collapsed,
+            sort_icon: if(length(assigns.iso_code_sort_orders) > 0, do: get_sort_icon(assigns.iso_code_sort_order), else: nil)
+          }
+        }
+    end
 
-    assigns = assign(assigns, :group_states, group_states)
+        # Get ordered country groups for rendering
+    {first_countries, first_group_name, second_countries, second_group_name} =
+      get_ordered_country_groups_for_render(assigns.current_countries, assigns.group_order)
+
+    assigns =
+      assigns
+      |> assign(:group_states, group_states)
+      |> assign(:first_countries, first_countries)
+      |> assign(:first_group_name, first_group_name)
+      |> assign(:second_countries, second_countries)
+      |> assign(:second_group_name, second_group_name)
 
     ~H"""
     <div id={@id} class="country-selector" phx-hook="CountrySelector">
@@ -69,6 +100,7 @@ defmodule GeoWeb.CountrySelector do
           variant="bordered"
           color="primary"
           enable_group_sorting={true}
+          sort_groups={false}
           toggle_group_sort_event="toggle_group_sort"
           toggle_group_collapse_event="toggle_group_collapse"
           group_event_target={@myself}
@@ -78,41 +110,29 @@ defmodule GeoWeb.CountrySelector do
           <div class="flex items-center">
             <span class="text-lg mr-2">{to_string(@selected_country.flag)}</span>
             <span class="text-base font-semibold text-gray-800">{to_string(@selected_country.name)}</span>
-            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
+            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded ml-2">
               {to_string(@selected_country.iso_code)}
             </span>
           </div>
         </:selection>
+
         <:option
-          :for={country <- @current_countries.name_group}
-          group="By Name"
+          :for={country <- @first_countries}
+          group={@first_group_name}
           value={to_string(country.iso_code)}
         >
-          <div class="flex items-center">
-            <span class="text-lg mr-2">{to_string(country.flag)}</span>
-            <span class="text-base font-semibold text-gray-800">{to_string(country.name)}</span>
-            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
-              {to_string(country.iso_code)}
-            </span>
-          </div>
+          <.country_option_content country={country} group_order={@group_order} group_name={@first_group_name} />
         </:option>
+
         <:option
-          :for={country <- @current_countries.iso_code_group}
-          group="By Country Code"
+          :for={country <- @second_countries}
+          group={@second_group_name}
           value={to_string(country.iso_code)}
         >
-          <div class="flex items-center">
-            <span class="text-lg mr-2">{to_string(country.flag)}</span>
-            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
-              {to_string(country.iso_code)}
-            </span>
-            <span class="text-base font-semibold text-gray-800">{to_string(country.name)}</span>
-          </div>
+          <.country_option_content country={country} group_order={@group_order} group_name={@second_group_name} />
         </:option>
         </.search_combobox>
       </form>
-
-
     </div>
     """
   end
@@ -197,11 +217,7 @@ defmodule GeoWeb.CountrySelector do
     end
   end
 
-
-
-
-
-    def handle_event("country_selected", %{"country" => iso_code}, socket) do
+  def handle_event("country_selected", %{"country" => iso_code}, socket) do
     # Find the selected country by iso_code from current countries
     # Use the iso_code group since both groups contain the same countries
     selected_country = Enum.find(socket.assigns.current_countries.iso_code_group, fn country ->
@@ -224,6 +240,37 @@ defmodule GeoWeb.CountrySelector do
   defp get_selected_country_iso_code(nil), do: nil
   defp get_selected_country_iso_code(country) do
     to_string(country.iso_code)
+  end
+
+
+
+  # Helper component for rendering country option content
+  defp country_option_content(assigns) do
+    ~H"""
+    <div class="flex items-center">
+      <span class="text-lg mr-2">{to_string(@country.flag)}</span>
+      <%= if should_show_iso_first?(@group_order, @group_name) do %>
+        <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded mr-2">
+          {to_string(@country.iso_code)}
+        </span>
+        <span class="text-base font-semibold text-gray-800">{to_string(@country.name)}</span>
+      <% else %>
+        <span class="text-base font-semibold text-gray-800">{to_string(@country.name)}</span>
+        <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded ml-2">
+          {to_string(@country.iso_code)}
+        </span>
+      <% end %>
+    </div>
+    """
+  end
+
+  # Helper function to determine if ISO code should be shown first
+  defp should_show_iso_first?(group_order, group_name) do
+    case {group_order, group_name} do
+      {:iso_code, "By Country Code"} -> true
+      {:name, "By Country Code"} -> true
+      _ -> false
+    end
   end
 
   defp sort_group(list, field, :asc), do: Enum.sort_by(list, &Map.get(&1, field))
@@ -265,6 +312,20 @@ defmodule GeoWeb.CountrySelector do
         true ->
           {[:original, :asc, :desc], :original}
       end
+    end
+  end
+
+      defp get_ordered_country_groups_for_render(current_countries, group_order) do
+    case group_order do
+      :iso_code ->
+        # When sorting by ISO code first, we want "By Country Code" to appear first
+        {current_countries.iso_code_group, "By Country Code", current_countries.name_group, "By Name"}
+      :name -> # explicitly handle :name
+        # When sorting by name first (default), we want "By Name" to appear first
+        {current_countries.name_group, "By Name", current_countries.iso_code_group, "By Country Code"}
+      _ -> # fallback defaults to :name
+        # Default to name ordering
+        {current_countries.name_group, "By Name", current_countries.iso_code_group, "By Country Code"}
     end
   end
 end
