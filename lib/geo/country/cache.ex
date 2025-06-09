@@ -39,7 +39,7 @@ defmodule Geo.Country.Cache do
   end
 
   @doc """
-  Get a country by its ISO code. Returns the Country resource or nil if not found.
+  Get a country by its ISO code. Returns the Country resource or raises an error if not found.
   """
   def get_by_iso_code!(iso_code) do
     country = GenServer.call(@name, {:get_by_iso_code, iso_code})

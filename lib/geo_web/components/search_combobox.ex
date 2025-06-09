@@ -161,6 +161,7 @@ defmodule GeoWeb.Components.SearchCombobox do
   attr :group_states, :map, default: %{}, doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
   attr :toggle_group_sort_event, :string, default: "toggle_group_sort", doc: "Event name for toggling group sort order"
   attr :toggle_group_collapse_event, :string, default: "toggle_group_collapse", doc: "Event name for toggling group collapse state"
+  attr :group_event_target, :any, default: nil, doc: "Target for group events (phx-target)"
 
   slot :start_section, required: false, doc: "Renders heex content in start of an element" do
     attr :class, :string, doc: "Custom CSS class for additional styling"
@@ -225,7 +226,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         </div>
       </div>
 
-      <div phx-hook="SearchCombobox" data-multiple={@multiple} id={"#{@id}-search-combobox"}>
+      <div phx-hook="SearchCombobox" data-multiple={@multiple} data-search-event={@search_event} id={"#{@id}-search-combobox"}>
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
           <option value=""></option>
@@ -253,14 +254,14 @@ defmodule GeoWeb.Components.SearchCombobox do
         </select>
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
-          <button
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between focus:outline-none border rounded-md"
+          <div
+            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
             aria-controls={"#{@id}-search-combobox-listbox"}
             aria-labelledby={"#{@id}-label #{@id}-button"}
-            type="button"
+            tabindex="0"
           >
             <div class="flex-1 flex items-center gap-2">
               <div
@@ -273,7 +274,11 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@start_section)}
               </div>
 
-              <div :if={@placeholder} class="search-combobox-placeholder select-none">
+              <div :if={@selection != []} class={[@selection[:class]]}>
+                {render_slot(@selection)}
+              </div>
+
+              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none">
                 {@placeholder}
               </div>
 
@@ -284,11 +289,6 @@ defmodule GeoWeb.Components.SearchCombobox do
                   "[&_.search-combobox-pill]:px-1 [&_.search-combobox-pill]:leading-4"
                 ]}
               >
-              </div>
-
-              <!-- Hidden selection slot template for JavaScript to use -->
-              <div :if={@selection != []} class="search-combobox-selection-slot hidden">
-                {render_slot(@selection)}
               </div>
             </div>
 
@@ -325,7 +325,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 <path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" />
               </svg>
             </div>
-          </button>
+          </div>
 
           <div
             id={"#{@id}-search-combobox-listbox"}
@@ -479,7 +479,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         </div>
       </div>
 
-      <div phx-hook="SearchCombobox" data-multiple={@multiple} id={"#{@id}-search-combobox"}>
+      <div phx-hook="SearchCombobox" data-multiple={@multiple} data-search-event={@search_event} id={"#{@id}-search-combobox"}>
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
           <option value=""></option>
@@ -507,14 +507,14 @@ defmodule GeoWeb.Components.SearchCombobox do
         </select>
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
-          <button
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between focus:outline-none border rounded-md"
+          <div
+            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
             aria-controls={"#{@id}-search-combobox-listbox"}
             aria-labelledby={"#{@id}-label #{@id}-button"}
-            type="button"
+            tabindex="0"
           >
             <div id={"#{@id}-select_toggle_label"} class="flex-1 flex items-center gap-2">
               <div
@@ -527,16 +527,15 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@start_section)}
               </div>
 
-              <div :if={@placeholder} class="search-combobox-placeholder select-none">
+              <div :if={@selection != []} class={[@selection[:class]]}>
+                {render_slot(@selection)}
+              </div>
+
+              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none">
                 {@placeholder}
               </div>
 
               <div data-part="select_toggle_label" class="selected-value"></div>
-
-              <!-- Hidden selection slot template for JavaScript to use -->
-              <div :if={@selection != []} class="search-combobox-selection-slot hidden">
-                {render_slot(@selection)}
-              </div>
             </div>
 
             <div class="flex items-center gap-1">
@@ -572,7 +571,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 <path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" />
               </svg>
             </div>
-          </button>
+          </div>
 
           <div
             id={"#{@id}-search-combobox-listbox"}

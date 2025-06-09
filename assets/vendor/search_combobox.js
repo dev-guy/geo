@@ -12,6 +12,11 @@ const SearchCombobox = {
     this.searchTerm = '';
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
+
+    // Get the search event name from data attribute, default to 'search_countries'
+    this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
+    console.log(`SearchCombobox: Using search event name: ${this.searchEventName}`);
+
     this.setupTriggerButton();
     this.setupSearchIntercept();
     this.setupDropdownObserver();
@@ -156,23 +161,28 @@ const SearchCombobox = {
     // Find the trigger button
     const triggerButton = this.el.querySelector('.search-combobox-trigger');
     if (triggerButton) {
-      console.log('Found combobox trigger button, setting up click handler');
+      console.log('Found combobox trigger, setting up click and keyboard handlers');
 
       // Remove any existing event listeners to avoid duplicates
       if (this.boundTriggerHandler) {
         triggerButton.removeEventListener('click', this.boundTriggerHandler);
       }
+      if (this.boundTriggerKeyHandler) {
+        triggerButton.removeEventListener('keydown', this.boundTriggerKeyHandler);
+      }
 
-      // Create bound handler
+      // Create bound handlers
       this.boundTriggerHandler = this.handleTriggerClick.bind(this);
+      this.boundTriggerKeyHandler = this.handleTriggerKeydown.bind(this);
 
-      // Add click handler
+      // Add event listeners
       triggerButton.addEventListener('click', this.boundTriggerHandler);
+      triggerButton.addEventListener('keydown', this.boundTriggerKeyHandler);
 
       // Store reference to the trigger button
       this.triggerButton = triggerButton;
     } else {
-      console.log('Combobox trigger button not found');
+      console.log('Combobox trigger not found');
     }
   },
 
@@ -251,7 +261,13 @@ const SearchCombobox = {
 
   setSingleSelection(option, value) {
     const selectEl = this.el.querySelector('.search-combobox-select');
-    if (!selectEl) return;
+    if (!selectEl) {
+      console.log('setSingleSelection: No select element found');
+      return;
+    }
+
+    console.log('setSingleSelection called with value:', value);
+    console.log('setSingleSelection: selectEl.name =', selectEl.name);
 
     // Remove selection from all options
     this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
@@ -262,6 +278,7 @@ const SearchCombobox = {
 
     // Update select element
     selectEl.value = value;
+    console.log('setSingleSelection: set selectEl.value to:', selectEl.value);
 
     // Update display and trigger change event
     this.updateSingleDisplay(option);
@@ -269,32 +286,16 @@ const SearchCombobox = {
   },
 
   updateSingleDisplay(selectedOption) {
-    const displayEl = this.el.querySelector('[data-part="select_toggle_label"]');
+    // With the new div-based structure, the selection content is managed by the LiveView
+    // through the :selection slot, so we don't need to manipulate the display here.
+    // Just ensure proper form state is maintained.
     const placeholder = this.el.querySelector('.search-combobox-placeholder');
 
-    if (displayEl) {
+    if (placeholder) {
       if (selectedOption) {
-        // Check if there's a selection slot template
-        const selectionSlot = this.el.querySelector('.search-combobox-selection-slot');
-
-        if (selectionSlot) {
-          // Use the selection slot content - trigger a LiveView event to update the selection
-          const value = selectedOption.getAttribute('data-combobox-value');
-          this.pushEvent('selection_updated', { value: value });
-          // The LiveView will update the selection slot content, so we don't need to do anything here
-          // Just make sure the display is visible
-          displayEl.classList.remove('hidden');
-        } else {
-          // Fallback to option text content
-          displayEl.textContent = selectedOption.textContent;
-          displayEl.classList.remove('hidden');
-        }
-
-        if (placeholder) placeholder.classList.add('hidden');
+        placeholder.classList.add('hidden');
       } else {
-        displayEl.innerHTML = '';
-        displayEl.classList.add('hidden');
-        if (placeholder) placeholder.classList.remove('hidden');
+        placeholder.classList.remove('hidden');
       }
     }
   },
@@ -356,8 +357,13 @@ const SearchCombobox = {
   triggerChange() {
     const selectEl = this.el.querySelector('.search-combobox-select');
     if (selectEl) {
+      console.log('triggerChange: dispatching change event on select with value:', selectEl.value);
+      console.log('triggerChange: select element name:', selectEl.name);
       const event = new Event('change', { bubbles: true });
       selectEl.dispatchEvent(event);
+      console.log('triggerChange: change event dispatched');
+    } else {
+      console.log('triggerChange: No select element found');
     }
   },
 
@@ -392,6 +398,22 @@ const SearchCombobox = {
       dropdown.setAttribute('hidden', 'true');
       this.triggerButton.setAttribute('aria-expanded', 'false');
       this.dropdownWasOpen = false; // Track state
+    }
+  },
+
+  handleTriggerKeydown(event) {
+    // Handle keyboard events for the div trigger (since it's no longer a button)
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.handleTriggerClick(event);
+    } else if (event.key === 'Escape') {
+      // Close dropdown if open
+      const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+      if (dropdown && !dropdown.hasAttribute('hidden')) {
+        dropdown.setAttribute('hidden', 'true');
+        this.triggerButton.setAttribute('aria-expanded', 'false');
+        this.dropdownWasOpen = false;
+      }
     }
   },
 
@@ -472,8 +494,18 @@ const SearchCombobox = {
     // Debounce the search request (300ms delay for better responsiveness)
     this.debounceTimer = setTimeout(() => {
       console.log(`Sending search for: "${this.searchTerm}"`);
-      // Send the search term to the LiveView
-      this.pushEvent('search_countries', { value: this.searchTerm });
+
+      // Check if there's a phx-target attribute on the search combobox
+      const searchCombobox = this.el.closest('[phx-target]');
+      if (searchCombobox) {
+        const target = searchCombobox.getAttribute('phx-target');
+        console.log(`Sending search event to target: ${target}`);
+        // Send to the specific component
+        this.pushEventTo(target, this.searchEventName, { value: this.searchTerm });
+      } else {
+        // Send to the parent LiveView (default behavior)
+        this.pushEvent(this.searchEventName, { value: this.searchTerm });
+      }
     }, 300);
   },
 
@@ -537,6 +569,9 @@ const SearchCombobox = {
     }
     if (this.boundTriggerHandler && this.triggerButton) {
       this.triggerButton.removeEventListener('click', this.boundTriggerHandler);
+    }
+    if (this.boundTriggerKeyHandler && this.triggerButton) {
+      this.triggerButton.removeEventListener('keydown', this.boundTriggerKeyHandler);
     }
     if (this.boundDocumentClickHandler) {
       document.removeEventListener('click', this.boundDocumentClickHandler);

@@ -3,30 +3,22 @@ defmodule GeoWeb.CountrySelector do
 
   @impl true
   def update(assigns, socket) do
+    # Convert selected_country from Ash resource to internal format if needed
+    assigns = convert_selected_country_to_internal_format(assigns)
+
     if socket.assigns[:original_countries] do
       {:ok, assign(socket, assigns)}
     else
-      countries = Geo.Geography.list_countries!()
-
-      # Convert to maps for easier handling
-      country_maps = Enum.map(countries, fn country ->
-        %{
-          iso_code: to_string(country.iso_code),
-          name: to_string(country.name),
-          flag: to_string(country.flag)
-        }
-      end)
-
-      countries_by_iso = country_maps
-      countries_by_name = country_maps
+      # Get initial countries - returns a single list, we duplicate for both groups
+      all_countries = Geo.Geography.selector_search_countries!()
+      countries_by_iso = all_countries
+      countries_by_name = all_countries
 
       socket =
         socket
         |> assign(:original_countries, %{iso_code_group: countries_by_iso, name_group: countries_by_name})
         |> assign(:current_countries, %{iso_code_group: countries_by_iso, name_group: countries_by_name})
-        |> assign(:query, "")
         |> assign(:selected_country, nil)
-        |> assign(:loading_countries, false)
         |> assign(:iso_code_group_collapsed, false)
         |> assign(:name_group_collapsed, false)
         |> assign(assigns)
@@ -55,7 +47,7 @@ defmodule GeoWeb.CountrySelector do
         collapsed: assigns.name_group_collapsed,
         sort_icon: if(length(assigns.name_sort_orders) > 0, do: get_sort_icon(assigns.name_sort_order), else: nil)
       },
-      "By Iso code" => %{
+      "By Country Code" => %{
         collapsed: assigns.iso_code_group_collapsed,
         sort_icon: if(length(assigns.iso_code_sort_orders) > 0, do: get_sort_icon(assigns.iso_code_sort_order), else: nil)
       }
@@ -64,107 +56,96 @@ defmodule GeoWeb.CountrySelector do
     assigns = assign(assigns, :group_states, group_states)
 
     ~H"""
-    <div id={@id} class="country-selector">
-      <.search_combobox
-        name="country"
-        id="country-combobox"
-        value={@selected_country}
-        placeholder="Select a country..."
-        search_placeholder="Type to search countries"
-        search_event="search_countries"
-        phx-change="country_selected"
-        variant="bordered"
-        color="primary"
-        enable_group_sorting={true}
-        toggle_group_sort_event="toggle_iso_code_sort"
-        toggle_group_collapse_event="toggle_iso_code_group"
-      >
+    <div id={@id} class="country-selector" phx-hook="CountrySelector">
+      <form phx-change="country_selected" phx-target={@myself}>
+        <.search_combobox
+          name="country"
+          id="country-combobox"
+          value={get_selected_country_iso_code(@selected_country)}
+          placeholder="Select a country..."
+          search_placeholder="Type to search countries"
+          search_event="search_combobox_updated"
+          phx-target={@myself}
+          variant="bordered"
+          color="primary"
+          enable_group_sorting={true}
+          toggle_group_sort_event="toggle_group_sort"
+          toggle_group_collapse_event="toggle_group_collapse"
+          group_states={@group_states}
+        >
         <:selection :if={@selected_country}>
           <div class="flex items-center">
-            <span class="text-lg mr-2">{@selected_country.flag}</span>
-            <span class="text-base font-semibold text-gray-800">{@selected_country.name}</span>
+            <span class="text-lg mr-2">{to_string(@selected_country.flag)}</span>
+            <span class="text-base font-semibold text-gray-800">{to_string(@selected_country.name)}</span>
             <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
-              {@selected_country.iso_code}
+              {to_string(@selected_country.iso_code)}
             </span>
           </div>
         </:selection>
         <:option
           :for={country <- @current_countries.name_group}
           group="By Name"
-          value={country}
+          value={to_string(country.iso_code)}
         >
           <div class="flex items-center">
-            <span class="text-lg mr-2">{country.flag}</span>
-            <span class="text-base font-semibold text-gray-800">{country.name}</span>
+            <span class="text-lg mr-2">{to_string(country.flag)}</span>
+            <span class="text-base font-semibold text-gray-800">{to_string(country.name)}</span>
             <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
-              {country.iso_code}
+              {to_string(country.iso_code)}
             </span>
           </div>
         </:option>
         <:option
           :for={country <- @current_countries.iso_code_group}
-          group="By Iso code"
-          value={country}
+          group="By Country Code"
+          value={to_string(country.iso_code)}
         >
           <div class="flex items-center">
-            <span class="text-lg mr-2">{country.flag}</span>
-            <span class="text-base font-semibold text-gray-800">{country.name}</span>
+            <span class="text-lg mr-2">{to_string(country.flag)}</span>
             <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
-              {country.iso_code}
+              {to_string(country.iso_code)}
             </span>
+            <span class="text-base font-semibold text-gray-800">{to_string(country.name)}</span>
           </div>
         </:option>
+        </.search_combobox>
+      </form>
 
-      </.search_combobox>
 
-      <%= if @query != "" && @current_countries.iso_code_group == [] && @current_countries.name_group == [] && !@loading_countries do %>
-        <div class="mt-2 p-3 text-sm text-gray-500 bg-gray-50 rounded-md">
-          No countries found matching "{@query}". Try a different search term.
-        </div>
-      <% end %>
-
-      <%= if @loading_countries do %>
-        <div class="mt-2 flex items-center justify-between text-sm text-gray-500 bg-gray-50 rounded-md p-4">
-          <div class="flex items-center">
-            <.spinner size="small" color="primary" class="mr-3" />
-            <span>Searching countries...</span>
-          </div>
-          <.button
-            variant="transparent"
-            size="small"
-            phx-click="cancel_country_search"
-            class="text-gray-500 hover:text-gray-700"
-          >
-            Cancel
-          </.button>
-        </div>
-      <% end %>
     </div>
     """
   end
 
   @impl true
-  def handle_event("search_countries", %{"value" => query}, socket) do
-    down = String.downcase(query)
-    original = socket.assigns.original_countries
+  def handle_event("search_combobox_updated", %{"value" => query}, socket) do
+    # Trim the query
+    query = String.trim(query)
 
-    filtered_code = original.iso_code_group |> Enum.filter(&matches(&1, down))
-    filtered_name = original.name_group |> Enum.filter(&matches(&1, down))
+    # If query is empty, use original countries
+    if query == "" do
+      socket = assign(socket, :current_countries, socket.assigns.original_countries)
+      {:noreply, socket}
+    else
+      try do
+        search_results = Geo.Geography.selector_search_countries!(query)
 
-    filtered_code = sort_group(filtered_code, :iso_code, socket.assigns.iso_code_sort_order)
-    filtered_name = sort_group(filtered_name, :name, socket.assigns.name_sort_order)
+        # Apply current sort orders to the results - both groups use the same data but different sorting
+        filtered_iso = sort_group(search_results, :iso_code, socket.assigns.iso_code_sort_order)
+        filtered_name = sort_group(search_results, :name, socket.assigns.name_sort_order)
 
-    socket =
-      socket
-      |> assign(:query, query)
-      |> assign(:current_countries, %{iso_code_group: filtered_code, name_group: filtered_name})
-
-    {:noreply, socket}
+        socket = assign(socket, :current_countries, %{iso_code_group: filtered_iso, name_group: filtered_name})
+        {:noreply, socket}
+      rescue
+        _error ->
+          socket = assign(socket, :current_countries, %{iso_code_group: [], name_group: []})
+          {:noreply, socket}
+      end
+    end
   end
 
-  def handle_event("toggle_iso_code_sort", %{"group" => group_name}, socket) do
+  def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
     case group_name do
-      "By Iso code" ->
+      "By Country Code" ->
         orders = socket.assigns.iso_code_sort_orders
         current = socket.assigns.iso_code_sort_order
         new = next_in_list(orders, current)
@@ -201,9 +182,9 @@ defmodule GeoWeb.CountrySelector do
     end
   end
 
-  def handle_event("toggle_iso_code_group", %{"group" => group_name}, socket) do
+  def handle_event("toggle_group_collapse", %{"group" => group_name}, socket) do
     case group_name do
-      "By Iso code" ->
+      "By Country Code" ->
         {:noreply,
          assign(socket, :iso_code_group_collapsed, !socket.assigns.iso_code_group_collapsed)}
 
@@ -215,38 +196,33 @@ defmodule GeoWeb.CountrySelector do
     end
   end
 
-  def handle_event("cancel_country_search", _, socket) do
-    {:noreply,
-     socket
-     |> assign(:query, "")
-     |> assign(:current_countries, socket.assigns.original_countries)}
-  end
 
-  def handle_event("country_selected", %{"value" => encoded_country}, socket) do
-    selected = case Jason.decode(encoded_country) do
-      {:ok, country_map} ->
-        # Convert back to atom keys for consistency
-        %{
-          iso_code: country_map["iso_code"],
-          name: country_map["name"],
-          flag: country_map["flag"]
-        }
-      {:error, _} ->
-        # Fallback: try to find by iso_code if it's a simple string
-        (socket.assigns.original_countries.iso_code_group ++
-           socket.assigns.original_countries.name_group)
-        |> Enum.find(&(&1.iso_code == encoded_country))
-    end
 
-    socket = assign(socket, :selected_country, selected)
-    send(self(), {:country_selected, selected})
+
+
+    def handle_event("country_selected", %{"country" => iso_code}, socket) do
+    # Find the selected country by iso_code from current countries
+    # Use the iso_code group since both groups contain the same countries
+    selected_country = Enum.find(socket.assigns.current_countries.iso_code_group, fn country ->
+      to_string(country.iso_code) == iso_code
+    end)
+
+    # Update internal state and send the original Ash resource to parent
+    socket = assign(socket, :selected_country, selected_country)
+    send(self(), {:country_selected, selected_country})
+
     {:noreply, socket}
   end
 
   # Private helpers
-  defp matches(country, down) do
-    String.contains?(String.downcase(country.name), down) ||
-      String.contains?(String.downcase(country.iso_code), down)
+  defp convert_selected_country_to_internal_format(assigns) do
+    # No conversion needed - we work with Ash resources directly
+    assigns
+  end
+
+  defp get_selected_country_iso_code(nil), do: nil
+  defp get_selected_country_iso_code(country) do
+    to_string(country.iso_code)
   end
 
   defp sort_group(list, field, :asc), do: Enum.sort_by(list, &Map.get(&1, field))
@@ -260,8 +236,6 @@ defmodule GeoWeb.CountrySelector do
     idx = Enum.find_index(list, &(&1 == current)) || 0
     Enum.at(list, rem(idx + 1, length(list)))
   end
-
-
 
   # Get the appropriate icon for the current sort order
   defp get_sort_icon(:asc), do: "hero-chevron-up"
