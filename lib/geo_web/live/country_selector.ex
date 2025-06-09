@@ -3,35 +3,61 @@ defmodule GeoWeb.CountrySelector do
 
   @impl true
   def update(assigns, socket) do
-    [countries_by_iso, countries_by_name]= Geo.Geography.search_countries!()
+    if socket.assigns[:original_countries] do
+      {:ok, assign(socket, assigns)}
+    else
+      countries = Geo.Geography.list_countries!()
 
-    socket =
-      socket
-        |> assign(:original_countries, [countries_by_iso, countries_by_name])
-        |> assign(:current_countries, [countries_by_iso, countries_by_name])
+      # Convert to maps for easier handling
+      country_maps = Enum.map(countries, fn country ->
+        %{
+          iso_code: to_string(country.iso_code),
+          name: to_string(country.name),
+          flag: to_string(country.flag)
+        }
+      end)
+
+      countries_by_iso = country_maps
+      countries_by_name = country_maps
+
+      socket =
+        socket
+        |> assign(:original_countries, %{iso_code_group: countries_by_iso, name_group: countries_by_name})
+        |> assign(:current_countries, %{iso_code_group: countries_by_iso, name_group: countries_by_name})
+        |> assign(:query, "")
+        |> assign(:selected_country, nil)
+        |> assign(:loading_countries, false)
+        |> assign(:iso_code_group_collapsed, false)
+        |> assign(:name_group_collapsed, false)
+        |> assign(assigns)
+
+      # Determine sort orders for each group
+      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso, :iso_code)
+      {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
+
+      socket =
+        socket
         |> assign(:iso_code_sort_order, iso_code_sort_order)
         |> assign(:name_sort_order, name_sort_order)
         |> assign(:iso_code_sort_orders, iso_code_sort_orders)
         |> assign(:name_sort_orders, name_sort_orders)
-        |> assign(assigns)
 
       {:ok, socket}
-    else
-      {:ok, assign(socket, assigns)}
     end
   end
 
   @impl true
   def render(assigns) do
     # Build group_states with sort icons based on availability
+    # Note: Order matters here - "By Name" should come first in the dropdown
     group_states = %{
-      "By Country Code" => %{
-        collapsed: assigns.iso_code_group_collapsed,
-        sort_icon: if(length(assigns.iso_code_sort_orders) > 0, do: get_sort_icon(assigns.iso_code_sort_order), else: nil)
-      },
-      "By Country Name" => %{
+      "By Name" => %{
         collapsed: assigns.name_group_collapsed,
         sort_icon: if(length(assigns.name_sort_orders) > 0, do: get_sort_icon(assigns.name_sort_order), else: nil)
+      },
+      "By Iso code" => %{
+        collapsed: assigns.iso_code_group_collapsed,
+        sort_icon: if(length(assigns.iso_code_sort_orders) > 0, do: get_sort_icon(assigns.iso_code_sort_order), else: nil)
       }
     }
 
@@ -42,7 +68,7 @@ defmodule GeoWeb.CountrySelector do
       <.search_combobox
         name="country"
         id="country-combobox"
-        value={@selected_country && @selected_country.iso_code}
+        value={@selected_country}
         placeholder="Select a country..."
         search_placeholder="Type to search countries"
         search_event="search_countries"
@@ -53,33 +79,42 @@ defmodule GeoWeb.CountrySelector do
         toggle_group_sort_event="toggle_iso_code_sort"
         toggle_group_collapse_event="toggle_iso_code_group"
       >
+        <:selection :if={@selected_country}>
+          <div class="flex items-center">
+            <span class="text-lg mr-2">{@selected_country.flag}</span>
+            <span class="text-base font-semibold text-gray-800">{@selected_country.name}</span>
+            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
+              {@selected_country.iso_code}
+            </span>
+          </div>
+        </:selection>
         <:option
-          :for={country <- @current_countries.iso_code_group}
-          group="By Country Code"
-          value={country.iso_code}
+          :for={country <- @current_countries.name_group}
+          group="By Name"
+          value={country}
         >
           <div class="flex items-center">
             <span class="text-lg mr-2">{country.flag}</span>
+            <span class="text-base font-semibold text-gray-800">{country.name}</span>
             <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
               {country.iso_code}
             </span>
+          </div>
+        </:option>
+        <:option
+          :for={country <- @current_countries.iso_code_group}
+          group="By Iso code"
+          value={country}
+        >
+          <div class="flex items-center">
+            <span class="text-lg mr-2">{country.flag}</span>
             <span class="text-base font-semibold text-gray-800">{country.name}</span>
+            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
+              {country.iso_code}
+            </span>
           </div>
         </:option>
 
-        <:option
-          :for={country <- @current_countries.name_group}
-          group="By Country Name"
-          value={country.iso_code}
-        >
-          <div class="flex items-center">
-            <span class="text-lg mr-2">{country.flag}</span>
-            <span class="text-base font-semibold text-gray-800">{country.name}</span>
-            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
-              {country.iso_code}
-            </span>
-          </div>
-        </:option>
       </.search_combobox>
 
       <%= if @query != "" && @current_countries.iso_code_group == [] && @current_countries.name_group == [] && !@loading_countries do %>
@@ -129,7 +164,7 @@ defmodule GeoWeb.CountrySelector do
 
   def handle_event("toggle_iso_code_sort", %{"group" => group_name}, socket) do
     case group_name do
-      "By Country Code" ->
+      "By Iso code" ->
         orders = socket.assigns.iso_code_sort_orders
         current = socket.assigns.iso_code_sort_order
         new = next_in_list(orders, current)
@@ -145,7 +180,7 @@ defmodule GeoWeb.CountrySelector do
 
         {:noreply, socket}
 
-      "By Country Name" ->
+      "By Name" ->
         orders = socket.assigns.name_sort_orders
         current = socket.assigns.name_sort_order
         new = next_in_list(orders, current)
@@ -168,11 +203,11 @@ defmodule GeoWeb.CountrySelector do
 
   def handle_event("toggle_iso_code_group", %{"group" => group_name}, socket) do
     case group_name do
-      "By Country Code" ->
+      "By Iso code" ->
         {:noreply,
          assign(socket, :iso_code_group_collapsed, !socket.assigns.iso_code_group_collapsed)}
 
-      "By Country Name" ->
+      "By Name" ->
         {:noreply, assign(socket, :name_group_collapsed, !socket.assigns.name_group_collapsed)}
 
       _ ->
@@ -187,11 +222,21 @@ defmodule GeoWeb.CountrySelector do
      |> assign(:current_countries, socket.assigns.original_countries)}
   end
 
-  def handle_event("country_selected", %{"value" => iso}, socket) do
-    selected =
-      (socket.assigns.original_countries.iso_code_group ++
-         socket.assigns.original_countries.name_group)
-      |> Enum.find(&(&1.iso_code == iso))
+  def handle_event("country_selected", %{"value" => encoded_country}, socket) do
+    selected = case Jason.decode(encoded_country) do
+      {:ok, country_map} ->
+        # Convert back to atom keys for consistency
+        %{
+          iso_code: country_map["iso_code"],
+          name: country_map["name"],
+          flag: country_map["flag"]
+        }
+      {:error, _} ->
+        # Fallback: try to find by iso_code if it's a simple string
+        (socket.assigns.original_countries.iso_code_group ++
+           socket.assigns.original_countries.name_group)
+        |> Enum.find(&(&1.iso_code == encoded_country))
+    end
 
     socket = assign(socket, :selected_country, selected)
     send(self(), {:country_selected, selected})

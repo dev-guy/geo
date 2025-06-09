@@ -167,6 +167,10 @@ defmodule GeoWeb.Components.SearchCombobox do
     attr :icon, :string, doc: "Icon displayed alongside of an item"
   end
 
+  slot :selection, required: false, doc: "Custom content to display when an item is selected" do
+    attr :class, :string, doc: "Custom CSS class for additional styling"
+  end
+
   attr :size, :string,
     default: "small",
     doc:
@@ -227,7 +231,7 @@ defmodule GeoWeb.Components.SearchCombobox do
           <option value=""></option>
 
           <%= if Enum.empty?(@option) do %>
-            {Phoenix.HTML.Form.options_for_select(@options, @value)}
+            {Phoenix.HTML.Form.options_for_select(@options, encode_current_value(@value))}
           <% else %>
             <optgroup
               :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
@@ -235,15 +239,15 @@ defmodule GeoWeb.Components.SearchCombobox do
               label={group_label}
             >
               {Phoenix.HTML.Form.options_for_select(
-                Enum.map(grouped_options, fn option -> {option[:value], option[:value]} end),
-                @value
+                Enum.map(grouped_options, &create_option_tuple/1),
+                encode_current_value(@value)
               )}
             </optgroup>
 
             {!Enum.any?(@option, &Map.has_key?(&1, :group)) &&
               Phoenix.HTML.Form.options_for_select(
-                Enum.map(@option, fn %{value: v} -> {v, v} end),
-                @value
+                Enum.map(@option, &create_option_tuple/1),
+                encode_current_value(@value)
               )}
           <% end %>
         </select>
@@ -280,6 +284,11 @@ defmodule GeoWeb.Components.SearchCombobox do
                   "[&_.search-combobox-pill]:px-1 [&_.search-combobox-pill]:leading-4"
                 ]}
               >
+              </div>
+
+              <!-- Hidden selection slot template for JavaScript to use -->
+              <div :if={@selection != []} class="search-combobox-selection-slot hidden">
+                {render_slot(@selection)}
               </div>
             </div>
 
@@ -476,7 +485,7 @@ defmodule GeoWeb.Components.SearchCombobox do
           <option value=""></option>
 
           <%= if Enum.empty?(@option) do %>
-            {Phoenix.HTML.Form.options_for_select(@options, @value)}
+            {Phoenix.HTML.Form.options_for_select(@options, encode_current_value(@value))}
           <% else %>
             <optgroup
               :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
@@ -484,8 +493,8 @@ defmodule GeoWeb.Components.SearchCombobox do
               label={group_label}
             >
               {Phoenix.HTML.Form.options_for_select(
-                Enum.map(grouped_options, fn option -> {option[:value], option[:value]} end),
-                @value
+                Enum.map(grouped_options, &create_option_tuple/1),
+                encode_current_value(@value)
               )}
             </optgroup>
 
@@ -523,6 +532,11 @@ defmodule GeoWeb.Components.SearchCombobox do
               </div>
 
               <div data-part="select_toggle_label" class="selected-value"></div>
+
+              <!-- Hidden selection slot template for JavaScript to use -->
+              <div :if={@selection != []} class="search-combobox-selection-slot hidden">
+                {render_slot(@selection)}
+              </div>
             </div>
 
             <div class="flex items-center gap-1">
@@ -694,6 +708,8 @@ defmodule GeoWeb.Components.SearchCombobox do
   slot :inner_block, required: false, doc: "Inner block that renders HEEx content"
 
   defp option(assigns) do
+    assigns = assign(assigns, :encoded_value, encode_value(assigns.value))
+
     ~H"""
     <div
       role="option"
@@ -702,7 +718,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white",
         @class
       ]}
-      data-combobox-value={@value}
+      data-combobox-value={@encoded_value}
     >
       {render_slot(@inner_block)}
       <svg
@@ -1181,4 +1197,21 @@ defmodule GeoWeb.Components.SearchCombobox do
       Gettext.dgettext(GeoWeb.Gettext, "errors", msg, opts)
     end
   end
+
+  # Helper function to encode values for form compatibility
+  defp encode_value(value) when is_map(value), do: Jason.encode!(value)
+  defp encode_value(value), do: value
+
+  # Helper function to create option tuples
+  defp create_option_tuple(option) do
+    value = option[:value]
+    encoded = encode_value(value)
+    {encoded, encoded}
+  end
+
+  # Helper function to encode the current value for comparison
+  defp encode_current_value(value) when is_list(value) do
+    Enum.map(value, &encode_value/1)
+  end
+  defp encode_current_value(value), do: encode_value(value)
 end

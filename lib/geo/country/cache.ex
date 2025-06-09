@@ -39,6 +39,18 @@ defmodule Geo.Country.Cache do
   end
 
   @doc """
+  Get a country by its ISO code. Returns the Country resource or nil if not found.
+  """
+  def get_by_iso_code!(iso_code) do
+    country = GenServer.call(@name, {:get_by_iso_code, iso_code})
+    if country do
+      country
+    else
+      raise "Country with ISO code #{iso_code} not found"
+    end
+  end
+
+  @doc """
   Refresh the cache by reloading all countries from the database.
   """
   def refresh_cache do
@@ -89,6 +101,14 @@ defmodule Geo.Country.Cache do
   @impl true
   def handle_call(:all_countries, _from, state) do
     {:reply, state.countries_by_name, state}
+  end
+
+  @impl true
+  def handle_call({:get_by_iso_code, iso_code}, _from, state) do
+    country = Enum.find(state.countries_by_iso_code, fn country ->
+      Comp.equal?(country.iso_code, iso_code)
+    end)
+    {:reply, country, state}
   end
 
   @impl true

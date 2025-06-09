@@ -274,11 +274,25 @@ const SearchCombobox = {
 
     if (displayEl) {
       if (selectedOption) {
-        displayEl.textContent = selectedOption.textContent;
-        displayEl.classList.remove('hidden');
+        // Check if there's a selection slot template
+        const selectionSlot = this.el.querySelector('.search-combobox-selection-slot');
+
+        if (selectionSlot) {
+          // Use the selection slot content - trigger a LiveView event to update the selection
+          const value = selectedOption.getAttribute('data-combobox-value');
+          this.pushEvent('selection_updated', { value: value });
+          // The LiveView will update the selection slot content, so we don't need to do anything here
+          // Just make sure the display is visible
+          displayEl.classList.remove('hidden');
+        } else {
+          // Fallback to option text content
+          displayEl.textContent = selectedOption.textContent;
+          displayEl.classList.remove('hidden');
+        }
+
         if (placeholder) placeholder.classList.add('hidden');
       } else {
-        displayEl.textContent = '';
+        displayEl.innerHTML = '';
         displayEl.classList.add('hidden');
         if (placeholder) placeholder.classList.remove('hidden');
       }

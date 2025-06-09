@@ -68,12 +68,23 @@ defmodule Geo.Country.Country do
       change Geo.Resources.Changes.SlugifyName
     end
 
-    action :search, :string do
-      argument :query, :string, allow_nil?: true, default: nil
-
-      run fn %{arguments: %{query: query}}, _context ->
-        {:ok, Geo.Geography.Country.Cache.search!(query)}
-      end
-    end
+    # TODO: Fix these cached operations later
+    # # Cached operation
+    # read :get_by_iso_code_cached do
+    #   argument :iso_code, :ci_string, allow_nil?: false
+    #
+    #   manual fn %{arguments: %{iso_code: iso_code}}, _context ->
+    #     {:ok, Geo.Country.Cache.get_by_iso_code!(iso_code)}
+    #   end
+    # end
+    #
+    # # Cached operation
+    # action :selector_search, :string do
+    #   argument :query, :string, allow_nil?: true, default: nil
+    #
+    #   manual fn %{arguments: %{query: query}}, _context ->
+    #     {:ok, Geo.Geography.Country.Cache.search!(query)}
+    #   end
+    # end
   end
 end

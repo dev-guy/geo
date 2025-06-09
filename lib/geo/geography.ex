@@ -8,7 +8,9 @@ defmodule Geo.Geography do
       define :upsert_country, action: :upsert
       define :update_country, action: :update
       define :list_countries, action: :read
-      define :search_countries, action: :search, args: [{:optional, :query}]
+      # TODO: Re-enable when selector_search action is fixed
+      # define :selector_search_countries, action: :selector_search, args: [{:optional, :query}]
+      define :get_by_iso_code_cached, action: :read, get_by: [:iso_code]
     end
   end
 end

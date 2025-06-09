@@ -3,6 +3,33 @@ defmodule GeoWeb.HomeLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    {:ok,
+     socket
+     |> assign(:selected_country, nil)
+    }
+  end
+
+  @impl true
+  def handle_event("selection_updated", %{"value" => country}, socket) do
+    {:noreply, assign(socket, :selected_country, country)}
+  end
+
+  @impl true
+  def handle_event("country_selected", %{"value" => country}, socket) do
+    {:noreply, assign(socket, :selected_country, country)}
+  end
+
+  # Forward group toggle events to the country selector component
+  @impl true
+  def handle_event("toggle_iso_code_sort", params, socket) do
+    send_update(GeoWeb.CountrySelector, id: "country", toggle_iso_code_sort: params)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("toggle_iso_code_group", params, socket) do
+    send_update(GeoWeb.CountrySelector, id: "country", toggle_iso_code_group: params)
+    {:noreply, socket}
   end
 
   @impl true
@@ -13,6 +40,7 @@ defmodule GeoWeb.HomeLive do
       <.live_component
         module={GeoWeb.CountrySelector}
         id="country"
+        selected_country={@selected_country}
       />
     </div>
     """
