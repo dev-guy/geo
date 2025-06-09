@@ -2,51 +2,13 @@ defmodule GeoWeb.CountrySelector do
   use GeoWeb, :live_component
 
   @impl true
-  def mount(_params, _session, socket) do
-    {countries_by_iso, countries_by_name} = Geo.Geography.search_countries!()
-
-    # Build original groups sorted by iso code and name
-    original = %{iso_code_group: items_by_code, name_group: items_by_name}
-
-    # Determine sort orders based on whether sorted lists match original
-    {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(items_by_code, :iso_code)
-    {name_sort_orders, name_sort_order} = determine_sort_orders(items_by_name, :name)
-
-    {:ok,
-     socket
-     |> assign(:selected_country, nil)
-     |> assign(:query, "")
-     |> assign(:original_countries, original)
-     |> assign(:current_countries, original)
-     |> assign(:loading_countries, false)
-     |> assign(:iso_code_sort_order, iso_code_sort_order)
-     |> assign(:name_sort_order, name_sort_order)
-     |> assign(:iso_code_group_collapsed, false)
-     |> assign(:name_group_collapsed, false)
-     |> assign(:iso_code_sort_orders, iso_code_sort_orders)
-     |> assign(:name_sort_orders, name_sort_orders)}
-  end
-
-  @impl true
   def update(assigns, socket) do
-    # If parent overrides groups, rebuild original/current
-    if assigns[:iso_code_group] && assigns[:name_group] do
-      countries =
-        Enum.zip(assigns.iso_code_group, assigns.name_group)
-        |> Enum.map(fn {code, name} -> %{iso_code: code, name: name, flag: nil} end)
+    [countries_by_iso, countries_by_name]= Geo.Geography.search_countries!()
 
-      items_by_code = Enum.sort_by(countries, & &1.iso_code)
-      items_by_name = Enum.sort_by(countries, & &1.name)
-      original = %{iso_code_group: items_by_code, name_group: items_by_name}
-
-      # Determine sort orders based on whether sorted lists match original
-      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(items_by_code, :iso_code)
-      {name_sort_orders, name_sort_order} = determine_sort_orders(items_by_name, :name)
-
-      socket =
-        socket
-        |> assign(:original_countries, original)
-        |> assign(:current_countries, original)
+    socket =
+      socket
+        |> assign(:original_countries, [countries_by_iso, countries_by_name])
+        |> assign(:current_countries, [countries_by_iso, countries_by_name])
         |> assign(:iso_code_sort_order, iso_code_sort_order)
         |> assign(:name_sort_order, name_sort_order)
         |> assign(:iso_code_sort_orders, iso_code_sort_orders)
@@ -88,7 +50,6 @@ defmodule GeoWeb.CountrySelector do
         variant="bordered"
         color="primary"
         enable_group_sorting={true}
-        group_states={@group_states}
         toggle_group_sort_event="toggle_iso_code_sort"
         toggle_group_collapse_event="toggle_iso_code_group"
       >
@@ -255,8 +216,7 @@ defmodule GeoWeb.CountrySelector do
     Enum.at(list, rem(idx + 1, length(list)))
   end
 
-    defp map_country(%{iso_code: iso, name: name, flag: flag}),
-    do: %{iso_code: iso, name: name, flag: flag}
+
 
   # Get the appropriate icon for the current sort order
   defp get_sort_icon(:asc), do: "hero-chevron-up"
