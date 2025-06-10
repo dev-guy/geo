@@ -13,6 +13,10 @@ const SearchCombobox = {
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
 
+    // Check if this SearchCombobox is inside a CountrySelector component
+    this.isInsideCountrySelector = !!this.el.closest('[phx-hook="CountrySelector"]');
+    console.log(`SearchCombobox: Inside CountrySelector: ${this.isInsideCountrySelector}`);
+
     // Get the search event name from data attribute, default to 'search_countries'
     this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
     console.log(`SearchCombobox: Using search event name: ${this.searchEventName}`);
@@ -31,6 +35,10 @@ const SearchCombobox = {
     const key = this.el.parentElement.getAttribute('key');
     console.log(`SearchCombobox updated with key: ${key}`);
     console.log(`SearchCombobox: Tracked dropdown state was open: ${this.dropdownWasOpen}`);
+
+    // Store whether search input was focused before update
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const wasSearchFocused = searchInput && document.activeElement === searchInput;
 
     // Check if the key has changed - if so, we need to completely reinitialize
     if (this.currentKey && this.currentKey !== key) {
@@ -64,6 +72,12 @@ const SearchCombobox = {
       setTimeout(() => {
         console.log('SearchCombobox: About to initialize selection after key change (delayed)');
         this.initializeSelection();
+        // Restore focus if search was focused - use longer delay to ensure other components finish
+        if (wasSearchFocused) {
+          setTimeout(() => {
+            this.restoreSearchFocus();
+          }, 300);
+        }
       }, 10);
     } else {
       // Normal update - just refresh handlers and selection
@@ -85,6 +99,12 @@ const SearchCombobox = {
       setTimeout(() => {
         console.log('SearchCombobox: About to re-initialize selection on update (delayed)');
         this.initializeSelection();
+        // Restore focus if search was focused - use longer delay to ensure other components finish
+        if (wasSearchFocused) {
+          setTimeout(() => {
+            this.restoreSearchFocus();
+          }, 300);
+        }
       }, 10);
     }
   },
@@ -203,15 +223,29 @@ const SearchCombobox = {
         option.removeEventListener('click', handler);
       });
     }
+    if (this.boundOptionKeydownHandlers) {
+      this.boundOptionKeydownHandlers.forEach(({ option, handler }) => {
+        option.removeEventListener('keydown', handler);
+      });
+    }
 
     this.boundOptionClickHandlers = [];
+    this.boundOptionKeydownHandlers = [];
 
-    // Set up click handlers for all options
+    // Set up click and keydown handlers for all options
     const options = this.el.querySelectorAll('.search-combobox-option');
     options.forEach(option => {
-      const handler = this.handleOptionClick.bind(this, option);
-      option.addEventListener('click', handler);
-      this.boundOptionClickHandlers.push({ option, handler });
+      const clickHandler = this.handleOptionClick.bind(this, option);
+      const keydownHandler = this.handleOptionKeydown.bind(this, option);
+
+      option.addEventListener('click', clickHandler);
+      option.addEventListener('keydown', keydownHandler);
+
+      // Make options focusable
+      option.setAttribute('tabindex', '-1');
+
+      this.boundOptionClickHandlers.push({ option, handler: clickHandler });
+      this.boundOptionKeydownHandlers.push({ option, handler: keydownHandler });
     });
 
     console.log(`Set up handlers for ${options.length} search options`);
@@ -232,6 +266,36 @@ const SearchCombobox = {
         dropdown.setAttribute('hidden', 'true');
         this.triggerButton.setAttribute('aria-expanded', 'false');
       }
+    }
+  },
+
+  handleOptionKeydown(option, event) {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
+
+    if (!isDropdownOpen) return;
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (!this.isInsideCountrySelector) {
+        // Only handle navigation if not inside CountrySelector
+        event.preventDefault();
+        this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
+      }
+      // If inside CountrySelector, let the event bubble up to CountrySelector
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      option.click();
+    } else if (event.key === ' ') {
+      // Space key should only highlight/navigate, not select
+      event.preventDefault();
+      // The option is already highlighted by the navigation, so we don't need to do anything
+      console.log('SearchCombobox: Space key pressed on option (navigation only):', option.getAttribute('data-combobox-value'));
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      dropdown.setAttribute('hidden', 'true');
+      this.triggerButton.setAttribute('aria-expanded', 'false');
+      this.dropdownWasOpen = false;
+      this.triggerButton.focus();
     }
   },
 
@@ -437,8 +501,12 @@ const SearchCombobox = {
       event.preventDefault();
       if (!isDropdownOpen) {
         this.openDropdownAndFocusSearch();
+      } else if (!this.isInsideCountrySelector) {
+        // Only handle navigation if not inside CountrySelector
+        // CountrySelector will handle its own navigation
+        this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
       }
-      // TODO: Add option navigation logic if needed
+      // If inside CountrySelector, let the event bubble up to CountrySelector
     } else if (this.isPrintableCharacter(event.key, event) && !isDropdownOpen) {
       // If a printable character is typed and dropdown is closed, open it and start typing
       console.log(`SearchCombobox: Opening dropdown and starting typing with character: "${event.key}"`);
@@ -447,7 +515,47 @@ const SearchCombobox = {
     }
   },
 
-    isPrintableCharacter(key, event) {
+  navigateOptions(direction) {
+    const options = Array.from(this.el.querySelectorAll('.search-combobox-option'));
+    if (options.length === 0) return;
+
+    let currentIndex = -1;
+    const currentSelected = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+
+    if (currentSelected) {
+      currentIndex = options.indexOf(currentSelected);
+    }
+
+    let newIndex;
+    if (direction === 'down') {
+      newIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+    } else {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+    }
+
+    const newOption = options[newIndex];
+    if (newOption) {
+      // Clear all selections and reset tabindex
+      options.forEach(opt => {
+        opt.removeAttribute('data-combobox-selected');
+        opt.setAttribute('tabindex', '-1');
+      });
+
+      // Set new selection and make it focusable
+      newOption.setAttribute('data-combobox-selected', '');
+      newOption.setAttribute('tabindex', '0');
+
+      // Scroll the option into view
+      newOption.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+      // Focus the option for accessibility
+      newOption.focus();
+
+      console.log(`SearchCombobox: Navigated ${direction} to option:`, newOption.getAttribute('data-combobox-value'));
+    }
+  },
+
+  isPrintableCharacter(key, event) {
     // Check if the key is a printable character (letters, numbers, symbols)
     // Exclude special keys like Tab, Shift, Control, etc.
     return key.length === 1 &&
@@ -457,7 +565,7 @@ const SearchCombobox = {
            key !== ' '; // Space is handled separately above
   },
 
-    openDropdownAndFocusSearch() {
+  openDropdownAndFocusSearch() {
     const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const searchInput = this.el.querySelector('.search-combobox-search-input');
 
@@ -485,7 +593,7 @@ const SearchCombobox = {
     }
   },
 
-    openDropdownAndStartTyping(character) {
+  openDropdownAndStartTyping(character) {
     const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const searchInput = this.el.querySelector('.search-combobox-search-input');
 
@@ -540,12 +648,17 @@ const SearchCombobox = {
       if (this.boundSearchHandler) {
         searchInput.removeEventListener('input', this.boundSearchHandler);
       }
+      if (this.boundSearchKeydownHandler) {
+        searchInput.removeEventListener('keydown', this.boundSearchKeydownHandler);
+      }
 
-      // Create bound handler
+      // Create bound handlers
       this.boundSearchHandler = this.handleSearchInput.bind(this);
+      this.boundSearchKeydownHandler = this.handleSearchKeydown.bind(this);
 
-      // Add our custom search handler
+      // Add our custom search handlers
       searchInput.addEventListener('input', this.boundSearchHandler);
+      searchInput.addEventListener('keydown', this.boundSearchKeydownHandler);
 
       // Store reference to the search input
       this.inputElement = searchInput;
@@ -554,11 +667,55 @@ const SearchCombobox = {
     }
   },
 
+  handleSearchKeydown(event) {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
+
+    if (!isDropdownOpen) return;
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (!this.isInsideCountrySelector) {
+        // Only handle navigation if not inside CountrySelector
+        event.preventDefault();
+        this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
+      }
+      // If inside CountrySelector, let the event bubble up to CountrySelector
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      this.selectHighlightedOption();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      dropdown.setAttribute('hidden', 'true');
+      this.triggerButton.setAttribute('aria-expanded', 'false');
+      this.dropdownWasOpen = false;
+    }
+  },
+
+  selectHighlightedOption() {
+    const selectedOption = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+    if (selectedOption) {
+      selectedOption.click();
+      console.log('SearchCombobox: Selected highlighted option:', selectedOption.getAttribute('data-combobox-value'));
+    }
+  },
+
   restoreSearchValue() {
     const searchInput = this.el.querySelector('.search-combobox-search-input');
     if (searchInput && this.searchTerm && searchInput.value !== this.searchTerm) {
       console.log(`Restoring search value: "${this.searchTerm}"`);
       searchInput.value = this.searchTerm;
+    }
+  },
+
+  restoreSearchFocus() {
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    if (searchInput) {
+      console.log('Restoring focus to search input');
+      searchInput.focus();
+      // Position cursor at the end of the text
+      if (searchInput.value) {
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+      }
     }
   },
 
@@ -672,6 +829,9 @@ const SearchCombobox = {
     if (this.boundSearchHandler && this.inputElement) {
       this.inputElement.removeEventListener('input', this.boundSearchHandler);
     }
+    if (this.boundSearchKeydownHandler && this.inputElement) {
+      this.inputElement.removeEventListener('keydown', this.boundSearchKeydownHandler);
+    }
     if (this.boundTriggerHandler && this.triggerButton) {
       this.triggerButton.removeEventListener('click', this.boundTriggerHandler);
     }
@@ -687,6 +847,11 @@ const SearchCombobox = {
     if (this.boundOptionClickHandlers) {
       this.boundOptionClickHandlers.forEach(({ option, handler }) => {
         option.removeEventListener('click', handler);
+      });
+    }
+    if (this.boundOptionKeydownHandlers) {
+      this.boundOptionKeydownHandlers.forEach(({ option, handler }) => {
+        option.removeEventListener('keydown', handler);
       });
     }
     if (this.dropdownObserver) {
