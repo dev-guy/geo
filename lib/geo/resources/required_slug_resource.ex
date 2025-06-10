@@ -1,29 +1,15 @@
-defmodule Geo.Resources.BaseResource do
+defmodule Geo.Resources.RequiredSlugResource do
   @moduledoc """
   Base resource module that provides common attributes and functionality.
   Other resources can use this module to inherit standard attributes.
   """
 
-  defmacro __using__(opts) do
+  defmacro __using__(_opts) do
     quote do
-      use Ash.Resource, unquote(opts)
-
       attributes do
-        uuid_v7_primary_key :id
-
-        # Core attributes that most resources need
-        attribute :name, :ci_string do
-          public? true
-          allow_nil? true
-        end
-
         attribute :slug, :ci_string do
-          public? true
-          allow_nil? true
+          allow_nil? false
         end
-
-        create_timestamp :created_at
-        update_timestamp :updated_at
       end
 
       # Common validations

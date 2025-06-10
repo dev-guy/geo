@@ -8,10 +8,15 @@ defmodule Geo.Country.Country.ManualGetByIsoCode do
 end
 
 defmodule Geo.Country.Country do
-  use Geo.Resources.BaseResource,
+  use Ash.Resource,
     otp_app: :healthcompass_directory,
     domain: Geo.Geography,
     data_layer: AshPostgres.DataLayer
+
+  use Geo.Resources.IdResource
+  use Geo.Resources.RequiredUniqueNameResource
+  use Geo.Resources.RequiredSlugResource
+  use Geo.Resources.TimestampsResource
 
   postgres do
     repo Geo.Repo
