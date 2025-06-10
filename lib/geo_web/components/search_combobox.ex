@@ -158,13 +158,19 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   # New attributes for dynamic group management
   attr :enable_group_sorting, :boolean, default: false, doc: "Enable sorting controls for groups"
+  attr :sort_groups, :boolean, default: true, doc: "Whether to sort groups alphabetically (true) or preserve original order (false)"
   attr :group_states, :map, default: %{}, doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
   attr :toggle_group_sort_event, :string, default: "toggle_group_sort", doc: "Event name for toggling group sort order"
   attr :toggle_group_collapse_event, :string, default: "toggle_group_collapse", doc: "Event name for toggling group collapse state"
+  attr :group_event_target, :any, default: nil, doc: "Target for group events (phx-target)"
 
   slot :start_section, required: false, doc: "Renders heex content in start of an element" do
     attr :class, :string, doc: "Custom CSS class for additional styling"
     attr :icon, :string, doc: "Icon displayed alongside of an item"
+  end
+
+  slot :selection, required: false, doc: "Custom content to display when an item is selected" do
+    attr :class, :string, doc: "Custom CSS class for additional styling"
   end
 
   attr :size, :string,
@@ -221,13 +227,13 @@ defmodule GeoWeb.Components.SearchCombobox do
         </div>
       </div>
 
-      <div phx-hook="SearchCombobox" data-multiple={@multiple} id={"#{@id}-search-combobox"}>
+      <div phx-hook="SearchCombobox" data-multiple={@multiple} data-search-event={@search_event} id={"#{@id}-search-combobox"}>
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
           <option value=""></option>
 
           <%= if Enum.empty?(@option) do %>
-            {Phoenix.HTML.Form.options_for_select(@options, @value)}
+            {Phoenix.HTML.Form.options_for_select(@options, encode_current_value(@value))}
           <% else %>
             <optgroup
               :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
@@ -235,28 +241,28 @@ defmodule GeoWeb.Components.SearchCombobox do
               label={group_label}
             >
               {Phoenix.HTML.Form.options_for_select(
-                Enum.map(grouped_options, fn option -> {option[:value], option[:value]} end),
-                @value
+                Enum.map(grouped_options, &create_option_tuple/1),
+                encode_current_value(@value)
               )}
             </optgroup>
 
             {!Enum.any?(@option, &Map.has_key?(&1, :group)) &&
               Phoenix.HTML.Form.options_for_select(
-                Enum.map(@option, fn %{value: v} -> {v, v} end),
-                @value
+                Enum.map(@option, &create_option_tuple/1),
+                encode_current_value(@value)
               )}
           <% end %>
         </select>
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
-          <button
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between focus:outline-none border rounded-md"
+          <div
+            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
             aria-controls={"#{@id}-search-combobox-listbox"}
             aria-labelledby={"#{@id}-label #{@id}-button"}
-            type="button"
+            tabindex="0"
           >
             <div class="flex-1 flex items-center gap-2">
               <div
@@ -269,7 +275,11 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@start_section)}
               </div>
 
-              <div :if={@placeholder} class="search-combobox-placeholder select-none">
+              <div :if={@selection != []} class={[@selection[:class]]}>
+                {render_slot(@selection)}
+              </div>
+
+              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none">
                 {@placeholder}
               </div>
 
@@ -316,7 +326,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 <path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" />
               </svg>
             </div>
-          </button>
+          </div>
 
           <div
             id={"#{@id}-search-combobox-listbox"}
@@ -349,15 +359,16 @@ defmodule GeoWeb.Components.SearchCombobox do
               <div class="px-1.5">
                 <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
                   <!-- Dynamic Groups with Sorting and Collapsing -->
-                  <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
+                  <%= for {group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) do %>
                     <%= if !is_nil(group_label) do %>
-                      <div class={["option-group", if(group_label != Enum.group_by(@option, & &1[:group]) |> Enum.to_list() |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                      <div class={["option-group", if(group_label != (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
                         <div class="group-label font-semibold my-2 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <button
                               type="button"
                               phx-click={@toggle_group_collapse_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title="Toggle group visibility"
                             >
@@ -369,16 +380,17 @@ defmodule GeoWeb.Components.SearchCombobox do
                             </button>
                             <span>{group_label}</span>
                           </div>
-                          <%= if length(grouped_options) > 1 do %>
+                          <%= if get_in(@group_states, [group_label, :sort_icon]) do %>
                             <button
                               type="button"
                               phx-click={@toggle_group_sort_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title={"Toggle #{group_label} sort order"}
                             >
                               <span class="mr-1">Sort</span>
-                              <.icon name={get_in(@group_states, [group_label, :sort_icon]) || "hero-chevron-up"} class="h-4 w-4" />
+                              <.icon name={get_in(@group_states, [group_label, :sort_icon])} class="h-4 w-4" />
                             </button>
                           <% end %>
                         </div>
@@ -403,7 +415,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
 
                   <div
-                    :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
+                    :for={{group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group]))}
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
@@ -470,13 +482,13 @@ defmodule GeoWeb.Components.SearchCombobox do
         </div>
       </div>
 
-      <div phx-hook="SearchCombobox" data-multiple={@multiple} id={"#{@id}-search-combobox"}>
+      <div phx-hook="SearchCombobox" data-multiple={@multiple} data-search-event={@search_event} id={"#{@id}-search-combobox"}>
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
           <option value=""></option>
 
           <%= if Enum.empty?(@option) do %>
-            {Phoenix.HTML.Form.options_for_select(@options, @value)}
+            {Phoenix.HTML.Form.options_for_select(@options, encode_current_value(@value))}
           <% else %>
             <optgroup
               :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
@@ -484,8 +496,8 @@ defmodule GeoWeb.Components.SearchCombobox do
               label={group_label}
             >
               {Phoenix.HTML.Form.options_for_select(
-                Enum.map(grouped_options, fn option -> {option[:value], option[:value]} end),
-                @value
+                Enum.map(grouped_options, &create_option_tuple/1),
+                encode_current_value(@value)
               )}
             </optgroup>
 
@@ -498,14 +510,14 @@ defmodule GeoWeb.Components.SearchCombobox do
         </select>
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
-          <button
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between focus:outline-none border rounded-md"
+          <div
+            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
             aria-controls={"#{@id}-search-combobox-listbox"}
             aria-labelledby={"#{@id}-label #{@id}-button"}
-            type="button"
+            tabindex="0"
           >
             <div id={"#{@id}-select_toggle_label"} class="flex-1 flex items-center gap-2">
               <div
@@ -518,7 +530,11 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@start_section)}
               </div>
 
-              <div :if={@placeholder} class="search-combobox-placeholder select-none">
+              <div :if={@selection != []} class={[@selection[:class]]}>
+                {render_slot(@selection)}
+              </div>
+
+              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none">
                 {@placeholder}
               </div>
 
@@ -558,7 +574,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 <path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" />
               </svg>
             </div>
-          </button>
+          </div>
 
           <div
             id={"#{@id}-search-combobox-listbox"}
@@ -591,15 +607,16 @@ defmodule GeoWeb.Components.SearchCombobox do
               <div class="px-1.5">
                 <%= if @enable_group_sorting && Enum.any?(@option, &Map.has_key?(&1, :group)) do %>
                   <!-- Dynamic Groups with Sorting and Collapsing -->
-                  <%= for {group_label, grouped_options} <- Enum.group_by(@option, & &1[:group]) do %>
+                  <%= for {group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) do %>
                     <%= if !is_nil(group_label) do %>
-                      <div class={["option-group", if(group_label != Enum.group_by(@option, & &1[:group]) |> Enum.to_list() |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                      <div class={["option-group", if(group_label != (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
                         <div class="group-label font-semibold my-2 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <button
                               type="button"
                               phx-click={@toggle_group_collapse_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title="Toggle group visibility"
                             >
@@ -611,16 +628,17 @@ defmodule GeoWeb.Components.SearchCombobox do
                             </button>
                             <span>{group_label}</span>
                           </div>
-                          <%= if length(grouped_options) > 1 do %>
+                          <%= if get_in(@group_states, [group_label, :sort_icon]) do %>
                             <button
                               type="button"
                               phx-click={@toggle_group_sort_event}
                               phx-value-group={group_label}
+                              phx-target={@group_event_target}
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title={"Toggle #{group_label} sort order"}
                             >
                               <span class="mr-1">Sort</span>
-                              <.icon name={get_in(@group_states, [group_label, :sort_icon]) || "hero-chevron-up"} class="h-4 w-4" />
+                              <.icon name={get_in(@group_states, [group_label, :sort_icon])} class="h-4 w-4" />
                             </button>
                           <% end %>
                         </div>
@@ -645,7 +663,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
 
                   <div
-                    :for={{group_label, grouped_options} <- Enum.group_by(@option, & &1[:group])}
+                    :for={{group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group]))}
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
@@ -694,15 +712,19 @@ defmodule GeoWeb.Components.SearchCombobox do
   slot :inner_block, required: false, doc: "Inner block that renders HEEx content"
 
   defp option(assigns) do
+    assigns = assign(assigns, :encoded_value, encode_value(assigns.value))
+
     ~H"""
     <div
       role="option"
       class={[
         "search-combobox-option cursor-pointer rounded flex justify-between items-center",
         "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white",
+        "[&[data-combobox-selected]]:bg-blue-100 [&[data-combobox-selected]]:text-blue-800",
+        "dark:[&[data-combobox-selected]]:bg-blue-900 dark:[&[data-combobox-selected]]:text-blue-200",
         @class
       ]}
-      data-combobox-value={@value}
+      data-combobox-value={@encoded_value}
     >
       {render_slot(@inner_block)}
       <svg
@@ -1180,5 +1202,45 @@ defmodule GeoWeb.Components.SearchCombobox do
     else
       Gettext.dgettext(GeoWeb.Gettext, "errors", msg, opts)
     end
+  end
+
+  # Helper function to encode values for form compatibility
+  defp encode_value(value) when is_map(value), do: Jason.encode!(value)
+  defp encode_value(value), do: value
+
+  # Helper function to create option tuples
+  defp create_option_tuple(option) do
+    value = option[:value]
+    encoded = encode_value(value)
+    {encoded, encoded}
+  end
+
+  # Helper function to encode the current value for comparison
+  defp encode_current_value(value) when is_list(value) do
+    Enum.map(value, &encode_value/1)
+  end
+  defp encode_current_value(value), do: encode_value(value)
+
+  # Helper function to group by while preserving the order of first appearance
+  defp group_by_preserving_order(enumerable, key_fun) do
+    enumerable
+    |> Enum.reduce({[], %{}}, fn item, {acc, seen} ->
+      key = key_fun.(item)
+      if Map.has_key?(seen, key) do
+        # Key already exists, add to existing group
+        updated_acc = Enum.map(acc, fn {k, items} ->
+          if k == key do
+            {k, items ++ [item]}
+          else
+            {k, items}
+          end
+        end)
+        {updated_acc, seen}
+      else
+        # New key, add new group
+        {acc ++ [{key, [item]}], Map.put(seen, key, true)}
+      end
+    end)
+    |> elem(0)
   end
 end

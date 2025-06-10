@@ -1,3 +1,33 @@
+defmodule Geo.Country.Country.ManualGetByIsoCode do
+  use Ash.Resource.ManualRead
+
+  def read(ash_query, _ecto_query, _opts, _context) do
+    iso_code = ash_query.arguments[:iso_code]
+    {:ok, [Geo.Country.Cache.get_by_iso_code!(iso_code)]}
+  end
+end
+
+defmodule Geo.Country.Country.ManualSelectorSearch do
+  use Ash.Resource.ManualRead
+
+  def read(ash_query, _ecto_query, _opts, _context) do
+    query = ash_query.arguments[:query]
+
+    if query == nil or String.trim(query) == "" do
+      # For empty queries, return countries sorted by name (the default for selector)
+      # This ensures the "original" order is name-sorted, giving consistent behavior
+      {_iso_results, name_results} = Geo.Country.Cache.search!(query)
+      {:ok, name_results}
+    else
+      # For search queries, combine and deduplicate as before
+      {iso_results, name_results} = Geo.Country.Cache.search!(query)
+      all_results = (iso_results ++ name_results)
+      |> Enum.uniq_by(& &1.id)
+      {:ok, all_results}
+    end
+  end
+end
+
 defmodule Geo.Country.Country do
   use Geo.Resources.BaseResource,
     otp_app: :healthcompass_directory,
@@ -38,7 +68,7 @@ defmodule Geo.Country.Country do
   end
 
   preparations do
-    prepare build(sort: [name: :asc])
+    prepare build(sort: [iso_code: :asc])
   end
 
   actions do
@@ -68,12 +98,18 @@ defmodule Geo.Country.Country do
       change Geo.Resources.Changes.SlugifyName
     end
 
-    action :search_countries, :string do
+    # Cached operation for getting by ISO code
+    read :get_by_iso_code_cached do
+      argument :iso_code, :ci_string, allow_nil?: false
+
+      manual Geo.Country.Country.ManualGetByIsoCode
+    end
+
+    # Cached operation for selector search
+    read :selector_search do
       argument :query, :string, allow_nil?: true, default: nil
 
-      run fn %{arguments: %{query: query}}, _context ->
-        {:ok, Geo.Geography.CountryCache.search!(query)}
-      end
+      manual Geo.Country.Country.ManualSelectorSearch
     end
   end
 end

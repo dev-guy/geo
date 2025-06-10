@@ -16,7 +16,7 @@ defmodule GeoWeb.Router do
   end
 
   scope "/", GeoWeb do
-    # pipe_through :browser
+    pipe_through :browser
     live "/", HomeLive, :index
   end
 
