@@ -1,7 +1,5 @@
 defmodule Geo.Resources.TimestampsResource do
   @moduledoc """
-  Base resource module that provides common attributes and functionality.
-  Other resources can use this module to inherit standard attributes.
   """
 
   defmacro __using__(_opts) do
