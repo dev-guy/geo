@@ -77,18 +77,18 @@ defmodule Geo.Country.Cache do
   @impl true
   def handle_call({:search, query}, _from, state) do
     Logger.info("CountryCache.search called with query: '#{query}'")
-    {iso_results, name_results} = do_search(state, query)
-    Logger.info("CountryCache.search returning {#{length(iso_results)}, #{length(name_results)}} results")
-    {:reply, {iso_results, name_results}, state}
+    {iso_code_results, name_results} = do_search(state, query)
+    Logger.info("CountryCache.search returning {#{length(iso_code_results)}, #{length(name_results)}} results")
+    {:reply, {iso_code_results, name_results}, state}
   end
 
   @impl true
   def handle_call(:search_all, _from, state) do
     Logger.info("CountryCache.search_all called")
     # Return all countries without sorting
-    {iso_results, name_results} = do_search_all(state)
-    Logger.info("CountryCache.search_all returning {#{length(iso_results)}, #{length(name_results)}} results")
-    {:reply, {iso_results, name_results}, state}
+    {iso_code_results, name_results} = do_search_all(state)
+    Logger.info("CountryCache.search_all returning {#{length(iso_code_results)}, #{length(name_results)}} results")
+    {:reply, {iso_code_results, name_results}, state}
   end
 
   @impl true
@@ -239,13 +239,13 @@ defmodule Geo.Country.Cache do
     name_results = exact_name ++ starts_with_name ++ partial_name
 
     # 1. Add countries from name_results to iso_code_results if not already present (by iso_code)
-    iso_codes_in_iso_results = MapSet.new(iso_code_results, fn country ->
+    iso_codes_in_iso_code_results = MapSet.new(iso_code_results, fn country ->
       Ash.CiString.to_comparable_string(country.iso_code)
     end)
 
     countries_to_add_to_iso = Enum.filter(name_results, fn country ->
       iso_code_str = Ash.CiString.to_comparable_string(country.iso_code)
-      not MapSet.member?(iso_codes_in_iso_results, iso_code_str)
+      not MapSet.member?(iso_codes_in_iso_code_results, iso_code_str)
     end)
 
     updated_iso_code_results = iso_code_results ++ countries_to_add_to_iso

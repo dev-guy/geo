@@ -23,46 +23,6 @@ import MishkaComponents from "../vendor/mishka_components.js";
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
-// Simplified CountrySelector hook - delegates most functionality to SearchCombobox
-const CountrySelector = {
-  mounted() {
-    console.log('CountrySelector: Mounted - using SearchCombobox for all navigation');
-
-    // Listen for form changes (country selections) to close dropdown
-    this.el.addEventListener('change', (event) => {
-      if (event.target.name === 'country') {
-        // Close dropdown after selection
-        this.closeDropdown();
-      }
-    });
-  },
-
-  updated() {
-    console.log('CountrySelector: Updated - SearchCombobox handles all updates');
-  },
-
-  closeDropdown() {
-    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
-    const trigger = this.el.querySelector('.search-combobox-trigger');
-
-    if (dropdown && trigger) {
-      dropdown.setAttribute('hidden', 'true');
-      trigger.setAttribute('aria-expanded', 'false');
-
-      // Update SearchCombobox state
-      const comboboxWrapper = this.el.querySelector('#country-combobox-search-combobox-wrapper');
-      if (comboboxWrapper && comboboxWrapper.__liveViewHook) {
-        comboboxWrapper.__liveViewHook.dropdownWasOpen = false;
-      }
-
-      console.log('CountrySelector: Closed dropdown after selection');
-    }
-  },
-
-  destroyed() {
-    console.log('CountrySelector: Destroyed - minimal cleanup needed');
-  }
-};
 
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
@@ -71,7 +31,6 @@ let liveSocket = new LiveSocket("/live", Socket, {
   },
   hooks: {
     ...MishkaComponents,
-    CountrySelector,
   },
 });
 // Show progress bar on live navigation and form submits
@@ -90,4 +49,3 @@ liveSocket.connect();
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket;
-

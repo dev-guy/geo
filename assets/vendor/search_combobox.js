@@ -277,6 +277,7 @@ const SearchCombobox = {
       if (dropdown) {
         dropdown.setAttribute('hidden', 'true');
         this.triggerButton.setAttribute('aria-expanded', 'false');
+        this.dropdownWasOpen = false; // Update state tracking
       }
     }
   },
@@ -695,9 +696,7 @@ const SearchCombobox = {
       this.selectHighlightedOption();
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      dropdown.setAttribute('hidden', 'true');
-      this.triggerButton.setAttribute('aria-expanded', 'false');
-      this.dropdownWasOpen = false;
+      this.closeDropdown();
     }
   },
 

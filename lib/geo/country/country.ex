@@ -7,27 +7,6 @@ defmodule Geo.Country.Country.ManualGetByIsoCode do
   end
 end
 
-defmodule Geo.Country.Country.ManualSelectorSearch do
-  use Ash.Resource.ManualRead
-
-  def read(ash_query, _ecto_query, _opts, _context) do
-    query = ash_query.arguments[:query]
-
-    if query == nil or String.trim(query) == "" do
-      # For empty queries, return countries sorted by name (the default for selector)
-      # This ensures the "original" order is name-sorted, giving consistent behavior
-      {_iso_results, name_results} = Geo.Country.Cache.search!(query)
-      {:ok, name_results}
-    else
-      # For search queries, combine and deduplicate as before
-      {iso_results, name_results} = Geo.Country.Cache.search!(query)
-      all_results = (iso_results ++ name_results)
-      |> Enum.uniq_by(& &1.id)
-      {:ok, all_results}
-    end
-  end
-end
-
 defmodule Geo.Country.Country do
   use Geo.Resources.BaseResource,
     otp_app: :healthcompass_directory,
@@ -106,10 +85,13 @@ defmodule Geo.Country.Country do
     end
 
     # Cached operation for selector search
-    read :selector_search do
+    action :selector_search, :map do
       argument :query, :string, allow_nil?: true, default: nil
-
-      manual Geo.Country.Country.ManualSelectorSearch
+      run fn input, _context ->
+        query = input.arguments.query
+        {iso_code_results, name_results} = Geo.Country.Cache.search!(query)
+        {:ok, %{by_iso_code: iso_code_results, by_name: name_results}}
+      end
     end
   end
 end
