@@ -13,9 +13,6 @@ to the search input box and focus should be in the input box.
   row should be selected. The currenltly selected row should still be  
   the bottom row in the viewport.
 
-4. When the tab key is pressed in the search input box, the focus should move to
-  the expand/collapse button in the first group.
-
 5. When the shift-tab key is pressed in the search input box, focus should
    go to the previous item in the form.
 
@@ -27,14 +24,11 @@ to the search input box and focus should be in the input box.
 7. When the escape key is pressed in combobox, it shold close and the 
    selected country should no change
 
-8. When the enter key is pressed in the combobox, the selected country should
-   be updated and the combobox should close.
+8. When the enter key is pressed in the combobox, the selected country is
+   updated and the combobox closes.
 
-9. When the enter key is pressed in the combobox, the selected country should
-    be updated and the combobox should close.
-    
-10. When a space is typed in the combobox, it should select the  
-    highlighted item but the combobox should remain open
+10. When a space is typed in the combobox, it selects the  
+    highlighted item and the combobox should remain open
 
 11. Down arrow from the search box should go to the first item in the first group
 
@@ -44,14 +38,16 @@ to the search input box and focus should be in the input box.
     element in the form
 
 14. The sort and expand/collapse buttons should not scroll the area or change the selection
-o
+ 
+15. searching for "united states" displays the united states
 
+16. Tab order from search box: 
+a) expand/collapse button, first group
+b) sort button, first group
+c) first item in first group
+d) expand/collapse button, second group
+e) sort button, second group
+f) first item in second group
 
-When I scroll the combobox all the way to the bottom and let go of the mouse, the combobox closes
-
-When I press the space over a highligheted item in a combobox, the highlighted
-item is not selected and instead the item after the curretnly selected
-item is selected.
-
-When I press space in the search box, it's treated like down arrow or tab
-
+17. When the combobox is opened, the "selected item" for is highlighted,
+selected, and visible

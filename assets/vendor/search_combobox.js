@@ -13,19 +13,24 @@ const SearchCombobox = {
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
 
-    // Check if this SearchCombobox is inside a CountrySelector component
-    this.isInsideCountrySelector = !!this.el.closest('[phx-hook="CountrySelector"]');
-    console.log(`SearchCombobox: Inside CountrySelector: ${this.isInsideCountrySelector}`);
+    // Initialize advanced keyboard navigation (no longer dependent on CountrySelector)
+    console.log('SearchCombobox: Initializing with advanced keyboard navigation');
 
     // Get the search event name from data attribute, default to 'search_countries'
     this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
     console.log(`SearchCombobox: Using search event name: ${this.searchEventName}`);
+
+    // Initialize button interaction tracking
+    this.hasScrolledThisSession = false;
+    this.isButtonInteraction = false;
 
     this.setupTriggerButton();
     this.setupSearchIntercept();
     this.setupDropdownObserver();
     this.setupFormChangeForwarding();
     this.setupOptionHandlers();
+    this.setupKeyboardNavigation();
+
     // Initialize the selection based on the current value
     console.log('SearchCombobox: About to initialize selection on mount');
     this.initializeSelection();
@@ -61,6 +66,7 @@ const SearchCombobox = {
       this.setupDropdownObserver();
       this.setupFormChangeForwarding();
       this.setupOptionHandlers();
+      this.setupKeyboardNavigation();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -85,6 +91,7 @@ const SearchCombobox = {
       this.setupSearchIntercept();
       this.setupFormChangeForwarding();
       this.setupOptionHandlers();
+      this.setupKeyboardNavigation();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -107,6 +114,11 @@ const SearchCombobox = {
         }
       }, 10);
     }
+
+    // Ensure there's always a highlighted option for navigation
+    setTimeout(() => {
+      this.ensureHighlightedOption();
+    }, 50);
   },
 
   initializeSelection() {
@@ -275,21 +287,25 @@ const SearchCombobox = {
 
     if (!isDropdownOpen) return;
 
+    // Check if the event originated from the search input
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const isFromSearchInput = event.target === searchInput;
+
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      if (!this.isInsideCountrySelector) {
-        // Only handle navigation if not inside CountrySelector
-        event.preventDefault();
-        this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
-      }
-      // If inside CountrySelector, let the event bubble up to CountrySelector
+      // Use advanced navigation for all search comboboxes
+      event.preventDefault();
+      this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
     } else if (event.key === 'Enter') {
       event.preventDefault();
       option.click();
     } else if (event.key === ' ') {
-      // Space key should only highlight/navigate, not select
-      event.preventDefault();
-      // The option is already highlighted by the navigation, so we don't need to do anything
-      console.log('SearchCombobox: Space key pressed on option (navigation only):', option.getAttribute('data-combobox-value'));
+      // Only prevent space if it's not coming from the search input
+      // This allows normal typing of spaces in the search box
+      if (!isFromSearchInput) {
+        event.preventDefault();
+        console.log('SearchCombobox: Space key pressed on option (navigation only):', option.getAttribute('data-combobox-value'));
+      }
+      // If from search input, let the space be typed normally
     } else if (event.key === 'Escape') {
       event.preventDefault();
       dropdown.setAttribute('hidden', 'true');
@@ -501,12 +517,10 @@ const SearchCombobox = {
       event.preventDefault();
       if (!isDropdownOpen) {
         this.openDropdownAndFocusSearch();
-      } else if (!this.isInsideCountrySelector) {
-        // Only handle navigation if not inside CountrySelector
-        // CountrySelector will handle its own navigation
-        this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
+      } else {
+        // Use advanced navigation for all search comboboxes
+        this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
       }
-      // If inside CountrySelector, let the event bubble up to CountrySelector
     } else if (this.isPrintableCharacter(event.key, event) && !isDropdownOpen) {
       // If a printable character is typed and dropdown is closed, open it and start typing
       console.log(`SearchCombobox: Opening dropdown and starting typing with character: "${event.key}"`);
@@ -556,13 +570,12 @@ const SearchCombobox = {
   },
 
   isPrintableCharacter(key, event) {
-    // Check if the key is a printable character (letters, numbers, symbols)
+    // Check if the key is a printable character (letters, numbers, symbols, spaces)
     // Exclude special keys like Tab, Shift, Control, etc.
     return key.length === 1 &&
            !event.ctrlKey &&
            !event.altKey &&
-           !event.metaKey &&
-           key !== ' '; // Space is handled separately above
+           !event.metaKey;
   },
 
   openDropdownAndFocusSearch() {
@@ -674,12 +687,9 @@ const SearchCombobox = {
     if (!isDropdownOpen) return;
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      if (!this.isInsideCountrySelector) {
-        // Only handle navigation if not inside CountrySelector
-        event.preventDefault();
-        this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
-      }
-      // If inside CountrySelector, let the event bubble up to CountrySelector
+      // Use advanced navigation for all search comboboxes
+      event.preventDefault();
+      this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
     } else if (event.key === 'Enter') {
       event.preventDefault();
       this.selectHighlightedOption();
@@ -854,6 +864,15 @@ const SearchCombobox = {
         option.removeEventListener('keydown', handler);
       });
     }
+    if (this.boundButtonClickHandler) {
+      const buttons = this.el.querySelectorAll('button[title*="Toggle group"], button[title*="sort order"]');
+      buttons.forEach(button => {
+        button.removeEventListener('click', this.boundButtonClickHandler);
+      });
+    }
+    if (this.buttonInteractionTimeout) {
+      clearTimeout(this.buttonInteractionTimeout);
+    }
     if (this.dropdownObserver) {
       this.dropdownObserver.disconnect();
     }
@@ -866,7 +885,386 @@ const SearchCombobox = {
       clearTimeout(this.debounceTimer);
     }
     this.cleanupHandlers();
-  }
+  },
+
+  setupKeyboardNavigation() {
+    // Remove existing listeners if any
+    if (this.boundSearchKeydownHandler) {
+      const searchInput = this.el.querySelector('.search-combobox-search-input');
+      if (searchInput) {
+        searchInput.removeEventListener('keydown', this.boundSearchKeydownHandler);
+      }
+    }
+
+    if (this.boundButtonKeyboardHandler) {
+      const buttons = this.el.querySelectorAll('button[title*="Toggle group"], button[title*="sort order"]');
+      buttons.forEach(button => {
+        button.removeEventListener('keydown', this.boundButtonKeyboardHandler);
+        button.removeEventListener('click', this.boundButtonClickHandler);
+      });
+    }
+
+    // Set up enhanced keyboard navigation
+    this.boundSearchKeydownHandler = (event) => {
+      this.handleAdvancedSearchKeydown(event);
+    };
+
+    this.boundButtonClickHandler = (event) => {
+      console.log('SearchCombobox: Button clicked, setting long-duration interaction flag');
+      this.isButtonInteraction = true;
+      this.buttonInteractionTime = Date.now();
+
+      // Store the current scroll position and highlighted option to restore later
+      const scrollArea = this.el.querySelector('.scroll-viewport');
+      const currentHighlighted = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+
+      if (scrollArea) {
+        this.preButtonScrollTop = scrollArea.scrollTop;
+      }
+      if (currentHighlighted) {
+        this.preButtonHighlightedValue = currentHighlighted.getAttribute('data-combobox-value');
+      }
+
+      // Clear any existing timeout
+      if (this.buttonInteractionTimeout) {
+        clearTimeout(this.buttonInteractionTimeout);
+      }
+
+      // Keep the flag set for longer to account for LiveView update delays
+      this.buttonInteractionTimeout = setTimeout(() => {
+        console.log('SearchCombobox: Clearing button interaction flag after extended timeout');
+        this.isButtonInteraction = false;
+        this.buttonInteractionTime = null;
+        this.preButtonScrollTop = null;
+        this.preButtonHighlightedValue = null;
+      }, 2000); // Extended to 2 seconds
+    };
+
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('keydown', this.boundSearchKeydownHandler);
+    }
+
+    const buttons = this.el.querySelectorAll('button[title*="Toggle group"], button[title*="sort order"]');
+    buttons.forEach(button => {
+      button.addEventListener('click', this.boundButtonClickHandler);
+    });
+
+    console.log(`SearchCombobox: Set up advanced keyboard navigation on search input and ${buttons.length} control buttons`);
+  },
+
+  handleAdvancedSearchKeydown(event) {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
+
+    if (!isDropdownOpen) {
+      // Handle keys when dropdown is closed
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.openDropdownAndFocusSearch();
+      } else if (this.isPrintableCharacter(event.key, event)) {
+        // If a printable character is typed and dropdown is closed, open it and start typing
+        console.log(`SearchCombobox: Opening dropdown and starting typing with character: "${event.key}"`);
+        event.preventDefault();
+        this.openDropdownAndStartTyping(event.key);
+      }
+      return;
+    }
+
+    // Handle keys when dropdown is open
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigateOptionsAdvanced('down');
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.navigateOptionsAdvanced('up');
+        break;
+      case 'Enter':
+        event.preventDefault();
+        this.selectHighlightedOption();
+        break;
+      case 'Escape':
+        event.preventDefault();
+        this.closeDropdown();
+        break;
+      case ' ':
+        // Space in search input should type normally, not select
+        // Only prevent default if we're not in the search input
+        if (event.target !== this.el.querySelector('.search-combobox-search-input')) {
+          event.preventDefault();
+          this.selectHighlightedOption();
+        }
+        break;
+      case 'Tab':
+        // Handle Tab navigation - move to first group button if available
+        const firstGroupButton = this.el.querySelector('button[title*="Toggle group"]');
+        if (firstGroupButton && !event.shiftKey) {
+          event.preventDefault();
+          firstGroupButton.focus();
+        }
+        break;
+    }
+  },
+
+  navigateOptionsAdvanced(direction) {
+    const options = Array.from(this.el.querySelectorAll('.search-combobox-option'));
+    if (options.length === 0) return;
+
+    let currentIndex = -1;
+    const currentSelected = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+
+    if (currentSelected) {
+      currentIndex = options.indexOf(currentSelected);
+    }
+
+    let newIndex;
+    if (direction === 'down') {
+      if (currentIndex === -1) {
+        // No current selection, select first option
+        newIndex = 0;
+      } else if (currentIndex < options.length - 1) {
+        // Move to next option
+        newIndex = currentIndex + 1;
+      } else {
+        // Already at last option, stay there
+        return;
+      }
+    } else { // 'up'
+      if (currentIndex === -1) {
+        // No current selection, select last option
+        newIndex = options.length - 1;
+      } else if (currentIndex > 0) {
+        // Move to previous option
+        newIndex = currentIndex - 1;
+      } else {
+        // At first option, move focus back to search input
+        const searchInput = this.el.querySelector('.search-combobox-search-input');
+        if (searchInput) {
+          searchInput.focus();
+          this.clearAllHighlights();
+        }
+        return;
+      }
+    }
+
+    const newOption = options[newIndex];
+    if (newOption) {
+      this.highlightOption(newOption, false); // Allow scrolling for navigation
+    }
+  },
+
+  highlightOption(option, preventScroll = false) {
+    if (!option) return;
+
+    // Clear all highlights first
+    this.clearAllHighlights();
+
+    // Highlight the new option
+    option.setAttribute('data-combobox-selected', '');
+
+    // Make sure the option is visible (unless prevented)
+    if (!preventScroll) {
+      this.scrollToOption(option);
+    }
+
+    // Set focus on the option for accessibility
+    option.setAttribute('tabindex', '0');
+    option.focus();
+
+    const value = option.getAttribute('data-combobox-value');
+    console.log('SearchCombobox: Highlighted and focused option:', value);
+  },
+
+  clearAllHighlights() {
+    // Clear all selections and remove tabindex
+    this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
+      .forEach(opt => {
+        opt.removeAttribute('data-combobox-selected');
+        opt.removeAttribute('tabindex');
+      });
+  },
+
+  closeDropdown() {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const trigger = this.el.querySelector('.search-combobox-trigger');
+
+    if (dropdown && trigger) {
+      dropdown.setAttribute('hidden', 'true');
+      trigger.setAttribute('aria-expanded', 'false');
+      this.dropdownWasOpen = false;
+      console.log('SearchCombobox: Closed dropdown via keyboard');
+    }
+  },
+
+  scrollToOption(option, forceGroupLabelVisible = false) {
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (!option || !scrollArea) return;
+
+    const optionTop = option.offsetTop;
+    const optionHeight = option.offsetHeight;
+    const scrollAreaHeight = scrollArea.clientHeight;
+    const currentScrollTop = scrollArea.scrollTop;
+
+    // Check if this is the first option in its group
+    const optionGroup = option.closest('.option-group');
+    let groupLabel = null;
+    let groupLabelHeight = 0;
+    let shouldShowGroupLabel = forceGroupLabelVisible;
+
+    if (optionGroup) {
+      groupLabel = optionGroup.querySelector('.group-label');
+      if (groupLabel) {
+        groupLabelHeight = groupLabel.offsetHeight;
+
+        // Check if this is the first option in the group
+        const groupOptions = Array.from(optionGroup.querySelectorAll('.search-combobox-option'));
+        const isFirstInGroup = groupOptions.indexOf(option) === 0;
+
+        if (isFirstInGroup) {
+          shouldShowGroupLabel = true;
+        }
+      }
+    }
+
+    // Current viewport boundaries
+    const viewportTop = currentScrollTop;
+    const viewportBottom = currentScrollTop + scrollAreaHeight;
+
+    // Option boundaries
+    const optionBottom = optionTop + optionHeight;
+
+    // Check if option is already fully visible
+    const isFullyVisible = optionTop >= viewportTop && optionBottom <= viewportBottom;
+
+    // If showing group label, check if both label and option are visible
+    if (shouldShowGroupLabel && groupLabel) {
+      const groupLabelTop = groupLabel.offsetTop;
+      const isGroupLabelVisible = groupLabelTop >= viewportTop;
+
+      if (isGroupLabelVisible && isFullyVisible) {
+        // Both group label and option are visible, no scroll needed
+        return;
+      }
+
+      if (!isGroupLabelVisible) {
+        // Need to show group label - scroll just enough to show it
+        const newScrollTop = Math.max(0, groupLabelTop - 5); // Minimal padding
+        if (Math.abs(newScrollTop - currentScrollTop) > 2) {
+          scrollArea.scrollTo({
+            top: newScrollTop,
+            behavior: 'smooth'
+          });
+          console.log(`SearchCombobox: Scrolled to show group label from ${currentScrollTop} to ${newScrollTop}`);
+        }
+        return;
+      }
+    }
+
+    // Calculate minimal scroll needed
+    let newScrollTop = currentScrollTop;
+
+    if (optionTop < viewportTop) {
+      // Option is above viewport - scroll up just enough to show the top edge
+      newScrollTop = optionTop - 2; // Minimal padding
+    } else if (optionBottom > viewportBottom) {
+      // Option is below viewport - scroll down just enough to show the bottom edge
+      // Use minimal scroll: just enough to make the option visible
+      const minimalScroll = optionBottom - viewportBottom + 2; // Minimal padding
+      newScrollTop = currentScrollTop + minimalScroll;
+    } else {
+      // Option is already visible, no scroll needed
+      return;
+    }
+
+    // Ensure we don't scroll beyond bounds
+    const maxScrollTop = scrollArea.scrollHeight - scrollAreaHeight;
+    newScrollTop = Math.max(0, Math.min(newScrollTop, maxScrollTop));
+
+    // Only scroll if there's a meaningful change
+    if (Math.abs(newScrollTop - currentScrollTop) > 1) {
+      scrollArea.scrollTo({
+        top: newScrollTop,
+        behavior: 'smooth'
+      });
+      console.log(`SearchCombobox: Minimal scroll from ${currentScrollTop} to ${newScrollTop} (diff: ${newScrollTop - currentScrollTop}) for option ${option.getAttribute('data-combobox-value')}`);
+    }
+  },
+
+  ensureHighlightedOption() {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    if (!dropdown || dropdown.hasAttribute('hidden')) return;
+
+    // If this is during a button interaction, use the no-scroll version instead
+    if (this.isButtonInteraction || (this.buttonInteractionTime && Date.now() - this.buttonInteractionTime < 3000)) {
+      console.log('SearchCombobox: Using no-scroll version due to button interaction');
+      this.ensureHighlightedOptionNoScroll();
+      return;
+    }
+
+    const currentHighlighted = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+    if (!currentHighlighted) {
+      // No option is highlighted, find the first visible option and highlight it
+      const firstOption = this.el.querySelector('.search-combobox-option');
+      if (firstOption) {
+        this.highlightOption(firstOption, true); // Prevent auto-scroll
+        console.log('SearchCombobox: Ensured highlighted option:', firstOption.getAttribute('data-combobox-value'));
+      }
+    }
+  },
+
+  ensureHighlightedOptionNoScroll() {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    if (!dropdown || dropdown.hasAttribute('hidden')) return;
+
+    // If this is after a button interaction, try to restore the previous state
+    if (this.isButtonInteraction && this.preButtonHighlightedValue) {
+      const previousOption = this.el.querySelector(`.search-combobox-option[data-combobox-value="${this.preButtonHighlightedValue}"]`);
+      if (previousOption) {
+        this.highlightOption(previousOption, true); // Prevent scroll
+        console.log('SearchCombobox: Restored previous highlighted option after button interaction:', this.preButtonHighlightedValue);
+
+        // Restore scroll position if available
+        if (this.preButtonScrollTop !== null) {
+          const scrollArea = this.el.querySelector('.scroll-viewport');
+          if (scrollArea) {
+            scrollArea.scrollTop = this.preButtonScrollTop;
+            console.log('SearchCombobox: Restored scroll position after button interaction:', this.preButtonScrollTop);
+          }
+        }
+        return;
+      }
+    }
+
+    // Get the current value from the hidden select element
+    const selectEl = this.el.querySelector('.search-combobox-select');
+    if (!selectEl || !selectEl.value) {
+      // No current value, just highlight first option without scrolling
+      const firstOption = this.el.querySelector('.search-combobox-option');
+      if (firstOption) {
+        this.highlightOption(firstOption, true); // Prevent scroll
+        console.log('SearchCombobox: Highlighted first option without scrolling');
+      }
+      return;
+    }
+
+    const currentValue = selectEl.value;
+
+    // Find and highlight the option with the current value, but don't scroll
+    const option = this.el.querySelector(`.search-combobox-option[data-combobox-value="${currentValue}"]`);
+    if (option) {
+      this.highlightOption(option, true); // Prevent scroll
+      console.log('SearchCombobox: Highlighted selected option without scrolling:', currentValue);
+    } else {
+      // Fallback to first option
+      const firstOption = this.el.querySelector('.search-combobox-option');
+      if (firstOption) {
+        this.highlightOption(firstOption, true); // Prevent scroll
+        console.log('SearchCombobox: Option not found, highlighted first option without scrolling');
+      }
+    }
+  },
 };
 
 export default SearchCombobox;
