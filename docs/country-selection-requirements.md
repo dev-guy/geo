@@ -1,53 +1,45 @@
-1. Typing a letter when an item is selected in the combobox should append that character
-to the search input box and focus should be in the input box. 
+Combobox Keyboard and Focus Behavior
+	1.	Typing Characters
+	•	Typing a letter when an item is selected should append the character to the search input and move focus to the input.
+	2.	Arrow Key Navigation
+	•	Down Arrow from Search Box: Moves focus to the first item in the first group.
+	•	Up Arrow from First Item: Moves focus back to the search input.
+	•	Up Arrow at Top of View: Scrolls up one row; the row above becomes selected and remains at the top of the viewport.
+	•	Down Arrow at Bottom of View: Scrolls down one row; the row below becomes selected and remains at the bottom of the viewport.
+	•	Down Arrow from Group Buttons: Selects the first row in the group.
+	•	Up Arrow from Group Buttons: Selects the first row in the previous group, or the search input if at the first group.
+	3.	Tab and Shift-Tab Navigation
+	•	Tab from Search Input:
+a) Expand/Collapse button (first group)
+b) Sort button (first group)
+c) First item in first group
+d) Expand/Collapse button (second group)
+e) Sort button (second group)
+f) First item in second group
+	•	Shift-Tab from Search Input: Moves to the previous element in the form.
+	•	Shift-Tab from First Group’s Expand/Collapse: Moves to the search input.
+	•	Tab from Last Item in Last Group: Moves to the next element in the form.
+	4.	Enter and Space Keys
+	•	Enter: Updates the selected country and closes the combobox.
+	•	Space: Selects the highlighted item and keeps the combobox open.
+	5.	Escape Key
+	•	Closes the combobox without changing the selected country.
 
-2. When up arrow is pressed when the selected item is at the top of the
-   view, the view should scroll up only one row and the row above the current
-   row should be selected. The currently selected row should be the
-   top row in the viewport. This should happen without any extraneous
-   scrolling eg the viewport should **not** scroll down extra lines and
-   the scroll back up
+⸻
 
-3. When the down arrow is pressed when the selected item is at the bottom of the
-   view, the view should scroll up only one row and the row below the current
-  row should be selected. The currenltly selected row should still be  
-  the bottom row in the viewport.
+Search and Input Behavior
+	6.	Search Input Debouncing
+	•	After debounce, input should remain focused with caret at the end, the combobox open, and the first item in the first group selected and visible.
+	7.	Search Result Display
+	•	Searching for “united states” displays the country “United States” in the combobox, once in each group
 
-5. When the shift-tab key is pressed in the search input box, focus should
-   go to the previous item in the form.
+⸻
 
-6. When the search input is debounced, the search input should still have
- focus with the caret at the end of the text. The combobox should be 
- open and the first item in the first group should be selected and
- visible.
+Visual and Selection Behavior
+	8.	On Open
+	•	The previously selected item should be highlighted, selected, and visible.
+	9.	Interaction with Buttons
+	•	Expand/Collapse and Sort buttons should not scroll the area or change selection.
+	10.	Mouse Scroll Behavior
 
-7. When the escape key is pressed in combobox, it shold close and the 
-   selected country should no change
-
-8. When the enter key is pressed in the combobox, the selected country is
-   updated and the combobox closes.
-
-10. When a space is typed in the combobox, it selects the  
-    highlighted item and the combobox should remain open
-
-11. Down arrow from the search box should go to the first item in the first group
-
-12. Up arrow from the first item in the first group should go to the search box 
-
-13. Tab from the last item in the last group should go to the next
-    element in the form
-
-14. The sort and expand/collapse buttons should not scroll the area or change the selection
- 
-15. searching for "united states" displays the united states
-
-16. Tab order from search box: 
-a) expand/collapse button, first group
-b) sort button, first group
-c) first item in first group
-d) expand/collapse button, second group
-e) sort button, second group
-f) first item in second group
-
-17. When the combobox is opened, the "selected item" for is highlighted,
-selected, and visible
+	•	Scrolling to the bottom and releasing the mouse should leave the combobox open.

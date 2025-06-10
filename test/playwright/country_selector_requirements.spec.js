@@ -505,4 +505,166 @@ test.describe('Country Selector Requirements', () => {
     // Verify it's actually highlighted/selected with the correct attribute
     await expect(selectedOption).toHaveAttribute('data-combobox-selected', '');
   });
+
+  test('Requirement 15: Down arrow from expand/collapse and sort buttons should select first row in group', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Focus the first group's expand/collapse button
+    const firstGroupCollapseButton = page.locator('.option-group').first().locator('.group-label button').first();
+    await firstGroupCollapseButton.focus();
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Press down arrow
+    await page.keyboard.press('ArrowDown');
+
+    // Verify focus moved to the first row in the group
+    const firstRowInGroup = page.locator('.option-group').first().locator('.search-combobox-option').first();
+    await expect(firstRowInGroup).toHaveAttribute('data-combobox-selected', '');
+    await expect(firstRowInGroup).toBeVisible();
+
+    // Test the same for sort button
+    const firstGroupSortButton = page.locator('.option-group').first().locator('.group-label button').last();
+    await firstGroupSortButton.focus();
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Press down arrow
+    await page.keyboard.press('ArrowDown');
+
+    // Verify focus moved to the first row in the group
+    await expect(firstRowInGroup).toHaveAttribute('data-combobox-selected', '');
+    await expect(firstRowInGroup).toBeVisible();
+  });
+
+  test('Requirement 16: Up arrow from expand/collapse and sort buttons should select first row in previous group or search input', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Test from second group's expand/collapse button - should go to first row of previous group
+    const secondGroupCollapseButton = page.locator('.option-group').last().locator('.group-label button').first();
+    await secondGroupCollapseButton.focus();
+    await expect(secondGroupCollapseButton).toBeFocused();
+
+    // Press up arrow
+    await page.keyboard.press('ArrowUp');
+
+    // Verify focus moved to the first row in the previous (first) group
+    const firstRowInFirstGroup = page.locator('.option-group').first().locator('.search-combobox-option').first();
+    await expect(firstRowInFirstGroup).toHaveAttribute('data-combobox-selected', '');
+    await expect(firstRowInFirstGroup).toBeVisible();
+
+    // Test from first group's expand/collapse button - should go to search input
+    const firstGroupCollapseButton = page.locator('.option-group').first().locator('.group-label button').first();
+    await firstGroupCollapseButton.focus();
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Press up arrow
+    await page.keyboard.press('ArrowUp');
+
+    // Verify focus moved to the search input
+    const searchInput = page.locator('.search-combobox-search-input');
+    await expect(searchInput).toBeFocused();
+
+    // Test the same for sort buttons
+    const secondGroupSortButton = page.locator('.option-group').last().locator('.group-label button').last();
+    await secondGroupSortButton.focus();
+    await expect(secondGroupSortButton).toBeFocused();
+
+    // Press up arrow
+    await page.keyboard.press('ArrowUp');
+
+    // Verify focus moved to the first row in the previous (first) group
+    await expect(firstRowInFirstGroup).toHaveAttribute('data-combobox-selected', '');
+    await expect(firstRowInFirstGroup).toBeVisible();
+
+    // Test from first group's sort button - should go to search input
+    const firstGroupSortButton = page.locator('.option-group').first().locator('.group-label button').last();
+    await firstGroupSortButton.focus();
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Press up arrow
+    await page.keyboard.press('ArrowUp');
+
+    // Verify focus moved to the search input
+    await expect(searchInput).toBeFocused();
+  });
+
+  test('Requirement 17: Shift-tab from expand/collapse in first group should go to search input', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Focus the first group's expand/collapse button
+    const firstGroupCollapseButton = page.locator('.option-group').first().locator('.group-label button').first();
+    await firstGroupCollapseButton.focus();
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Press Shift+Tab
+    await page.keyboard.press('Shift+Tab');
+
+    // Verify focus moved to the search input
+    const searchInput = page.locator('.search-combobox-search-input');
+    await expect(searchInput).toBeFocused();
+
+    // Test the same for the sort button in the first group
+    const firstGroupSortButton = page.locator('.option-group').first().locator('.group-label button').last();
+    await firstGroupSortButton.focus();
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Press Shift+Tab
+    await page.keyboard.press('Shift+Tab');
+
+    // Verify focus moved to the search input
+    await expect(searchInput).toBeFocused();
+  });
+
+  test('Requirement 18: Scrolling the combobox all the way to the bottom and releasing the mouse leaves the combobox open', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Get the scroll container
+    const scrollContainer = page.locator('.scroll-area-viewport');
+
+    // Verify combobox is initially open
+    await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
+
+    // Get initial scroll position and scroll height
+    const initialScrollTop = await scrollContainer.evaluate(el => el.scrollTop);
+    const scrollHeight = await scrollContainer.evaluate(el => el.scrollHeight);
+    const clientHeight = await scrollContainer.evaluate(el => el.clientHeight);
+
+    // Scroll to the bottom using mouse wheel events
+    // We'll simulate multiple wheel events to scroll all the way down
+    const scrollSteps = Math.ceil((scrollHeight - clientHeight) / 50); // 50px per step
+
+    for (let i = 0; i < scrollSteps; i++) {
+      await scrollContainer.hover();
+      await page.mouse.wheel(0, 50);
+      await page.waitForTimeout(10); // Small delay between scroll steps
+    }
+
+    // Ensure we're at the bottom
+    await scrollContainer.evaluate(el => el.scrollTop = el.scrollHeight);
+
+    // Verify we've scrolled to the bottom
+    const finalScrollTop = await scrollContainer.evaluate(el => el.scrollTop);
+    expect(finalScrollTop).toBeGreaterThan(initialScrollTop);
+
+    // Move mouse away from the scroll area and "release" by moving to a neutral position
+    await page.mouse.move(100, 100);
+
+    // Wait a moment to ensure any potential close events would have fired
+    await page.waitForTimeout(200);
+
+    // Verify the combobox is still open
+    await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
+    await expect(page.locator('.search-combobox-dropdown')).toBeVisible();
+
+    // Additional verification: try clicking outside to ensure it can still be closed normally
+    await page.click('body', { position: { x: 50, y: 50 } });
+    await expect(page.locator('.search-combobox-dropdown')).toHaveAttribute('hidden');
+  });
 });

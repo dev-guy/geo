@@ -307,6 +307,20 @@ const SearchCombobox = {
         console.log('SearchCombobox: Space key pressed on option (navigation only):', option.getAttribute('data-combobox-value'));
       }
       // If from search input, let the space be typed normally
+    } else if (event.key === 'Tab' && !event.shiftKey) {
+      // Handle Tab from option - check if this is the last option in the last group
+      const allOptions = Array.from(this.el.querySelectorAll('.search-combobox-option'));
+      const currentIndex = allOptions.indexOf(option);
+
+      if (currentIndex === allOptions.length - 1) {
+        // This is the last option - close dropdown and let tab go to next form element
+        event.preventDefault();
+        this.closeDropdown();
+        // Focus will naturally move to next element after dropdown closes
+        return;
+      }
+
+      // For other options, let default tab behavior continue to next focusable element
     } else if (event.key === 'Escape') {
       event.preventDefault();
       dropdown.setAttribute('hidden', 'true');
@@ -908,6 +922,10 @@ const SearchCombobox = {
       this.handleAdvancedSearchKeydown(event);
     };
 
+    this.boundButtonKeyboardHandler = (event) => {
+      this.handleButtonKeydown(event);
+    };
+
     this.boundButtonClickHandler = (event) => {
       console.log('SearchCombobox: Button clicked, setting long-duration interaction flag');
       this.isButtonInteraction = true;
@@ -947,9 +965,45 @@ const SearchCombobox = {
     const buttons = this.el.querySelectorAll('button[title*="Toggle group"], button[title*="sort order"]');
     buttons.forEach(button => {
       button.addEventListener('click', this.boundButtonClickHandler);
+      button.addEventListener('keydown', this.boundButtonKeyboardHandler);
     });
 
     console.log(`SearchCombobox: Set up advanced keyboard navigation on search input and ${buttons.length} control buttons`);
+  },
+
+  handleButtonKeydown(event) {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
+
+    if (!isDropdownOpen) return;
+
+    if (event.key === 'Tab' && !event.shiftKey) {
+      // Find the current button and determine next focus target
+      const currentButton = event.target;
+      const buttonGroup = currentButton.closest('.option-group');
+
+      if (buttonGroup) {
+        // Check if this is a sort button (last button in group)
+        const groupButtons = Array.from(buttonGroup.querySelectorAll('button'));
+        const isSortButton = groupButtons.indexOf(currentButton) === groupButtons.length - 1;
+
+        if (isSortButton) {
+          // From sort button, go to first option in this group
+          const firstOptionInGroup = buttonGroup.querySelector('.search-combobox-option');
+          if (firstOptionInGroup) {
+            event.preventDefault();
+            this.highlightOption(firstOptionInGroup, false);
+            return;
+          }
+        }
+      }
+
+      // For other buttons or if no option found, let default tab behavior continue
+      // This will naturally move to the next focusable element
+    } else if (event.key === 'Tab' && event.shiftKey) {
+      // Shift+Tab should go to previous element in tab order
+      // Let default behavior handle this
+    }
   },
 
   handleAdvancedSearchKeydown(event) {
