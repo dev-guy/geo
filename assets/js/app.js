@@ -55,15 +55,20 @@ const CountrySelector = {
       this.ensureHighlightedOption();
     }, 50);
 
-    // Reset button interaction flag after update
-    setTimeout(() => {
-      this.isButtonInteraction = false;
-    }, 100);
+    // Don't reset button interaction flag here - let the timeout handle it
+    // This prevents premature clearing during LiveView updates
   },
 
   ensureHighlightedOption() {
     const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
     if (!dropdown || dropdown.hasAttribute('hidden')) return;
+
+    // If this is during a button interaction, use the no-scroll version instead
+    if (this.isButtonInteraction || (this.buttonInteractionTime && Date.now() - this.buttonInteractionTime < 3000)) {
+      console.log('CountrySelector: Using no-scroll version due to button interaction');
+      this.ensureHighlightedOptionNoScroll();
+      return;
+    }
 
     const currentHighlighted = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
     if (!currentHighlighted) {
@@ -133,13 +138,61 @@ const CountrySelector = {
 
     // Set up keyboard navigation and click tracking on group control buttons
     this.boundButtonKeyboardHandler = (event) => {
-      this.handleKeyboardNavigation(event);
+      // For buttons, we only want to handle specific keys and prevent unwanted navigation
+      if (event.key === 'Enter' || event.key === ' ') {
+        // Let Enter and Space activate the button (default behavior)
+        console.log('CountrySelector: Button activated via keyboard');
+
+        // Set the button interaction flag
+        this.isButtonInteraction = true;
+        this.buttonInteractionTime = Date.now();
+
+        // Store current state like in click handler
+        const scrollArea = this.el.querySelector('.scroll-viewport');
+        const currentHighlighted = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+
+        if (scrollArea) {
+          this.preButtonScrollTop = scrollArea.scrollTop;
+        }
+        if (currentHighlighted) {
+          this.preButtonHighlightedValue = currentHighlighted.getAttribute('data-combobox-value');
+        }
+
+        // Clear any existing timeout
+        if (this.buttonInteractionTimeout) {
+          clearTimeout(this.buttonInteractionTimeout);
+        }
+
+        // Keep the flag set for longer to account for LiveView update delays
+        this.buttonInteractionTimeout = setTimeout(() => {
+          console.log('CountrySelector: Clearing button interaction flag after keyboard activation');
+          this.isButtonInteraction = false;
+          this.buttonInteractionTime = null;
+          this.preButtonScrollTop = null;
+          this.preButtonHighlightedValue = null;
+        }, 2000);
+      } else {
+        // For other keys, use normal keyboard navigation
+        this.handleKeyboardNavigation(event);
+      }
     };
 
     this.boundButtonClickHandler = (event) => {
+      // Don't prevent default or stop propagation - we need the LiveView events to work
       console.log('CountrySelector: Button clicked, setting long-duration interaction flag');
       this.isButtonInteraction = true;
       this.buttonInteractionTime = Date.now();
+
+      // Store the current scroll position and highlighted option to restore later
+      const scrollArea = this.el.querySelector('.scroll-viewport');
+      const currentHighlighted = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+
+      if (scrollArea) {
+        this.preButtonScrollTop = scrollArea.scrollTop;
+      }
+      if (currentHighlighted) {
+        this.preButtonHighlightedValue = currentHighlighted.getAttribute('data-combobox-value');
+      }
 
       // Clear any existing timeout
       if (this.buttonInteractionTimeout) {
@@ -151,6 +204,8 @@ const CountrySelector = {
         console.log('CountrySelector: Clearing button interaction flag after extended timeout');
         this.isButtonInteraction = false;
         this.buttonInteractionTime = null;
+        this.preButtonScrollTop = null;
+        this.preButtonHighlightedValue = null;
       }, 2000); // Extended to 2 seconds
     };
 
@@ -856,6 +911,25 @@ const CountrySelector = {
   ensureHighlightedOptionNoScroll() {
     const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
     if (!dropdown || dropdown.hasAttribute('hidden')) return;
+
+    // If this is after a button interaction, try to restore the previous state
+    if (this.isButtonInteraction && this.preButtonHighlightedValue) {
+      const previousOption = this.el.querySelector(`.search-combobox-option[data-combobox-value="${this.preButtonHighlightedValue}"]`);
+      if (previousOption) {
+        this.highlightOption(previousOption, true); // Prevent scroll
+        console.log('CountrySelector: Restored previous highlighted option after button interaction:', this.preButtonHighlightedValue);
+
+        // Restore scroll position if available
+        if (this.preButtonScrollTop !== null) {
+          const scrollArea = this.el.querySelector('.scroll-viewport');
+          if (scrollArea) {
+            scrollArea.scrollTop = this.preButtonScrollTop;
+            console.log('CountrySelector: Restored scroll position after button interaction:', this.preButtonScrollTop);
+          }
+        }
+        return;
+      }
+    }
 
     // Get the current value from the hidden select element
     const selectEl = this.el.querySelector('.search-combobox-select');

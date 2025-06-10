@@ -139,11 +139,11 @@ defmodule GeoWeb.CountrySelector do
 
   @impl true
   def handle_event("search_combobox_updated", %{"value" => query}, socket) do
-    # Trim the query
-    query = String.trim(query)
+    # Check if trimmed query is empty, but keep original query for search
+    trimmed_query = String.trim(query)
 
-    # If query is empty, use original countries and restore original sort orders
-    if query == "" do
+    # If trimmed query is empty, use original countries and restore original sort orders
+    if trimmed_query == "" do
       # Restore original sort orders from the full country list
       all_countries = Geo.Geography.selector_search_countries!()
       {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(all_countries, :iso_code)
