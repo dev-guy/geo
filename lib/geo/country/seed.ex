@@ -3,10 +3,9 @@ defmodule Geo.Country.Seed do
   Creates valid `Country` structs through the canonical :create action.
   """
   def seed_countries!() do
+    # Specify the fields that will be updated
     seed_countries_data()
-    |> Enum.map(fn country_data ->
-      Geo.Geography.upsert_country!(country_data)
-    end)
+    |> Geo.Geography.upsert_country!(upsert_fields: [:name, :flag, :slug])
   end
 
   # Pre-defined country data as used in the original seed

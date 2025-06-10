@@ -39,11 +39,6 @@ defmodule Geo.Resources.BaseResource do
       identities do
         identity :unique_slug, [:slug]
       end
-
-      # Common preparations for queries
-      preparations do
-        prepare build(sort: [created_at: :desc])
-      end
     end
   end
 end

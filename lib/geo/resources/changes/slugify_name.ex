@@ -52,5 +52,11 @@ defmodule Geo.Resources.Changes.SlugifyName do
     |> String.trim("-")
   end
 
+  defp slugify(%Ash.CiString{} = ci_string) do
+    ci_string
+    |> to_string()
+    |> slugify()
+  end
+
   defp slugify(_), do: nil
 end
