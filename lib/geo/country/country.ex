@@ -14,8 +14,8 @@ defmodule Geo.Country.Country do
     data_layer: AshPostgres.DataLayer
 
   use Geo.Resources.IdResource
-  use Geo.Resources.RequiredUniqueNameResource
-  use Geo.Resources.RequiredSlugResource
+  use Geo.Resources.UniqueNameResource, allow_nil?: false
+  use Geo.Resources.UniqueSlugResource, allow_nil?: false
   use Geo.Resources.TimestampsResource
 
   postgres do
@@ -33,7 +33,7 @@ defmodule Geo.Country.Country do
                   max_length: 3
     end
 
-    attribute :flag, :ci_string do
+    attribute :flag, :string do
       allow_nil? false
       public? true
       description "Unicode flag emoji for the country"
@@ -43,12 +43,6 @@ defmodule Geo.Country.Country do
   identities do
     # Inherit unique_slug from base resource
     identity :unique_iso_code, [:iso_code]
-  end
-
-  validations do
-    validate present(:name)
-    validate present(:iso_code)
-    validate present(:flag)
   end
 
   preparations do

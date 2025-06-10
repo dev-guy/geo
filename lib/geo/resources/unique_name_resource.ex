@@ -2,14 +2,9 @@ defmodule Geo.Resources.UniqueNameResource do
   @moduledoc """
   """
 
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
     quote do
-      attributes do
-        # Core attributes that most resources need
-        attribute :name, :ci_string do
-          allow_nil? true
-        end
-      end
+      use Geo.Resources.NameResource, unquote(opts)
 
       # Common identities
       identities do

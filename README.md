@@ -57,7 +57,7 @@ classDiagram
         UtcDatetimeUsec created_at
         UtcDatetimeUsec updated_at
         CiString iso_code
-        CiString flag
+        String flag
         destroy()
         read()
         create(name, iso_code, flag, slug)
@@ -247,7 +247,7 @@ Core attributes:
 - `id` (UUIDv7) - Primary key
 - `name` (CiString) - Country name
 - `iso_code` (CiString) - ISO country code (2-3 chars, unique)
-- `flag` (CiString) - Unicode flag emoji
+- `flag` (String) - Unicode flag emoji
 - `slug` (CiString) - URL-friendly identifier
 - `created_at`, `updated_at` - Timestamps
 
