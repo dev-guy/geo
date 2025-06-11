@@ -27,6 +27,8 @@ const SearchCombobox = {
     // Initialize button interaction tracking
     this.hasScrolledThisSession = false;
     this.isButtonInteraction = false;
+    this.isScrollbarInteraction = false;
+    this.scrollbarDragInProgress = false;
 
     this.setupTriggerButton();
     this.setupSearchIntercept();
@@ -36,6 +38,7 @@ const SearchCombobox = {
     this.setupKeyboardNavigation();
     this.setupWindowResizeHandler();
     this.setupClearButton();
+    this.setupScrollbarTracking();
 
     // Initialize the selection based on the current value
     console.log('SearchCombobox: About to initialize selection on mount');
@@ -105,6 +108,7 @@ const SearchCombobox = {
       this.setupKeyboardNavigation();
       this.setupWindowResizeHandler();
       this.setupClearButton();
+      this.setupScrollbarTracking();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -767,7 +771,51 @@ const SearchCombobox = {
     }
   },
 
-  handleDocumentClick(event) {
+        handleDocumentClick(event) {
+    // Don't close dropdown for scrollbar interactions or non-left clicks
+    if (event.button !== 0) return; // Only handle left mouse button
+
+    // Don't close if we're in the middle of a scrollbar interaction or drag
+    if (this.isScrollbarInteraction || this.scrollbarDragInProgress) {
+      console.log('SearchCombobox: Ignoring click during scrollbar interaction');
+      return;
+    }
+
+    // Don't close if a scrollbar interaction just ended recently (within 300ms)
+    if (this.scrollbarStartTime && Date.now() - this.scrollbarStartTime < 500) {
+      console.log('SearchCombobox: Ignoring click shortly after scrollbar interaction');
+      return;
+    }
+
+    // Don't close if scrolling happened recently (within 200ms)
+    if (this.lastScrollTime && Date.now() - this.lastScrollTime < 200) {
+      console.log('SearchCombobox: Ignoring click shortly after scroll activity');
+      return;
+    }
+
+    // Check if the click is on a scrollbar by looking at the event target
+    // Scrollbar clicks often have the target as the scrollable element itself
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (scrollArea && event.target === scrollArea) {
+      // This might be a scrollbar click, don't close dropdown
+      console.log('SearchCombobox: Ignoring potential scrollbar click');
+      return;
+    }
+
+    // Additional check: if click is near the right edge of the scroll area, it might be scrollbar
+    if (scrollArea) {
+      const rect = scrollArea.getBoundingClientRect();
+      const isNearScrollbar = event.clientX > rect.right - 25 &&
+                             event.clientX <= rect.right + 10 &&
+                             event.clientY >= rect.top &&
+                             event.clientY <= rect.bottom;
+
+      if (isNearScrollbar) {
+        console.log('SearchCombobox: Ignoring click near scrollbar area');
+        return;
+      }
+    }
+
     // Close dropdown when clicking outside
     if (!this.el.contains(event.target)) {
       const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
@@ -1108,6 +1156,137 @@ const SearchCombobox = {
   },
 
   /**
+   * Sets up scrollbar interaction tracking
+   */
+  setupScrollbarTracking() {
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (scrollArea) {
+      console.log('Found scroll area, setting up scrollbar tracking');
+
+      // Remove any existing event listeners to avoid duplicates
+      if (this.boundScrollHandler) {
+        scrollArea.removeEventListener('scroll', this.boundScrollHandler);
+      }
+      if (this.boundScrollMouseDownHandler) {
+        scrollArea.removeEventListener('mousedown', this.boundScrollMouseDownHandler);
+      }
+      if (this.boundScrollMouseUpHandler) {
+        document.removeEventListener('mouseup', this.boundScrollMouseUpHandler);
+      }
+      if (this.boundScrollMouseMoveHandler) {
+        document.removeEventListener('mousemove', this.boundScrollMouseMoveHandler);
+      }
+
+      // Create bound handlers
+      this.boundScrollHandler = this.handleScroll.bind(this);
+      this.boundScrollMouseDownHandler = this.handleScrollMouseDown.bind(this);
+      this.boundScrollMouseUpHandler = this.handleScrollMouseUp.bind(this);
+      this.boundScrollMouseMoveHandler = this.handleScrollMouseMove.bind(this);
+
+      // Add event listeners
+      scrollArea.addEventListener('scroll', this.boundScrollHandler);
+      scrollArea.addEventListener('mousedown', this.boundScrollMouseDownHandler);
+      document.addEventListener('mouseup', this.boundScrollMouseUpHandler);
+      document.addEventListener('mousemove', this.boundScrollMouseMoveHandler);
+
+      // Store reference to the scroll area
+      this.scrollArea = scrollArea;
+      this.lastScrollTime = 0;
+      this.lastScrollTop = scrollArea.scrollTop;
+    } else {
+      console.log('Scroll area not found for scrollbar tracking');
+    }
+  },
+
+    /**
+   * Handles scroll events to detect scrollbar usage
+   */
+  handleScroll(event) {
+    const currentTime = Date.now();
+    const scrollArea = event.target;
+    const currentScrollTop = scrollArea.scrollTop;
+
+    // If scroll position changed significantly, we're likely scrolling
+    if (Math.abs(currentScrollTop - this.lastScrollTop) > 5) {
+      console.log('SearchCombobox: Scroll detected, setting scrollbar interaction flag');
+      this.isScrollbarInteraction = true;
+      this.lastScrollTime = currentTime;
+      this.lastScrollTop = currentScrollTop;
+
+      // Clear the flag after scrolling stops
+      if (this.scrollEndTimer) {
+        clearTimeout(this.scrollEndTimer);
+      }
+
+      this.scrollEndTimer = setTimeout(() => {
+        console.log('SearchCombobox: Scroll ended, clearing interaction flag');
+        this.isScrollbarInteraction = false;
+      }, 150); // Short delay to detect end of scrolling
+    }
+  },
+
+  /**
+   * Handles mouse down on scroll area (potential scrollbar interaction)
+   */
+  handleScrollMouseDown(event) {
+    // Check if this is likely a scrollbar interaction
+    const scrollArea = event.currentTarget;
+    const rect = scrollArea.getBoundingClientRect();
+
+    // If the click is near the right edge, it's likely a scrollbar
+    const isNearRightEdge = event.clientX > rect.right - 20;
+
+    // Also check if the click is on the scrollbar by comparing client coordinates
+    // with the scroll area's content vs visible area
+    const hasVerticalScrollbar = scrollArea.scrollHeight > scrollArea.clientHeight;
+
+    if (isNearRightEdge && hasVerticalScrollbar) {
+      console.log('SearchCombobox: Detected scrollbar interaction start');
+      this.isScrollbarInteraction = true;
+      this.scrollbarDragInProgress = true;
+      this.scrollbarStartTime = Date.now();
+
+      // Store initial mouse position for drag detection
+      this.scrollbarStartX = event.clientX;
+      this.scrollbarStartY = event.clientY;
+    }
+  },
+
+  /**
+   * Handles mouse move during potential scrollbar drag
+   */
+  handleScrollMouseMove(event) {
+    if (this.scrollbarDragInProgress) {
+      // If we're dragging and the mouse has moved significantly, we're definitely scrolling
+      const deltaX = Math.abs(event.clientX - this.scrollbarStartX);
+      const deltaY = Math.abs(event.clientY - this.scrollbarStartY);
+
+      if (deltaX > 5 || deltaY > 5) {
+        console.log('SearchCombobox: Confirmed scrollbar drag in progress');
+        this.isScrollbarInteraction = true;
+      }
+    }
+  },
+
+  /**
+   * Handles mouse up (end of potential scrollbar interaction)
+   */
+  handleScrollMouseUp(event) {
+    if (this.isScrollbarInteraction || this.scrollbarDragInProgress) {
+      console.log('SearchCombobox: Ending scrollbar interaction');
+
+      // Clear the flags after a longer delay to handle cases where mouse is released outside combobox
+      setTimeout(() => {
+        this.isScrollbarInteraction = false;
+        this.scrollbarDragInProgress = false;
+        this.scrollbarStartTime = null;
+        this.scrollbarStartX = null;
+        this.scrollbarStartY = null;
+      }, 300); // Increased delay to 300ms
+    }
+  },
+
+  /**
    * Clears single selection
    */
   clearSingleSelection() {
@@ -1174,6 +1353,21 @@ const SearchCombobox = {
     }
     if (this.boundClearHandler && this.clearButton) {
       this.clearButton.removeEventListener('click', this.boundClearHandler);
+    }
+    if (this.boundScrollMouseDownHandler && this.scrollArea) {
+      this.scrollArea.removeEventListener('mousedown', this.boundScrollMouseDownHandler);
+    }
+    if (this.boundScrollMouseUpHandler) {
+      document.removeEventListener('mouseup', this.boundScrollMouseUpHandler);
+    }
+    if (this.boundScrollMouseMoveHandler) {
+      document.removeEventListener('mousemove', this.boundScrollMouseMoveHandler);
+    }
+    if (this.boundScrollHandler && this.scrollArea) {
+      this.scrollArea.removeEventListener('scroll', this.boundScrollHandler);
+    }
+    if (this.scrollEndTimer) {
+      clearTimeout(this.scrollEndTimer);
     }
   },
 
