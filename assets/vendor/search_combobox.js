@@ -30,10 +30,9 @@ const SearchCombobox = {
     this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
     console.log(`SearchCombobox: Using search event name: ${this.searchEventName}`);
 
-    // Initialize button interaction & scrollbar-drag tracking
+    // Initialize button interaction tracking
     this.hasScrolledThisSession = false;
     this.isButtonInteraction = false;
-    this.isDraggingScroll = false;
 
     this.setupTriggerButton();
     this.setupSearchIntercept();
@@ -43,9 +42,6 @@ const SearchCombobox = {
     this.setupKeyboardNavigation();
     this.setupWindowResizeHandler();
     this.setupClearButton();
-
-    // watch for scrollbar drag / release
-    this.setupScrollHandlers();
 
     // Initialize the selection based on the current value
     console.log('SearchCombobox: About to initialize selection on mount');
@@ -821,38 +817,8 @@ const SearchCombobox = {
   },
 
   handleDocumentClick(event) {
-    // ignore any pointerdown/mouseup/click that follows a scrollbar drag
-    if (this.isDraggingScroll) {
-      console.log(`SearchCombobox: Ignoring ${event.type} after scrollbar drag`);
-      this.isDraggingScroll = false;
-      return;
-    }
-
     // Don't close dropdown for non-left clicks
     if (event.button !== 0) return; // Only handle left mouse button
-
-    // Check if the click is on or very near the scrollbar
-    const scrollArea = this.el.querySelector('.scroll-viewport');
-    if (scrollArea) {
-      const rect = scrollArea.getBoundingClientRect();
-
-      // If click is on the scroll area itself, it might be scrollbar
-      if (event.target === scrollArea) {
-        console.log('SearchCombobox: Ignoring click on scroll area (potential scrollbar)');
-        return;
-      }
-
-      // If click is in the scrollbar zone (right edge + some margin)
-      const isInScrollbarZone = event.clientX > rect.right - 30 &&
-        event.clientX <= rect.right + 15 &&
-        event.clientY >= rect.top &&
-        event.clientY <= rect.bottom;
-
-      if (isInScrollbarZone) {
-        console.log('SearchCombobox: Ignoring click in scrollbar zone');
-        return;
-      }
-    }
 
     // Close dropdown when clicking outside
     if (!this.el.contains(event.target)) {
@@ -1340,11 +1306,7 @@ const SearchCombobox = {
       document.removeEventListener('mouseup',     this.boundDocumentClickHandler);
       document.removeEventListener('click',       this.boundDocumentClickHandler);
     }
-    if (this._swallowPointerUp) {
-      document.removeEventListener('pointerup', this._swallowPointerUp, true);
-      document.removeEventListener('click',     this._swallowClick,     true);
-      this._swallowPointerUp = this._swallowClick = null;
-    }
+
     if (this.boundChangeHandler && this.selectElement) {
       this.selectElement.removeEventListener('change', this.boundChangeHandler);
     }
@@ -1378,33 +1340,7 @@ const SearchCombobox = {
     }
   },
 
-  // helper to catch scrollbar drags & swallow the first pointerup/click
-  setupScrollHandlers() {
-    const scrollArea = this.el.querySelector('.scroll-viewport');
-    if (!scrollArea) return;
-    // detect actual scrollbar thumb/track press
-    scrollArea.addEventListener('pointerdown', (e) => {
-      const rect = scrollArea.getBoundingClientRect();
-      const scrollbarZone = e.clientX > rect.right - 20; // ≈ native scrollbar width
-      if (scrollbarZone) {
-        this.isDraggingScroll = true;
-      }
-    });
 
-    // capture-phase intercepts (run before LiveView's handlers)
-    const swallowIfDragging = (e) => {
-      if (this.isDraggingScroll) {
-        this.isDraggingScroll = false;
-        e.stopImmediatePropagation();
-        e.preventDefault();
-      }
-    };
-    // store so we can remove later in cleanup
-    this._swallowPointerUp   = swallowIfDragging;
-    this._swallowClick       = swallowIfDragging;
-    document.addEventListener('pointerup', this._swallowPointerUp,   true);
-    document.addEventListener('click',     this._swallowClick,       true);
-  },
 
   destroyed() {
     const key = this.el.parentElement ? this.el.parentElement.getAttribute('key') : 'unknown';
