@@ -35,6 +35,7 @@ const SearchCombobox = {
     this.setupOptionHandlers();
     this.setupKeyboardNavigation();
     this.setupWindowResizeHandler();
+    this.setupClearButton();
 
     // Initialize the selection based on the current value
     console.log('SearchCombobox: About to initialize selection on mount');
@@ -74,6 +75,7 @@ const SearchCombobox = {
       this.setupOptionHandlers();
       this.setupKeyboardNavigation();
       this.setupWindowResizeHandler();
+      this.setupClearButton();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -102,6 +104,7 @@ const SearchCombobox = {
       this.setupOptionHandlers();
       this.setupKeyboardNavigation();
       this.setupWindowResizeHandler();
+      this.setupClearButton();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -441,6 +444,16 @@ const SearchCombobox = {
         placeholder.classList.add('hidden');
       } else {
         placeholder.classList.remove('hidden');
+      }
+    }
+
+    // Show/hide clear button based on selection
+    const clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
+    if (clearButton) {
+      if (selectedOption) {
+        clearButton.removeAttribute('hidden');
+      } else {
+        clearButton.setAttribute('hidden', 'true');
       }
     }
   },
@@ -996,6 +1009,124 @@ const SearchCombobox = {
     window.addEventListener('resize', this.boundWindowResizeHandler);
   },
 
+  /**
+   * Sets up the clear button functionality
+   */
+  setupClearButton() {
+    const clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
+    if (clearButton) {
+      console.log('Found clear button, setting up click handler');
+
+      // Remove any existing event listener to avoid duplicates
+      if (this.boundClearHandler) {
+        clearButton.removeEventListener('click', this.boundClearHandler);
+      }
+
+      // Create bound handler
+      this.boundClearHandler = this.handleClearClick.bind(this);
+
+      // Add event listener
+      clearButton.addEventListener('click', this.boundClearHandler);
+
+      // Store reference to the clear button
+      this.clearButton = clearButton;
+    } else {
+      console.log('Clear button not found');
+    }
+  },
+
+  /**
+   * Handles clear button click
+   */
+  handleClearClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    console.log('SearchCombobox: Clear button clicked');
+
+    const selectEl = this.el.querySelector('.search-combobox-select');
+    const isMultiple = this.el.getAttribute('data-multiple') === 'true';
+
+    if (isMultiple) {
+      // Clear all multiple selections
+      this.clearAllMultipleSelections();
+    } else {
+      // Clear single selection
+      this.clearSingleSelection();
+    }
+
+    // Clear search input
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    if (searchInput) {
+      searchInput.value = '';
+      this.searchTerm = '';
+    }
+
+    // Hide the clear button
+    const clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
+    if (clearButton) {
+      clearButton.setAttribute('hidden', 'true');
+    }
+
+    // Trigger change event
+    this.triggerChange();
+
+    // Close dropdown if open
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    if (dropdown && !dropdown.hasAttribute('hidden')) {
+      dropdown.setAttribute('hidden', 'true');
+      this.triggerButton.setAttribute('aria-expanded', 'false');
+      this.dropdownWasOpen = false;
+    }
+
+    // Focus the trigger button
+    if (this.triggerButton) {
+      this.triggerButton.focus();
+    }
+  },
+
+  /**
+   * Clears all selections in multiple mode
+   */
+  clearAllMultipleSelections() {
+    const selectEl = this.el.querySelector('.search-combobox-select');
+    if (!selectEl) return;
+
+    // Clear all selected options in the select element
+    Array.from(selectEl.options).forEach(option => {
+      option.selected = false;
+    });
+
+    // Clear all visual selections
+    this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
+      .forEach(opt => opt.removeAttribute('data-combobox-selected'));
+
+    // Update display
+    this.updateMultipleDisplay();
+
+    console.log('SearchCombobox: Cleared all multiple selections');
+  },
+
+  /**
+   * Clears single selection
+   */
+  clearSingleSelection() {
+    const selectEl = this.el.querySelector('.search-combobox-select');
+    if (!selectEl) return;
+
+    // Clear the select element value
+    selectEl.value = '';
+
+    // Clear all visual selections
+    this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
+      .forEach(opt => opt.removeAttribute('data-combobox-selected'));
+
+    // Update display
+    this.updateSingleDisplay(null);
+
+    console.log('SearchCombobox: Cleared single selection');
+  },
+
   cleanupHandlers() {
     console.log('SearchCombobox: Cleaning up handlers');
     if (this.boundSearchHandler && this.inputElement) {
@@ -1040,6 +1171,9 @@ const SearchCombobox = {
     }
     if (this.boundWindowResizeHandler) {
       window.removeEventListener('resize', this.boundWindowResizeHandler);
+    }
+    if (this.boundClearHandler && this.clearButton) {
+      this.clearButton.removeEventListener('click', this.boundClearHandler);
     }
   },
 
