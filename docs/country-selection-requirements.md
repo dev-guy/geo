@@ -31,8 +31,7 @@ e) Repeat from b
     - Enter: Updates the selected country and closes the combobox.
     and the button should keep focus
 	  -	Space: If there is a highlighted item, selects the highlighted item and keeps the combobox open.
-     If there is no highlighted item, target is the search input if the cursor is in it. Ignore the
-     space if the search box is empty
+     If there is no highlighted item, target is the search input if the cursor is in it. Ignore the space if the search box is empty
 	5.	Escape Key
 	•	Closes the combobox without changing the selected country.
 

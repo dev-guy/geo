@@ -772,4 +772,51 @@ test.describe('Country Selector Requirements', () => {
     // Verify search input still has focus
     await expect(searchInput).toBeFocused();
   });
+
+  test('Requirement 20: Left and right arrow from a group button goes to the other group button', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Focus the first group's expand/collapse button
+    const firstGroupCollapseButton = page.locator('.option-group').first().locator('.group-label button').first();
+    await firstGroupCollapseButton.focus();
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Press right arrow - should move to sort button in same group
+    await page.keyboard.press('ArrowRight');
+    const firstGroupSortButton = page.locator('.option-group').first().locator('.group-label button').last();
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Press right arrow again - should move to expand/collapse button in next group
+    await page.keyboard.press('ArrowRight');
+    const secondGroupCollapseButton = page.locator('.option-group').last().locator('.group-label button').first();
+    await expect(secondGroupCollapseButton).toBeFocused();
+
+    // Press right arrow again - should move to sort button in second group
+    await page.keyboard.press('ArrowRight');
+    const secondGroupSortButton = page.locator('.option-group').last().locator('.group-label button').last();
+    await expect(secondGroupSortButton).toBeFocused();
+
+    // Press right arrow again - should wrap back to first group's expand/collapse button
+    await page.keyboard.press('ArrowRight');
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Test left arrow navigation in reverse
+    // From first group collapse button, left arrow should go to last group sort button
+    await page.keyboard.press('ArrowLeft');
+    await expect(secondGroupSortButton).toBeFocused();
+
+    // Left arrow should go to second group collapse button
+    await page.keyboard.press('ArrowLeft');
+    await expect(secondGroupCollapseButton).toBeFocused();
+
+    // Left arrow should go to first group sort button
+    await page.keyboard.press('ArrowLeft');
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Left arrow should go to first group collapse button
+    await page.keyboard.press('ArrowLeft');
+    await expect(firstGroupCollapseButton).toBeFocused();
+  });
 });

@@ -1295,7 +1295,11 @@ const SearchCombobox = {
 
     if (!isDropdownOpen) return;
 
-    if (event.key === 'Tab' && !event.shiftKey) {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      // Handle left and right arrow navigation between group buttons
+      event.preventDefault();
+      this.navigateGroupButtons(event.key === 'ArrowRight' ? 'right' : 'left');
+    } else if (event.key === 'Tab' && !event.shiftKey) {
       // Find the current button and determine next focus target
       const currentButton = event.target;
       const buttonGroup = currentButton.closest('.option-group');
@@ -1355,6 +1359,41 @@ const SearchCombobox = {
       // For other buttons (including sort button), let default behavior handle this
       console.log('SearchCombobox: Letting default Shift+Tab behavior handle this');
     }
+  },
+
+  navigateGroupButtons(direction) {
+    // Get all group buttons in order: [group1_collapse, group1_sort, group2_collapse, group2_sort, ...]
+    const allButtons = [];
+    const groups = Array.from(this.el.querySelectorAll('.option-group'));
+
+    groups.forEach(group => {
+      const groupButtons = Array.from(group.querySelectorAll('button'));
+      allButtons.push(...groupButtons);
+    });
+
+    if (allButtons.length === 0) return;
+
+    // Find the currently focused button
+    const currentButton = document.activeElement;
+    const currentIndex = allButtons.indexOf(currentButton);
+
+    if (currentIndex === -1) {
+      // No button is currently focused, focus the first one
+      allButtons[0].focus();
+      return;
+    }
+
+    let newIndex;
+    if (direction === 'right') {
+      // Move to next button, wrap around to beginning if at end
+      newIndex = (currentIndex + 1) % allButtons.length;
+    } else { // 'left'
+      // Move to previous button, wrap around to end if at beginning
+      newIndex = currentIndex === 0 ? allButtons.length - 1 : currentIndex - 1;
+    }
+
+    allButtons[newIndex].focus();
+    console.log(`SearchCombobox: Navigated ${direction} from button ${currentIndex} to button ${newIndex}`);
   },
 
   handleAdvancedSearchKeydown(event) {
