@@ -17,7 +17,8 @@ test.describe('Country Selector Space Key Issue', () => {
     await page.keyboard.press('ArrowDown');
 
     // Step 4: Find and hover over Albania
-    const albaniaOption = page.locator('.search-combobox-option', { hasText: 'Albania' });
+    // Be more specific by targeting the first Albania option with the ISO code AL
+    const albaniaOption = page.locator('.search-combobox-option[data-combobox-value="AL"]').first();
     await albaniaOption.scrollIntoViewIfNeeded();
     await albaniaOption.hover();
 

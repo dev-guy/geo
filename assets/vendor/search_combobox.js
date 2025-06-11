@@ -20,7 +20,8 @@ const SearchCombobox = {
     // Track mouse position for hover detection
     window.mouseX = 0;
     window.mouseY = 0;
-    document.addEventListener('mousemove', this.trackMousePosition);
+    this.boundTrackMousePosition = this.trackMousePosition.bind(this);
+    document.addEventListener('mousemove', this.boundTrackMousePosition);
 
     // Initialize advanced keyboard navigation (no longer dependent on CountrySelector)
     console.log('SearchCombobox: Initializing with advanced keyboard navigation');
@@ -43,7 +44,7 @@ const SearchCombobox = {
     this.setupWindowResizeHandler();
     this.setupClearButton();
 
-    // watch for mousedown on the scrollbar
+    // watch for scrollbar drag / release
     this.setupScrollHandlers();
 
     // Initialize the selection based on the current value
@@ -578,10 +579,12 @@ const SearchCombobox = {
         setTimeout(() => searchInput.focus(), 10);
       }
 
-      // Add document click listener to close when clicking outside
+      // Click-away for pointerdown, mouseup, and click
       if (!this.boundDocumentClickHandler) {
         this.boundDocumentClickHandler = this.handleDocumentClick.bind(this);
-        document.addEventListener('click', this.boundDocumentClickHandler);
+        document.addEventListener('pointerdown', this.boundDocumentClickHandler);
+        document.addEventListener('mouseup',   this.boundDocumentClickHandler);
+        document.addEventListener('click',     this.boundDocumentClickHandler);
       }
     } else {
       // Close dropdown
@@ -763,10 +766,12 @@ const SearchCombobox = {
       // Focus search input
       setTimeout(() => searchInput.focus(), 10);
 
-      // Add document click listener to close when clicking outside
+      // Click-away for pointerdown, mouseup, and click
       if (!this.boundDocumentClickHandler) {
         this.boundDocumentClickHandler = this.handleDocumentClick.bind(this);
-        document.addEventListener('click', this.boundDocumentClickHandler);
+        document.addEventListener('pointerdown', this.boundDocumentClickHandler);
+        document.addEventListener('mouseup',   this.boundDocumentClickHandler);
+        document.addEventListener('click',     this.boundDocumentClickHandler);
       }
     }
   },
@@ -805,18 +810,20 @@ const SearchCombobox = {
         this.handleSearchInput({ target: searchInput });
       }, 10);
 
-      // Add document click listener to close when clicking outside
+      // Click-away for pointerdown, mouseup, and click
       if (!this.boundDocumentClickHandler) {
         this.boundDocumentClickHandler = this.handleDocumentClick.bind(this);
-        document.addEventListener('click', this.boundDocumentClickHandler);
+        document.addEventListener('pointerdown', this.boundDocumentClickHandler);
+        document.addEventListener('mouseup',   this.boundDocumentClickHandler);
+        document.addEventListener('click',     this.boundDocumentClickHandler);
       }
     }
   },
 
   handleDocumentClick(event) {
-    // if we just dragged the scrollbar, ignore this "click" entirely
+    // ignore any pointerdown/mouseup/click that follows a scrollbar drag
     if (this.isDraggingScroll) {
-      console.log('SearchCombobox: Ignoring document click after scrollbar drag');
+      console.log(`SearchCombobox: Ignoring ${event.type} after scrollbar drag`);
       this.isDraggingScroll = false;
       return;
     }
@@ -1329,7 +1336,14 @@ const SearchCombobox = {
       this.triggerButton.removeEventListener('keydown', this.boundTriggerKeyHandler);
     }
     if (this.boundDocumentClickHandler) {
-      document.removeEventListener('click', this.boundDocumentClickHandler);
+      document.removeEventListener('pointerdown', this.boundDocumentClickHandler);
+      document.removeEventListener('mouseup',     this.boundDocumentClickHandler);
+      document.removeEventListener('click',       this.boundDocumentClickHandler);
+    }
+    if (this._swallowPointerUp) {
+      document.removeEventListener('pointerup', this._swallowPointerUp, true);
+      document.removeEventListener('click',     this._swallowClick,     true);
+      this._swallowPointerUp = this._swallowClick = null;
     }
     if (this.boundChangeHandler && this.selectElement) {
       this.selectElement.removeEventListener('change', this.boundChangeHandler);
@@ -1364,13 +1378,32 @@ const SearchCombobox = {
     }
   },
 
-  // new helper to catch scrollbar drags
+  // helper to catch scrollbar drags & swallow the first pointerup/click
   setupScrollHandlers() {
     const scrollArea = this.el.querySelector('.scroll-viewport');
     if (!scrollArea) return;
-    scrollArea.addEventListener('mousedown', () => {
-      this.isDraggingScroll = true;
+    // detect actual scrollbar thumb/track press
+    scrollArea.addEventListener('pointerdown', (e) => {
+      const rect = scrollArea.getBoundingClientRect();
+      const scrollbarZone = e.clientX > rect.right - 20; // ≈ native scrollbar width
+      if (scrollbarZone) {
+        this.isDraggingScroll = true;
+      }
     });
+
+    // capture-phase intercepts (run before LiveView's handlers)
+    const swallowIfDragging = (e) => {
+      if (this.isDraggingScroll) {
+        this.isDraggingScroll = false;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    };
+    // store so we can remove later in cleanup
+    this._swallowPointerUp   = swallowIfDragging;
+    this._swallowClick       = swallowIfDragging;
+    document.addEventListener('pointerup', this._swallowPointerUp,   true);
+    document.addEventListener('click',     this._swallowClick,       true);
   },
 
   destroyed() {
@@ -1382,7 +1415,9 @@ const SearchCombobox = {
     this.cleanupHandlers();
 
     // Remove mousemove tracking
-    document.removeEventListener('mousemove', this.trackMousePosition);
+    if (this.boundTrackMousePosition) {
+      document.removeEventListener('mousemove', this.boundTrackMousePosition);
+    }
   },
 
   setupKeyboardNavigation() {
