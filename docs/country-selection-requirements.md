@@ -12,18 +12,18 @@
 	•	Down Arrow from last row of the last group: Goes to the search input.
 	•	Down Arrow from Group Buttons: Selects the first row in the next uncollapsed group, if there is one. If there is no next uncollapsed group, goes to the search input.
 	•	Up Arrow from Group Buttons: Selects the last row in the previous uncollapsed group, if there is one. If there is no previous uncollapsed group, goes to the search input
+	•	Left and right Arrow from a group button goes to the other group button 
 	3.	Tab and Shift-Tab Navigation
-	•	Tab from Search Input:
-a) Expand/Collapse button (first group)
-b) Sort button (first group)
-c) First item in first group
-d) Expand/Collapse button (second group)
-e) Sort button (second group)
-f) First item in second group
+	•	From Search Input:
+a) Press tab: Go to Expand/Collapse button in the first group
+b) Press tab: Go to Sort button in the group
+c) Press tab: If the group is collapsed, process as if at step d; otherwise, Go to the first item in the group
+d) Press tab: Go to the Expand/Collapse button in the next group
+e) Repeat from b
 	•	Shift-Tab from Search Input: Moves to the previous element in the form.
 	•	Shift-Tab from First Group’s Expand/Collapse: Moves to the search input.
-	•	Shift-Tab from sort button: Moves to the expand/collapse button in the same group
-	•	Shift-Tab from Expand/Collapse: Moves to the last item in the previous group, or to the search input
+	•	Shift-Tab from Sort button: Moves to the expand/collapse button in the same group
+	•	Shift-Tab from Expand/Collapse: Moves to the last item in the previous uncollapsed group, or to the search input
 	•	Tab from Last Item in Last Group: Moves to the next element in the form.
 	4.	Enter and Space Keys
 	•	When a button has focus, the space and enter keys behave as if the button was clicked

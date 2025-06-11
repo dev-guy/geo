@@ -15,6 +15,7 @@ const SearchCombobox = {
     this.searchTerm = '';
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
+    this.debounceDelay = 500;
 
     // Initialize advanced keyboard navigation (no longer dependent on CountrySelector)
     console.log('SearchCombobox: Initializing with advanced keyboard navigation');
@@ -889,11 +890,11 @@ const SearchCombobox = {
       clearTimeout(this.debounceTimer);
     }
 
-    // Debounce the search request (600ms delay to reduce focus loss)
+    // Debounce the search request (500ms delay to reduce focus loss)
     this.debounceTimer = setTimeout(() => {
       console.log(`Sending search for: "${this.searchTerm}"`);
       this.sendSearchEvent(this.searchTerm);
-    }, 600);
+    }, this.debounceDelay);
   },
 
   sendSearchEvent(searchTerm) {
@@ -1259,12 +1260,21 @@ const SearchCombobox = {
       this.scrollToOption(option);
     }
 
-    // Set focus on the option for accessibility
-    option.setAttribute('tabindex', '0');
-    option.focus();
+    // Check if search input has content - if so, don't steal focus
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
+    const isSearchFocused = searchInput && document.activeElement === searchInput;
 
-    const value = option.getAttribute('data-combobox-value');
-    console.log('SearchCombobox: Highlighted and focused option:', value);
+    // Set tabindex for accessibility
+    option.setAttribute('tabindex', '0');
+
+    // Only focus the option if search input doesn't have content and isn't focused
+    if (!hasSearchContent && !isSearchFocused) {
+      option.focus();
+      console.log('SearchCombobox: Highlighted and focused option:', option.getAttribute('data-combobox-value'));
+    } else {
+      console.log('SearchCombobox: Highlighted option without focusing (search input has content or focus):', option.getAttribute('data-combobox-value'));
+    }
   },
 
   clearAllHighlights() {
