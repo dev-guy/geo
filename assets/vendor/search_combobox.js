@@ -615,10 +615,10 @@ const SearchCombobox = {
     if (options.length === 0) return;
 
     let currentIndex = -1;
-    const currentSelected = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+    const currentNavigated = this.el.querySelector('.search-combobox-option[data-combobox-navigate]');
 
-    if (currentSelected) {
-      currentIndex = options.indexOf(currentSelected);
+    if (currentNavigated) {
+      currentIndex = options.indexOf(currentNavigated);
     }
 
     let newIndex;
@@ -634,7 +634,7 @@ const SearchCombobox = {
         const searchInput = this.el.querySelector('.search-combobox-search-input');
         if (searchInput) {
           searchInput.focus();
-          this.clearAllHighlights();
+          this.clearAllNavigationHighlights();
 
           // Scroll to make search input visible
           const scrollArea = this.el.querySelector('.scroll-viewport');
@@ -660,7 +660,7 @@ const SearchCombobox = {
         const searchInput = this.el.querySelector('.search-combobox-search-input');
         if (searchInput) {
           searchInput.focus();
-          this.clearAllHighlights();
+          this.clearAllNavigationHighlights();
 
           // Scroll to make search input visible
           const scrollArea = this.el.querySelector('.scroll-viewport');
@@ -859,14 +859,14 @@ const SearchCombobox = {
   },
 
   selectHighlightedOption() {
-    const selectedOption = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
-    if (selectedOption) {
+    const navigatedOption = this.el.querySelector('.search-combobox-option[data-combobox-navigate]');
+    if (navigatedOption) {
       // Check if search input has content before selecting
       const searchInput = this.el.querySelector('.search-combobox-search-input');
       const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
 
-      selectedOption.click();
-      console.log('SearchCombobox: Selected highlighted option:', selectedOption.getAttribute('data-combobox-value'));
+      navigatedOption.click();
+      console.log('SearchCombobox: Selected navigated option:', navigatedOption.getAttribute('data-combobox-value'));
 
       // If search input has content, ensure focus returns to it
       if (hasSearchContent) {
@@ -879,6 +879,100 @@ const SearchCombobox = {
         }, 10);
       }
     }
+  },
+
+  selectHighlightedOptionKeepOpen() {
+    const selectedOption = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
+    if (selectedOption) {
+      const value = selectedOption.getAttribute('data-combobox-value');
+      const isMultiple = this.el.getAttribute('data-multiple') === 'true';
+
+      console.log('SearchCombobox: Selecting highlighted option and keeping combobox open:', value);
+
+      if (isMultiple) {
+        this.toggleMultipleSelection(selectedOption, value);
+      } else {
+        // For single selection, update the selection but keep dropdown open
+        this.setSingleSelectionKeepOpen(selectedOption, value);
+      }
+    }
+  },
+
+  setSingleSelectionKeepOpen(option, value) {
+    const selectEl = this.el.querySelector('.search-combobox-select');
+    if (!selectEl) {
+      console.log('setSingleSelectionKeepOpen: No select element found');
+      return;
+    }
+
+    console.log('setSingleSelectionKeepOpen called with value:', value);
+
+    // Remove selection from all other options (but keep the current one selected)
+    this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
+      .forEach(opt => {
+        if (opt !== option) {
+          opt.removeAttribute('data-combobox-selected');
+        }
+      });
+
+    // Ensure the chosen option is selected
+    option.setAttribute('data-combobox-selected', '');
+
+    // Update select element value
+    selectEl.value = value;
+    console.log('setSingleSelectionKeepOpen: Set select value to:', value);
+
+    // Update display and trigger change event
+    this.updateSingleDisplay(option);
+    this.triggerChange();
+
+    // Keep the dropdown open - don't close it
+    console.log('setSingleSelectionKeepOpen: Keeping dropdown open after selection');
+  },
+
+  setActiveSelectionKeepOpen(option) {
+    const value = option.getAttribute('data-combobox-value');
+    console.log('setActiveSelectionKeepOpen called with value:', value);
+
+    // Clear all current selections (light blue with checkmark)
+    this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
+      .forEach(opt => opt.removeAttribute('data-combobox-selected'));
+
+    // Set this option as the active selection (light blue with checkmark)
+    option.setAttribute('data-combobox-selected', '');
+
+    // Keep the navigation state (blue) as well so it remains highlighted
+    // The option should have both states: navigated (blue) and selected (checkmark)
+
+    console.log('setActiveSelectionKeepOpen: Set active selection, keeping combobox open');
+  },
+
+  findHoveredOption() {
+    // Try to find an option that's currently being hovered
+    // We can use the :hover pseudo-class or check for mouse position
+    const options = this.el.querySelectorAll('.search-combobox-option');
+
+    for (const option of options) {
+      // Check if this option matches the :hover pseudo-class
+      if (option.matches(':hover')) {
+        return option;
+      }
+    }
+
+    return null;
+  },
+
+  setCurrentNavigationItem(option) {
+    // Clear all current navigation highlights
+    this.clearAllNavigationHighlights();
+
+    // Set this option as the current navigation item (light purple)
+    option.setAttribute('data-combobox-navigate', '');
+
+    // Make sure it's visible
+    this.scrollToOption(option);
+
+    console.log('SearchCombobox: Set current navigation item:', option.getAttribute('data-combobox-value'));
   },
 
   restoreSearchValue() {
@@ -1295,7 +1389,47 @@ const SearchCombobox = {
 
     if (!isDropdownOpen) return;
 
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    if (event.key === ' ' || event.key === 'Enter') {
+      // When a button has focus, space and enter keys behave as if the button was clicked
+      event.preventDefault();
+      const currentButton = event.target;
+      console.log('SearchCombobox: Space/Enter key pressed on button, simulating click');
+
+      // Store button reference for focus restoration
+      const buttonSelector = this.getButtonSelector(currentButton);
+
+      // Trigger the click event on the button
+      currentButton.click();
+
+      // Keep focus on the button after the action, with multiple attempts to handle LiveView updates
+      setTimeout(() => {
+        const button = this.el.querySelector(buttonSelector) || currentButton;
+        if (button) {
+          button.focus();
+          console.log('SearchCombobox: Restored focus to button after click (first attempt)');
+        }
+      }, 10);
+
+      // Second attempt after a longer delay to handle LiveView updates
+      setTimeout(() => {
+        const button = this.el.querySelector(buttonSelector) || currentButton;
+        if (button && document.activeElement !== button) {
+          button.focus();
+          console.log('SearchCombobox: Restored focus to button after click (second attempt)');
+        }
+      }, 100);
+
+      // Third attempt after an even longer delay
+      setTimeout(() => {
+        const button = this.el.querySelector(buttonSelector) || currentButton;
+        if (button && document.activeElement !== button) {
+          button.focus();
+          console.log('SearchCombobox: Restored focus to button after click (third attempt)');
+        }
+      }, 300);
+
+      return;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       // Handle left and right arrow navigation between group buttons
       event.preventDefault();
       this.navigateGroupButtons(event.key === 'ArrowRight' ? 'right' : 'left');
@@ -1321,8 +1455,8 @@ const SearchCombobox = {
       }
 
       // For other buttons or if no option found, let default tab behavior continue
-      // This will naturally move to the next focusable element
-            } else if (event.key === 'Tab' && event.shiftKey) {
+      console.log('SearchCombobox: Letting default Shift+Tab behavior handle this');
+    } else if (event.key === 'Tab' && event.shiftKey) {
       // Handle Shift+Tab from buttons
       const currentButton = event.target;
       const buttonGroup = currentButton.closest('.option-group');
@@ -1433,11 +1567,44 @@ const SearchCombobox = {
         this.closeDropdown();
         break;
       case ' ':
-        // Space in search input should type normally, not select
-        // Only prevent default if we're not in the search input
-        if (event.target !== this.el.querySelector('.search-combobox-search-input')) {
+        // Handle space key based on context and requirements
+        const searchInput = this.el.querySelector('.search-combobox-search-input');
+        const isFromSearchInput = event.target === searchInput;
+
+        // Check if there's a hovered item (this would be detected via CSS :hover or mouse events)
+        // For now, we'll check if there's any item that's currently being hovered
+        const hoveredOption = this.findHoveredOption();
+
+        if (hoveredOption) {
+          // If there is a hovered item, make it the current navigation item (light purple)
           event.preventDefault();
-          this.selectHighlightedOption();
+          this.setCurrentNavigationItem(hoveredOption);
+          console.log('SearchCombobox: Set hovered item as current navigation item:', hoveredOption.getAttribute('data-combobox-value'));
+        } else {
+          // If no hovered item, space goes into the search box
+          event.preventDefault();
+
+          // Focus the search input if it's not already focused
+          if (!isFromSearchInput) {
+            searchInput.focus();
+          }
+
+          // Add the space to the search input at current cursor position
+          const currentValue = searchInput.value || '';
+          const cursorPos = searchInput.selectionStart || currentValue.length;
+          const newValue = currentValue.slice(0, cursorPos) + ' ' + currentValue.slice(cursorPos);
+
+          // Trim leading and trailing spaces as mentioned
+          searchInput.value = newValue.trim();
+
+          // Position cursor after the inserted space (accounting for trim)
+          const newCursorPos = Math.min(cursorPos + 1, searchInput.value.length);
+          searchInput.setSelectionRange(newCursorPos, newCursorPos);
+
+          // Trigger search input handling
+          this.handleSearchInput({ target: searchInput });
+
+          console.log('SearchCombobox: No hovered item, added space to search input');
         }
         break;
       case 'Tab':
@@ -1454,11 +1621,11 @@ const SearchCombobox = {
   highlightOption(option, preventScroll = false) {
     if (!option) return;
 
-    // Clear all highlights first
-    this.clearAllHighlights();
+    // Clear all navigation highlights first
+    this.clearAllNavigationHighlights();
 
-    // Highlight the new option
-    option.setAttribute('data-combobox-selected', '');
+    // Highlight the new option for keyboard navigation (blue state)
+    option.setAttribute('data-combobox-navigate', '');
 
     // Make sure the option is visible (unless prevented)
     if (!preventScroll) {
@@ -1487,6 +1654,15 @@ const SearchCombobox = {
     this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
       .forEach(opt => {
         opt.removeAttribute('data-combobox-selected');
+        opt.removeAttribute('tabindex');
+      });
+  },
+
+  clearAllNavigationHighlights() {
+    // Clear all navigation highlights and remove tabindex
+    this.el.querySelectorAll('.search-combobox-option[data-combobox-navigate]')
+      .forEach(opt => {
+        opt.removeAttribute('data-combobox-navigate');
         opt.removeAttribute('tabindex');
       });
   },
@@ -1609,17 +1785,17 @@ const SearchCombobox = {
       return;
     }
 
-    const currentHighlighted = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
-    if (currentHighlighted) {
-      // There is a highlighted option - make sure it's visible by scrolling to it
-      console.log('SearchCombobox: Scrolling to ensure selected option is visible:', currentHighlighted.getAttribute('data-combobox-value'));
-      this.scrollToOption(currentHighlighted, false);
+    const currentNavigated = this.el.querySelector('.search-combobox-option[data-combobox-navigate]');
+    if (currentNavigated) {
+      // There is a navigated option - make sure it's visible by scrolling to it
+      console.log('SearchCombobox: Scrolling to ensure navigated option is visible:', currentNavigated.getAttribute('data-combobox-value'));
+      this.scrollToOption(currentNavigated, false);
     } else {
       // No option is highlighted, find the first visible option and highlight it
       const firstOption = this.el.querySelector('.search-combobox-option');
       if (firstOption) {
         this.highlightOption(firstOption, false); // Allow scrolling
-        console.log('SearchCombobox: Ensured highlighted option:', firstOption.getAttribute('data-combobox-value'));
+        console.log('SearchCombobox: Ensured navigated option:', firstOption.getAttribute('data-combobox-value'));
       }
     }
   },
@@ -1739,6 +1915,21 @@ const SearchCombobox = {
       scrollArea.style.height = '';
       console.log('SearchCombobox: Using default height as content fits within viewport');
     }
+  },
+
+  getButtonSelector(button) {
+    // Create a selector to find the button after potential DOM updates
+    const buttonGroup = button.closest('.option-group');
+    if (!buttonGroup) return null;
+
+    const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+    const groupIndex = allGroups.indexOf(buttonGroup);
+
+    const groupButtons = Array.from(buttonGroup.querySelectorAll('button'));
+    const buttonIndex = groupButtons.indexOf(button);
+
+    // Return a selector that can find the button by its position
+    return `.option-group:nth-child(${groupIndex + 1}) button:nth-child(${buttonIndex + 1})`;
   },
 };
 

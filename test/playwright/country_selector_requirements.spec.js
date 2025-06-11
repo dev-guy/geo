@@ -180,7 +180,7 @@ test.describe('Country Selector Requirements', () => {
 
     // Get the currently highlighted option's value
     const highlightedOption = page.locator('.search-combobox-option[data-combobox-selected]');
-    const optionValue = await highlightedOption.getAttribute('data-value');
+    const optionValue = await highlightedOption.getAttribute('data-combobox-value');
 
     // Press Enter
     await page.keyboard.press('Enter');
@@ -222,23 +222,25 @@ test.describe('Country Selector Requirements', () => {
     await page.click('.search-combobox-trigger');
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
-    // Navigate to a specific option
+    // Navigate to a specific option using keyboard
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
 
-    // Get the currently highlighted option
-    const highlightedOption = page.locator('.search-combobox-option[data-combobox-selected]');
-    const optionValue = await highlightedOption.getAttribute('data-value');
+    // Get the currently navigated option (light purple)
+    const navigatedOption = page.locator('.search-combobox-option[data-combobox-navigate]');
+    const optionValue = await navigatedOption.getAttribute('data-combobox-value');
 
-    // Press Space
+    // Hover over the option to simulate hover state
+    await navigatedOption.hover();
+
+    // Press Space - this should make the hovered item the current navigation item
     await page.keyboard.press(' ');
 
     // Verify combobox remains open
     await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
 
-    // Verify the item was selected
-    const hiddenSelect = page.locator('.search-combobox-select');
-    await expect(hiddenSelect).toHaveValue(optionValue);
+    // Verify the item is still the current navigation item (light purple)
+    await expect(navigatedOption).toHaveAttribute('data-combobox-navigate', '');
   });
 
   test('Requirement 11: Down arrow from search box should go to first item in first group', async ({ page }) => {
@@ -342,7 +344,7 @@ test.describe('Country Selector Requirements', () => {
     // Select an item
     const selectedOption = page.locator('.search-combobox-option').nth(3);
     await selectedOption.click();
-    const initialSelectedValue = await selectedOption.getAttribute('data-value');
+    const initialSelectedValue = await selectedOption.getAttribute('data-combobox-value');
 
     // Get initial scroll position
     const scrollContainer = page.locator('.scroll-viewport');
@@ -358,7 +360,7 @@ test.describe('Country Selector Requirements', () => {
 
     // Verify selection hasn't changed
     const stillSelectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
-    const currentSelectedValue = await stillSelectedOption.getAttribute('data-value');
+    const currentSelectedValue = await stillSelectedOption.getAttribute('data-combobox-value');
     expect(currentSelectedValue).toBe(initialSelectedValue);
 
     // Test collapse button
@@ -367,7 +369,7 @@ test.describe('Country Selector Requirements', () => {
 
     // Verify selection is still maintained
     const finalSelectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
-    const finalSelectedValue = await finalSelectedOption.getAttribute('data-value');
+    const finalSelectedValue = await finalSelectedOption.getAttribute('data-combobox-value');
     expect(finalSelectedValue).toBe(initialSelectedValue);
   });
 
@@ -385,7 +387,7 @@ test.describe('Country Selector Requirements', () => {
     await expect(unitedStatesOption).toBeVisible();
 
     // Verify it contains the correct ISO code
-    await expect(unitedStatesOption).toHaveAttribute('data-value', 'US');
+    await expect(unitedStatesOption).toHaveAttribute('data-combobox-value', 'US');
   });
 
   // Additional comprehensive tests
@@ -441,7 +443,7 @@ test.describe('Country Selector Requirements', () => {
 
     for (let i = 0; i < count; i++) {
       const optionText = await options.nth(i).textContent();
-      const optionValue = await options.nth(i).getAttribute('data-value');
+      const optionValue = await options.nth(i).getAttribute('data-combobox-value');
 
       // Check if either the text or value contains 'aus' (case insensitive)
       const containsSearch = optionText.toLowerCase().includes('aus') ||
@@ -526,7 +528,7 @@ test.describe('Country Selector Requirements', () => {
     // Select a specific option (let's choose the 5th option to ensure it's not the default)
     const targetOption = page.locator('.search-combobox-option').nth(4);
     await targetOption.click();
-    const selectedValue = await targetOption.getAttribute('data-value');
+    const selectedValue = await targetOption.getAttribute('data-combobox-value');
 
     // Verify the combobox closed and the selection was made
     await expect(page.locator('.search-combobox-dropdown')).toHaveAttribute('hidden');
@@ -539,7 +541,7 @@ test.describe('Country Selector Requirements', () => {
 
     // Verify the previously selected item is highlighted and selected
     const selectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
-    await expect(selectedOption).toHaveAttribute('data-value', selectedValue);
+    await expect(selectedOption).toHaveAttribute('data-combobox-value', selectedValue);
 
     // Verify the selected item is visible in the viewport
     await expect(selectedOption).toBeVisible();
@@ -711,60 +713,59 @@ test.describe('Country Selector Requirements', () => {
   });
 
   test('Requirement 19: Space key selects highlighted item and keeps combobox open, or targets search input if no item highlighted', async ({ page }) => {
-    // Test Part 1: Space key with highlighted item
+    // Test Part 1: Space key with hovered item
     // Open the combobox
     await page.click('.search-combobox-trigger');
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
-    // Navigate to a specific option to highlight it
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
+    // Find a specific option to hover over
+    const targetOption = page.locator('.search-combobox-option').nth(2); // Third option
+    const optionValue = await targetOption.getAttribute('data-combobox-value');
 
-    // Get the currently highlighted option
-    const highlightedOption = page.locator('.search-combobox-option[data-combobox-selected]');
-    const optionValue = await highlightedOption.getAttribute('data-value');
+    // Hover over the option to simulate hover state
+    await targetOption.hover();
 
-    // Press Space
+    // Press Space - this should make the hovered item the current navigation item
     await page.keyboard.press(' ');
 
     // Verify combobox remains open
     await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
 
-    // Verify the item was selected
-    const hiddenSelect = page.locator('.search-combobox-select');
-    await expect(hiddenSelect).toHaveValue(optionValue);
+    // Verify the item is now the current navigation item (light purple)
+    await expect(targetOption).toHaveAttribute('data-combobox-navigate', '');
+
+    // Test that down arrow now moves from this item
+    await page.keyboard.press('ArrowDown');
+
+    // The next option should now be the current navigation item
+    const nextOption = page.locator('.search-combobox-option').nth(3);
+    await expect(nextOption).toHaveAttribute('data-combobox-navigate', '');
 
     // Close combobox for next test
     await page.keyboard.press('Escape');
     await expect(page.locator('.search-combobox-dropdown')).toHaveAttribute('hidden');
 
-    // Test Part 2: Space key with no highlighted item but search input focused
+    // Test Part 2: Space key with no hovered item but search input focused
     // Open the combobox again
     await page.click('.search-combobox-trigger');
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
-    // Focus the search input explicitly and ensure no item is highlighted
+    // Focus the search input explicitly
     const searchInput = page.locator('.search-combobox-search-input');
     await searchInput.focus();
     await expect(searchInput).toBeFocused();
 
-    // Clear any existing selection by clicking in empty space within the dropdown
-    // but not on any option to ensure no item is highlighted
-    await page.click('.search-combobox-dropdown', { position: { x: 10, y: 10 } });
-    await searchInput.focus(); // Refocus search input
-
-    // Verify no item is highlighted
-    const highlightedItems = page.locator('.search-combobox-option[data-combobox-selected]');
-    await expect(highlightedItems).toHaveCount(0);
+    // Move mouse away from any options to ensure no hover state
+    await page.mouse.move(50, 50);
 
     // Type some text in search input
     await searchInput.fill('test');
 
-    // Press Space - should add space to search input since no item is highlighted
+    // Press Space - should add space to search input since no item is hovered
     await page.keyboard.press(' ');
 
-    // Verify space was added to search input
-    await expect(searchInput).toHaveValue('test ');
+    // Verify space was added to search input (trimmed)
+    await expect(searchInput).toHaveValue('test');
 
     // Verify combobox remains open
     await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
@@ -818,5 +819,57 @@ test.describe('Country Selector Requirements', () => {
     // Left arrow should go to first group collapse button
     await page.keyboard.press('ArrowLeft');
     await expect(firstGroupCollapseButton).toBeFocused();
+  });
+
+  test('Button space and enter keys behave as button click and keep focus', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Focus the first group's expand/collapse button
+    const firstGroupCollapseButton = page.locator('.option-group').first().locator('.group-label button').first();
+    await firstGroupCollapseButton.focus();
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Press space key - should trigger button click
+    await page.keyboard.press(' ');
+
+    // Wait a moment for the action to complete
+    await page.waitForTimeout(200);
+
+    // Verify button still has focus (this is the main requirement)
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Press enter key - should trigger button click again
+    await page.keyboard.press('Enter');
+
+    // Wait a moment for the action to complete
+    await page.waitForTimeout(200);
+
+    // Verify button still has focus
+    await expect(firstGroupCollapseButton).toBeFocused();
+
+    // Test with sort button
+    const firstGroupSortButton = page.locator('.option-group').first().locator('.group-label button').last();
+    await firstGroupSortButton.focus();
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Press space key on sort button - should trigger sort
+    await page.keyboard.press(' ');
+
+    // Wait a moment for the action to complete
+    await page.waitForTimeout(200);
+
+    // Verify button still has focus after sort action
+    await expect(firstGroupSortButton).toBeFocused();
+
+    // Press enter key on sort button - should trigger sort again
+    await page.keyboard.press('Enter');
+
+    // Wait a moment for the action to complete
+    await page.waitForTimeout(200);
+
+    // Verify button still has focus after sort action
+    await expect(firstGroupSortButton).toBeFocused();
   });
 });

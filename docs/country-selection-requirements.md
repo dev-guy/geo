@@ -10,8 +10,8 @@
 	•	Up Arrow at Top of View while a combobox item has focus: Scrolls up one row; the row above becomes selected and remains at the top of the viewport.
 	•	Down Arrow at Bottom of View while a combobox item has focus: Scrolls down one row; the row below becomes selected and remains at the bottom of the viewport.
 	•	Down Arrow from last row of the last group: Goes to the search input.
-	•	Down Arrow from Group Buttons: Selects the first row in the next uncollapsed group, if there is one. If there is no next uncollapsed group, goes to the search input.
-	•	Up Arrow from Group Buttons: Selects the last row in the previous uncollapsed group, if there is one. If there is no previous uncollapsed group, goes to the search input
+	•	Down Arrow from Group Buttons: Selects the first row in the next uncollapsed group, if there is one, and it is selected. If there is no next uncollapsed group, goes to the search input.
+	•	Up Arrow from Group Buttons: Selects the last row in the previous uncollapsed group, if there is one, and it is selected. If there is no previous uncollapsed group, goes to the search input
 	•	Left and right Arrow from a group button goes to the other group button 
 	3.	Tab and Shift-Tab Navigation
 	•	From Search Input:
@@ -30,8 +30,7 @@ e) Repeat from b
 	•	Otherwise
     - Enter: Updates the selected country and closes the combobox.
     and the button should keep focus
-	  -	Space: If there is a highlighted item, selects the highlighted item and keeps the combobox open.
-     If there is no highlighted item, target is the search input if the cursor is in it. Ignore the space if the search box is empty
+	  -	Space: Items in the combobox can be highlighted for two reasons: 1) hovering 2) the "current" row that is changed via the up/down arrow keys. There is a checkmark next to the selected items - in the multiple selection case, multiple items can have checkmarks next to them. When hovering over an item and the spacebar is pressed, the hovered item becomes the "current" row such that pressing the down arrow key will change the "current" row to the next row. If there is no hovered item when the spacebar is pressed, the space should be added to the search input depending on where the caret is located, with the exception that the search input self-truncates leading and trailing spaces. For example, hover over Belgium and press space. Then press the down arrow. Belize should then be the "current" item, highlighted in light purple.
 	5.	Escape Key
 	•	Closes the combobox without changing the selected country.
 
