@@ -45,9 +45,10 @@ const SearchCombobox = {
     console.log(`SearchCombobox updated with key: ${key}`);
     console.log(`SearchCombobox: Tracked dropdown state was open: ${this.dropdownWasOpen}`);
 
-    // Store whether search input was focused before update
+    // Store whether search input was focused before update and its content
     const searchInput = this.el.querySelector('.search-combobox-search-input');
     const wasSearchFocused = searchInput && document.activeElement === searchInput;
+    const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
 
     // Check if the key has changed - if so, we need to completely reinitialize
     if (this.currentKey && this.currentKey !== key) {
@@ -85,8 +86,8 @@ const SearchCombobox = {
       setTimeout(() => {
         console.log('SearchCombobox: About to initialize selection after key change (delayed)');
         this.initializeSelection();
-        // Restore focus if search was focused - use longer delay to ensure other components finish
-        if (wasSearchFocused) {
+        // Restore focus if search was focused - prioritize search input if it has content
+        if (wasSearchFocused || hasSearchContent) {
           setTimeout(() => {
             this.restoreSearchFocus();
           }, 300);
@@ -116,9 +117,10 @@ const SearchCombobox = {
       setTimeout(() => {
         console.log('SearchCombobox: About to re-initialize selection on update (delayed)');
         this.initializeSelection();
-        // Restore focus if search was focused - use longer delay to ensure other components finish
-        if (wasSearchFocused) {
+        // Restore focus if search was focused OR if search has content (prioritize search input)
+        if (wasSearchFocused || hasSearchContent) {
           setTimeout(() => {
+            console.log('SearchCombobox: Restoring focus to search input (was focused or has content)');
             this.restoreSearchFocus();
           }, 300);
         }
@@ -278,16 +280,24 @@ const SearchCombobox = {
     const value = option.getAttribute('data-combobox-value');
     const isMultiple = this.el.getAttribute('data-multiple') === 'true';
 
+    // Check if search input has content before making changes
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
+
     if (isMultiple) {
       this.toggleMultipleSelection(option, value);
     } else {
       this.setSingleSelection(option, value);
-      // Close dropdown after single selection
-      const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
-      if (dropdown) {
-        dropdown.setAttribute('hidden', 'true');
-        this.triggerButton.setAttribute('aria-expanded', 'false');
-        this.dropdownWasOpen = false; // Update state tracking
+      // For single selection, only close dropdown if search input is empty
+      if (!hasSearchContent) {
+        const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+        if (dropdown) {
+          dropdown.setAttribute('hidden', 'true');
+          this.triggerButton.setAttribute('aria-expanded', 'false');
+          this.dropdownWasOpen = false; // Update state tracking
+        }
+      } else {
+        console.log('handleOptionClick: Keeping dropdown open because search input has content');
       }
     }
   },
@@ -384,6 +394,11 @@ const SearchCombobox = {
     console.log('setSingleSelection called with value:', value);
     console.log('setSingleSelection: selectEl.name =', selectEl.name);
 
+    // Check if search input has content - if so, preserve its focus
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
+    const wasSearchFocused = searchInput && document.activeElement === searchInput;
+
     // Remove selection from all options
     this.el.querySelectorAll('.search-combobox-option[data-combobox-selected]')
       .forEach(opt => opt.removeAttribute('data-combobox-selected'));
@@ -398,6 +413,20 @@ const SearchCombobox = {
     // Update display and trigger change event
     this.updateSingleDisplay(option);
     this.triggerChange();
+
+    // If search input has content or was focused, restore focus to it
+    if (hasSearchContent || wasSearchFocused) {
+      setTimeout(() => {
+        if (searchInput) {
+          console.log('setSingleSelection: Restoring focus to search input after selection');
+          searchInput.focus();
+          // Position cursor at the end of the text
+          if (searchInput.value) {
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+          }
+        }
+      }, 10);
+    }
   },
 
   updateSingleDisplay(selectedOption) {
@@ -583,7 +612,22 @@ const SearchCombobox = {
         // Move to next option
         newIndex = currentIndex + 1;
       } else {
-        // Already at last option, stay there
+        // At last option, move focus back to search input
+        const searchInput = this.el.querySelector('.search-combobox-search-input');
+        if (searchInput) {
+          searchInput.focus();
+          this.clearAllHighlights();
+
+          // Scroll to make search input visible
+          const scrollArea = this.el.querySelector('.scroll-viewport');
+          if (scrollArea) {
+            scrollArea.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
+            console.log('SearchCombobox: Scrolled to top to show search input from last option');
+          }
+        }
         return;
       }
     } else { // 'up'
@@ -773,8 +817,23 @@ const SearchCombobox = {
   selectHighlightedOption() {
     const selectedOption = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
     if (selectedOption) {
+      // Check if search input has content before selecting
+      const searchInput = this.el.querySelector('.search-combobox-search-input');
+      const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
+
       selectedOption.click();
       console.log('SearchCombobox: Selected highlighted option:', selectedOption.getAttribute('data-combobox-value'));
+
+      // If search input has content, ensure focus returns to it
+      if (hasSearchContent) {
+        setTimeout(() => {
+          if (searchInput) {
+            console.log('selectHighlightedOption: Restoring focus to search input after keyboard selection');
+            searchInput.focus();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+          }
+        }, 10);
+      }
     }
   },
 
@@ -790,11 +849,14 @@ const SearchCombobox = {
     const searchInput = this.el.querySelector('.search-combobox-search-input');
     if (searchInput) {
       console.log('Restoring focus to search input');
-      searchInput.focus();
-      // Position cursor at the end of the text
-      if (searchInput.value) {
-        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
-      }
+      // Use requestAnimationFrame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        searchInput.focus();
+        // Position cursor at the end of the text
+        if (searchInput.value) {
+          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        }
+      });
     }
   },
 
@@ -827,11 +889,11 @@ const SearchCombobox = {
       clearTimeout(this.debounceTimer);
     }
 
-    // Debounce the search request (300ms delay for better responsiveness)
+    // Debounce the search request (600ms delay to reduce focus loss)
     this.debounceTimer = setTimeout(() => {
       console.log(`Sending search for: "${this.searchTerm}"`);
       this.sendSearchEvent(this.searchTerm);
-    }, 300);
+    }, 600);
   },
 
   sendSearchEvent(searchTerm) {
@@ -1089,9 +1151,42 @@ const SearchCombobox = {
 
       // For other buttons or if no option found, let default tab behavior continue
       // This will naturally move to the next focusable element
-    } else if (event.key === 'Tab' && event.shiftKey) {
-      // Shift+Tab should go to previous element in tab order
-      // Let default behavior handle this
+            } else if (event.key === 'Tab' && event.shiftKey) {
+      // Handle Shift+Tab from buttons
+      const currentButton = event.target;
+      const buttonGroup = currentButton.closest('.option-group');
+
+      console.log('SearchCombobox: Shift+Tab from button:', currentButton.title);
+
+      if (buttonGroup) {
+        // Check if this is the first group
+        const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+        const isFirstGroup = allGroups.indexOf(buttonGroup) === 0;
+
+        console.log('SearchCombobox: Is first group:', isFirstGroup);
+
+        if (isFirstGroup) {
+          // Check if this is specifically the expand/collapse button (first button in group)
+          const groupButtons = Array.from(buttonGroup.querySelectorAll('button'));
+          const isExpandCollapseButton = groupButtons.indexOf(currentButton) === 0;
+
+          console.log('SearchCombobox: Button index:', groupButtons.indexOf(currentButton), 'Is expand/collapse:', isExpandCollapseButton);
+
+          if (isExpandCollapseButton) {
+            // From first group's expand/collapse button, go to search input
+            const searchInput = this.el.querySelector('.search-combobox-search-input');
+            if (searchInput) {
+              console.log('SearchCombobox: Moving focus to search input');
+              event.preventDefault();
+              searchInput.focus();
+              return;
+            }
+          }
+        }
+      }
+
+      // For other buttons (including sort button), let default behavior handle this
+      console.log('SearchCombobox: Letting default Shift+Tab behavior handle this');
     }
   },
 

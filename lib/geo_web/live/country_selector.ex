@@ -159,14 +159,17 @@ defmodule GeoWeb.CountrySelector do
   end
 
   def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
-    # this code is wrong. when the sort order for the group is 'original', the socket.assigns.original_countries list
-    # for the group should be used and no sorting is needed.
     case group_name do
       "By Country Code" ->
         orders = socket.assigns.iso_code_sort_orders
         current = socket.assigns.iso_code_sort_order
         new = next_in_list(orders, current)
-        updated = sort_group(socket.assigns.current_countries.iso_code_group, :iso_code, new)
+
+        updated = if new == :original do
+          socket.assigns.original_countries.iso_code_group
+        else
+          sort_group(socket.assigns.current_countries.iso_code_group, :iso_code, new)
+        end
 
         socket =
           socket
@@ -182,7 +185,12 @@ defmodule GeoWeb.CountrySelector do
         orders = socket.assigns.name_sort_orders
         current = socket.assigns.name_sort_order
         new = next_in_list(orders, current)
-        updated = sort_group(socket.assigns.current_countries.name_group, :name, new)
+
+        updated = if new == :original do
+          socket.assigns.original_countries.name_group
+        else
+          sort_group(socket.assigns.current_countries.name_group, :name, new)
+        end
 
         socket =
           socket

@@ -292,6 +292,48 @@ test.describe('Country Selector Requirements', () => {
     await expect(page.locator('.search-combobox-dropdown')).toHaveAttribute('hidden');
   });
 
+  test('Down arrow from last item in last group should go to search input', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Navigate to the last item
+    const lastOption = page.locator('.search-combobox-option').last();
+    await lastOption.scrollIntoViewIfNeeded();
+    await lastOption.click();
+
+    // Verify the last option is selected
+    await expect(lastOption).toHaveAttribute('data-combobox-selected', '');
+
+    // Add some debugging
+    console.log('About to press ArrowDown on last option');
+
+    // Press Down arrow
+    await page.keyboard.press('ArrowDown');
+
+    // Wait a bit for the navigation to complete
+    await page.waitForTimeout(100);
+
+    // Add debugging to see what's focused
+    const focusedElement = await page.evaluate(() => {
+      const focused = document.activeElement;
+      return {
+        tagName: focused?.tagName,
+        className: focused?.className,
+        id: focused?.id
+      };
+    });
+    console.log('Currently focused element:', focusedElement);
+
+    // Verify focus moved to the search input
+    const searchInput = page.locator('.search-combobox-search-input');
+    await expect(searchInput).toBeFocused();
+
+    // Verify no option is selected anymore
+    const selectedOptions = page.locator('.search-combobox-option[data-combobox-selected]');
+    await expect(selectedOptions).toHaveCount(0);
+  });
+
   test('Requirement 14: Sort and expand/collapse buttons should not scroll or change selection', async ({ page }) => {
     // Open the combobox
     await page.click('.search-combobox-trigger');
@@ -608,7 +650,7 @@ test.describe('Country Selector Requirements', () => {
     const searchInput = page.locator('.search-combobox-search-input');
     await expect(searchInput).toBeFocused();
 
-    // Test the same for the sort button in the first group
+    // Test the sort button in the first group - should go to expand/collapse button (normal tab order)
     const firstGroupSortButton = page.locator('.option-group').first().locator('.group-label button').last();
     await firstGroupSortButton.focus();
     await expect(firstGroupSortButton).toBeFocused();
@@ -616,8 +658,8 @@ test.describe('Country Selector Requirements', () => {
     // Press Shift+Tab
     await page.keyboard.press('Shift+Tab');
 
-    // Verify focus moved to the search input
-    await expect(searchInput).toBeFocused();
+    // Verify focus moved to the expand/collapse button (previous element in tab order)
+    await expect(firstGroupCollapseButton).toBeFocused();
   });
 
   test('Requirement 18: Scrolling the combobox all the way to the bottom and releasing the mouse leaves the combobox open', async ({ page }) => {
