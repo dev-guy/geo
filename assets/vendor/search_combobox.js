@@ -1571,17 +1571,18 @@ const SearchCombobox = {
         const searchInput = this.el.querySelector('.search-combobox-search-input');
         const isFromSearchInput = event.target === searchInput;
 
-        // Check if there's a hovered item (this would be detected via CSS :hover or mouse events)
-        // For now, we'll check if there's any item that's currently being hovered
+        // Check if there's a hovered item or if an option currently has focus
         const hoveredOption = this.findHoveredOption();
+        const focusedOption = document.activeElement && document.activeElement.classList.contains('search-combobox-option') ? document.activeElement : null;
 
-        if (hoveredOption) {
-          // If there is a hovered item, make it the current navigation item (light purple)
+        // Only set navigation item if there's a clearly hovered option AND it's different from any focused option
+        if (hoveredOption && hoveredOption !== focusedOption) {
+          // If there is a hovered item that's different from focused item, make it the current navigation item
           event.preventDefault();
           this.setCurrentNavigationItem(hoveredOption);
           console.log('SearchCombobox: Set hovered item as current navigation item:', hoveredOption.getAttribute('data-combobox-value'));
         } else {
-          // If no hovered item, space goes into the search box
+          // Default behavior: space goes into the search box
           event.preventDefault();
 
           // Focus the search input if it's not already focused
@@ -1594,17 +1595,18 @@ const SearchCombobox = {
           const cursorPos = searchInput.selectionStart || currentValue.length;
           const newValue = currentValue.slice(0, cursorPos) + ' ' + currentValue.slice(cursorPos);
 
-          // Trim leading and trailing spaces as mentioned
-          searchInput.value = newValue.trim();
+          // Only trim leading spaces and collapse multiple consecutive spaces, but preserve trailing spaces
+          const trimmedValue = newValue.replace(/^\s+/, '').replace(/\s{2,}/g, ' ');
+          searchInput.value = trimmedValue;
 
-          // Position cursor after the inserted space (accounting for trim)
-          const newCursorPos = Math.min(cursorPos + 1, searchInput.value.length);
+          // Position cursor after the inserted space
+          const newCursorPos = Math.min(cursorPos + 1, trimmedValue.length);
           searchInput.setSelectionRange(newCursorPos, newCursorPos);
 
           // Trigger search input handling
           this.handleSearchInput({ target: searchInput });
 
-          console.log('SearchCombobox: No hovered item, added space to search input');
+          console.log('SearchCombobox: Added space to search input (no clear hovered item or default behavior)');
         }
         break;
       case 'Tab':
