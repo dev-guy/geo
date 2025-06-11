@@ -9,6 +9,9 @@ const SearchCombobox = {
     const key = this.el.parentElement.getAttribute('key');
     console.log(`SearchCombobox mounted with key: ${key}`);
     this.currentKey = key;
+
+    // Store instance reference for debugging
+    this.el.searchComboboxInstance = this;
     this.searchTerm = '';
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
@@ -30,6 +33,7 @@ const SearchCombobox = {
     this.setupFormChangeForwarding();
     this.setupOptionHandlers();
     this.setupKeyboardNavigation();
+    this.setupWindowResizeHandler();
 
     // Initialize the selection based on the current value
     console.log('SearchCombobox: About to initialize selection on mount');
@@ -67,11 +71,14 @@ const SearchCombobox = {
       this.setupFormChangeForwarding();
       this.setupOptionHandlers();
       this.setupKeyboardNavigation();
+      this.setupWindowResizeHandler();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
         console.log('SearchCombobox: Restoring dropdown open state after key change');
         this.restoreDropdownState(true);
+        // Recalculate height after restoration
+        this.setOptimalDropdownHeight();
       }
 
       // Initialize selection
@@ -92,11 +99,14 @@ const SearchCombobox = {
       this.setupFormChangeForwarding();
       this.setupOptionHandlers();
       this.setupKeyboardNavigation();
+      this.setupWindowResizeHandler();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
         console.log('SearchCombobox: Restoring dropdown open state after normal update');
         this.restoreDropdownState(true);
+        // Recalculate height after restoration
+        this.setOptimalDropdownHeight();
       }
 
       // Restore the search input value after LiveView updates
@@ -481,8 +491,8 @@ const SearchCombobox = {
 
     const isHidden = dropdown.hasAttribute('hidden');
 
-    if (isHidden) {
-      // Open dropdown
+        if (isHidden) {
+      // Open dropdown first
       dropdown.removeAttribute('hidden');
       this.triggerButton.setAttribute('aria-expanded', 'true');
       this.dropdownWasOpen = true; // Track state
@@ -493,6 +503,15 @@ const SearchCombobox = {
         this.searchTerm = ''; // Clear stored search term
         this.sendSearchEvent('');
       }
+
+      // Calculate and set optimal height after opening and content is rendered
+      setTimeout(() => {
+        this.setOptimalDropdownHeight();
+        // Retry after a longer delay if content might still be loading
+        setTimeout(() => {
+          this.setOptimalDropdownHeight();
+        }, 200);
+      }, 50);
 
       // Focus search input if available
       if (searchInput) {
@@ -597,9 +616,10 @@ const SearchCombobox = {
     const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const searchInput = this.el.querySelector('.search-combobox-search-input');
 
-    if (dropdown && searchInput) {
+        if (dropdown && searchInput) {
       console.log('SearchCombobox: Opening dropdown and focusing search input');
-      // Open dropdown
+
+      // Open dropdown first
       dropdown.removeAttribute('hidden');
       this.triggerButton.setAttribute('aria-expanded', 'true');
       this.dropdownWasOpen = true;
@@ -609,6 +629,15 @@ const SearchCombobox = {
         this.searchTerm = ''; // Clear stored search term
         this.sendSearchEvent('');
       }
+
+      // Calculate and set optimal height after opening and content is rendered
+      setTimeout(() => {
+        this.setOptimalDropdownHeight();
+        // Retry after a longer delay if content might still be loading
+        setTimeout(() => {
+          this.setOptimalDropdownHeight();
+        }, 200);
+      }, 50);
 
       // Focus search input
       setTimeout(() => searchInput.focus(), 10);
@@ -625,9 +654,10 @@ const SearchCombobox = {
     const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const searchInput = this.el.querySelector('.search-combobox-search-input');
 
-    if (dropdown && searchInput) {
+        if (dropdown && searchInput) {
       console.log(`SearchCombobox: Opening dropdown and starting typing with: "${character}"`);
-      // Open dropdown
+
+      // Open dropdown first
       dropdown.removeAttribute('hidden');
       this.triggerButton.setAttribute('aria-expanded', 'true');
       this.dropdownWasOpen = true;
@@ -635,6 +665,15 @@ const SearchCombobox = {
       // Set the character in the search input and focus it
       searchInput.value = character;
       this.searchTerm = character;
+
+      // Calculate and set optimal height after opening and content is rendered
+      setTimeout(() => {
+        this.setOptimalDropdownHeight();
+        // Retry after a longer delay if content might still be loading
+        setTimeout(() => {
+          this.setOptimalDropdownHeight();
+        }, 200);
+      }, 50);
 
       setTimeout(() => {
         searchInput.focus();
@@ -847,6 +886,36 @@ const SearchCombobox = {
     // The phx-change on the search_combobox should catch this
   },
 
+  /**
+   * Test method to manually trigger height calculation (for debugging)
+   */
+  testHeightCalculation() {
+    console.log('SearchCombobox: Manual height calculation test triggered');
+    this.setOptimalDropdownHeight();
+  },
+
+  /**
+   * Sets up window resize handler to recalculate dropdown height when viewport changes
+   */
+  setupWindowResizeHandler() {
+    // Remove existing listener if any
+    if (this.boundWindowResizeHandler) {
+      window.removeEventListener('resize', this.boundWindowResizeHandler);
+    }
+
+    // Create bound handler
+    this.boundWindowResizeHandler = () => {
+      const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+      if (dropdown && !dropdown.hasAttribute('hidden')) {
+        // Only recalculate if dropdown is open
+        this.setOptimalDropdownHeight();
+      }
+    };
+
+    // Add resize listener
+    window.addEventListener('resize', this.boundWindowResizeHandler);
+  },
+
   cleanupHandlers() {
     console.log('SearchCombobox: Cleaning up handlers');
     if (this.boundSearchHandler && this.inputElement) {
@@ -888,6 +957,9 @@ const SearchCombobox = {
     }
     if (this.dropdownObserver) {
       this.dropdownObserver.disconnect();
+    }
+    if (this.boundWindowResizeHandler) {
+      window.removeEventListener('resize', this.boundWindowResizeHandler);
     }
   },
 
@@ -1215,17 +1287,19 @@ const SearchCombobox = {
       }
     }
 
-    // Calculate minimal scroll needed
+    // Calculate minimal scroll needed for true single-line scrolling
     let newScrollTop = currentScrollTop;
 
     if (optionTop < viewportTop) {
-      // Option is above viewport - scroll up just enough to show the top edge
-      newScrollTop = optionTop - 2; // Minimal padding
+      // Option is above viewport - scroll up just enough to show it at the top
+      // Calculate the minimal scroll needed to bring the top of the option into view
+      const scrollNeeded = viewportTop - optionTop;
+      newScrollTop = currentScrollTop - scrollNeeded - 5; // Small padding from top
     } else if (optionBottom > viewportBottom) {
-      // Option is below viewport - scroll down just enough to show the bottom edge
-      // Use minimal scroll: just enough to make the option visible
-      const minimalScroll = optionBottom - viewportBottom + 2; // Minimal padding
-      newScrollTop = currentScrollTop + minimalScroll;
+      // Option is below viewport - scroll down just enough to show it at the bottom
+      // Calculate the minimal scroll needed to bring the bottom of the option into view
+      const scrollNeeded = optionBottom - viewportBottom;
+      newScrollTop = currentScrollTop + scrollNeeded + 5; // Small padding
     } else {
       // Option is already visible, no scroll needed
       return;
@@ -1318,6 +1392,86 @@ const SearchCombobox = {
       }
     }
   },
+
+    /**
+   * Calculates and sets the optimal height for the dropdown to maintain a 50px margin at the bottom
+   */
+  setOptimalDropdownHeight() {
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+
+    if (!dropdown || !scrollArea) {
+      console.log('SearchCombobox: setOptimalDropdownHeight - dropdown or scrollArea not found');
+      return;
+    }
+
+    // Check if dropdown is actually visible
+    if (dropdown.hasAttribute('hidden')) {
+      console.log('SearchCombobox: setOptimalDropdownHeight - dropdown is hidden, skipping');
+      return;
+    }
+
+    // Get the dropdown's position relative to the viewport
+    const dropdownRect = dropdown.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    console.log(`SearchCombobox: Height calculation - viewport: ${viewportHeight}px, dropdown top: ${dropdownRect.top}px`);
+
+    // Calculate available space below the dropdown (accounting for 50px margin)
+    const availableHeight = viewportHeight - dropdownRect.top - 50;
+
+    // Get the current height of the dropdown content to determine if we need to limit it
+    // Try multiple selectors to find the content container
+    let dropdownContent = dropdown.querySelector('.px-1\\.5') ||
+                         dropdown.querySelector('.scroll-content') ||
+                         dropdown.querySelector('[data-part="search-combobox-listbox"] > div:last-child') ||
+                         dropdown;
+
+    let contentHeight = dropdownContent.scrollHeight;
+
+    // If content height is very small, it might not be rendered yet - estimate based on options
+    if (contentHeight < 100) {
+      const options = dropdown.querySelectorAll('.search-combobox-option');
+      if (options.length > 0) {
+        // Estimate height: ~40px per option + group headers + padding
+        const estimatedHeight = (options.length * 40) + 100; // Add 100px for headers and padding
+        contentHeight = Math.max(contentHeight, estimatedHeight);
+        console.log(`SearchCombobox: Content height too small (${dropdownContent.scrollHeight}px), estimated ${estimatedHeight}px based on ${options.length} options`);
+      }
+    }
+
+    console.log(`SearchCombobox: Available height: ${availableHeight}px, content height: ${contentHeight}px`);
+
+    // Add space for search input and padding (approximately 60px)
+    const searchInputHeight = 60;
+    const maxContentHeight = Math.max(100, availableHeight - searchInputHeight);
+
+    // Only set height if we need to constrain it
+    if (contentHeight > maxContentHeight) {
+      const heightInRem = maxContentHeight / 16; // Convert px to rem (assuming 16px = 1rem)
+      scrollArea.style.height = `${heightInRem}rem`;
+      console.log(`SearchCombobox: Set dropdown height to ${heightInRem}rem (${maxContentHeight}px) to maintain 50px bottom margin`);
+    } else {
+      // Reset to default if content fits
+      scrollArea.style.height = '';
+      console.log('SearchCombobox: Using default height as content fits within viewport');
+    }
+  },
+};
+
+// Add global test function for debugging
+window.testComboboxHeight = function() {
+  const comboboxElements = document.querySelectorAll('[phx-hook="SearchCombobox"]');
+  console.log(`Found ${comboboxElements.length} SearchCombobox elements`);
+
+  comboboxElements.forEach((el, index) => {
+    console.log(`Testing height calculation for combobox ${index + 1}`);
+    if (el.searchComboboxInstance && el.searchComboboxInstance.testHeightCalculation) {
+      el.searchComboboxInstance.testHeightCalculation();
+    } else {
+      console.log(`Combobox ${index + 1} does not have instance or test method`);
+    }
+  });
 };
 
 export default SearchCombobox;

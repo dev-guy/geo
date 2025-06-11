@@ -33,7 +33,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Get the scroll container
-    const scrollContainer = page.locator('.scroll-area-viewport');
+    const scrollContainer = page.locator('.scroll-viewport');
 
     // Find the first visible option and select it
     const firstVisibleOption = page.locator('.search-combobox-option').first();
@@ -60,7 +60,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Get the scroll container
-    const scrollContainer = page.locator('.scroll-area-viewport');
+    const scrollContainer = page.locator('.scroll-viewport');
 
     // Scroll to bottom to find the last visible option
     await scrollContainer.evaluate(el => el.scrollTop = el.scrollHeight);
@@ -303,7 +303,7 @@ test.describe('Country Selector Requirements', () => {
     const initialSelectedValue = await selectedOption.getAttribute('data-value');
 
     // Get initial scroll position
-    const scrollContainer = page.locator('.scroll-area-viewport');
+    const scrollContainer = page.locator('.scroll-viewport');
     const initialScrollTop = await scrollContainer.evaluate(el => el.scrollTop);
 
     // Click sort button in first group
@@ -626,7 +626,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Get the scroll container
-    const scrollContainer = page.locator('.scroll-area-viewport');
+    const scrollContainer = page.locator('.scroll-viewport');
 
     // Verify combobox is initially open
     await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
@@ -666,5 +666,68 @@ test.describe('Country Selector Requirements', () => {
     // Additional verification: try clicking outside to ensure it can still be closed normally
     await page.click('body', { position: { x: 50, y: 50 } });
     await expect(page.locator('.search-combobox-dropdown')).toHaveAttribute('hidden');
+  });
+
+  test('Requirement 19: Space key selects highlighted item and keeps combobox open, or targets search input if no item highlighted', async ({ page }) => {
+    // Test Part 1: Space key with highlighted item
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Navigate to a specific option to highlight it
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+
+    // Get the currently highlighted option
+    const highlightedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const optionValue = await highlightedOption.getAttribute('data-value');
+
+    // Press Space
+    await page.keyboard.press(' ');
+
+    // Verify combobox remains open
+    await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
+
+    // Verify the item was selected
+    const hiddenSelect = page.locator('.search-combobox-select');
+    await expect(hiddenSelect).toHaveValue(optionValue);
+
+    // Close combobox for next test
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.search-combobox-dropdown')).toHaveAttribute('hidden');
+
+    // Test Part 2: Space key with no highlighted item but search input focused
+    // Open the combobox again
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Focus the search input explicitly and ensure no item is highlighted
+    const searchInput = page.locator('.search-combobox-search-input');
+    await searchInput.focus();
+    await expect(searchInput).toBeFocused();
+
+    // Clear any existing selection by clicking in empty space within the dropdown
+    // but not on any option to ensure no item is highlighted
+    await page.click('.search-combobox-dropdown', { position: { x: 10, y: 10 } });
+    await searchInput.focus(); // Refocus search input
+
+    // Verify no item is highlighted
+    const highlightedItems = page.locator('.search-combobox-option[data-combobox-selected]');
+    await expect(highlightedItems).toHaveCount(0);
+
+    // Type some text in search input
+    await searchInput.fill('test');
+
+    // Press Space - should add space to search input since no item is highlighted
+    await page.keyboard.press(' ');
+
+    // Verify space was added to search input
+    await expect(searchInput).toHaveValue('test ');
+
+    // Verify combobox remains open
+    await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
+
+    // Verify search input still has focus
+    await expect(searchInput).toBeFocused();
   });
 });

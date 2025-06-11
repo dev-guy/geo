@@ -17,18 +17,18 @@ defmodule Geo.Country.Cache do
     GenServer.start_link(__MODULE__, [], name: @name)
   end
 
-  @doc """
-  Search for countries by name. Returns a list of matching Country resources.
-  Returns tuple of {iso_matches, name_matches} without any sorting applied.
-  """
-  def search!(query)
+  def search!(query \\ nil)
   def search!(query) when query == nil do
-    # Return all countries when query is empty
     GenServer.call(@name, :search_all)
   end
 
   def search!(query) do
-    GenServer.call(@name, {:search, query})
+    trimmed_query = String.trim(query)
+    if trimmed_query == "" do
+      GenServer.call(@name, :search_all)
+    else
+      GenServer.call(@name, {:search, trimmed_query})
+    end
   end
 
   @doc """

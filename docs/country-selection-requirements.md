@@ -1,4 +1,5 @@
-Combobox Keyboard and Focus Behavior
+# Combobox Keyboard and Focus Behavior
+
 	1.	Typing Characters
 	•	Typing a letter when an item is selected should append the character to the search input and move focus to the input.
 	2.	Arrow Key Navigation
@@ -22,6 +23,8 @@ f) First item in second group
 	4.	Enter and Space Keys
 	•	Enter: Updates the selected country and closes the combobox.
 	•	Space: Selects the highlighted item and keeps the combobox open.
+     If there is no highlighted item, target is the search input box if
+     the cursor is in it.
 	5.	Escape Key
 	•	Closes the combobox without changing the selected country.
 

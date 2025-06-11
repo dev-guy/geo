@@ -17,11 +17,12 @@ defmodule GeoWeb.CountrySelector do
       {:ok, assign(socket, assigns)}
     else
       %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!()
+      original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
 
       socket =
         socket
-        |> assign(:original_countries, %{iso_code_group: countries_by_iso_code, name_group: countries_by_name})
-        |> assign(:current_countries, %{iso_code_group: countries_by_iso_code, name_group: countries_by_name})
+        |> assign(:original_countries, original_countries)
+        |> assign(:current_countries, original_countries)
         |> assign(:selected_country, nil)
         |> assign(:iso_code_group_collapsed, false)
         |> assign(:name_group_collapsed, false)
@@ -96,6 +97,7 @@ defmodule GeoWeb.CountrySelector do
           phx-target={@myself}
           variant="bordered"
           color="primary"
+          height="h-fit max-h-[32rem]"
           enable_group_sorting={true}
           sort_groups={false}
           toggle_group_sort_event="toggle_group_sort"
@@ -137,50 +139,28 @@ defmodule GeoWeb.CountrySelector do
   @impl true
   def handle_event("search_combobox_updated", %{"value" => query}, socket) do
     # Check if trimmed query is empty, but keep original query for search
-    trimmed_query = String.trim(query)
+    %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!(query)
+    original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
 
-    # If trimmed query is empty, use original countries and restore original sort orders
-    if trimmed_query == "" do
-      # Restore original sort orders from the full country list
-      %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!()
-      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso_code, :iso_code)
-      {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
+    # Recalculate sort orders based on the search results
+    {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso_code, :iso_code)
+    {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
 
-      socket =
-        socket
-        |> assign(:current_countries, socket.assigns.original_countries)
-        |> assign(:iso_code_sort_orders, iso_code_sort_orders)
-        |> assign(:name_sort_orders, name_sort_orders)
-        |> assign(:iso_code_sort_order, iso_code_sort_order)
-        |> assign(:name_sort_order, name_sort_order)
+    socket =
+      socket
+      |> assign(:current_countries, original_countries)
+      |> assign(:original_countries, original_countries)
+      |> assign(:iso_code_sort_orders, iso_code_sort_orders)
+      |> assign(:name_sort_orders, name_sort_orders)
+      |> assign(:iso_code_sort_order, iso_code_sort_order)
+      |> assign(:name_sort_order, name_sort_order)
 
-      {:noreply, socket}
-    else
-      try do
-        %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!(query)
-
-        # Recalculate sort orders based on the search results
-        {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso_code, :iso_code)
-        {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
-
-        socket =
-          socket
-          |> assign(:current_countries, %{iso_code_group: countries_by_iso_code, name_group: countries_by_name})
-          |> assign(:iso_code_sort_orders, iso_code_sort_orders)
-          |> assign(:name_sort_orders, name_sort_orders)
-          |> assign(:iso_code_sort_order, iso_code_sort_order)
-          |> assign(:name_sort_order, name_sort_order)
-
-        {:noreply, socket}
-      rescue
-        _error ->
-          socket = assign(socket, :current_countries, %{iso_code_group: [], name_group: []})
-          {:noreply, socket}
-      end
-    end
+    {:noreply, socket}
   end
 
   def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
+    # this code is wrong. when the sort order for the group is 'original', the socket.assigns.original_countries list
+    # for the group should be used and no sorting is needed.
     case group_name do
       "By Country Code" ->
         orders = socket.assigns.iso_code_sort_orders
