@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Combobox Scrolling</title>
+    <script>
+        function testScrolling() {
+            // Open the page in a new window
+            window.open('http://localhost:4000', '_blank');
+        }
+
+        function showInstructions() {
+            document.getElementById('instructions').style.display = 'block';
+        }
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .instructions { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Combobox Scrolling Test</h1>
+
+    <button onclick="testScrolling()">Open Test Page</button>
+    <button onclick="showInstructions()">Show Test Instructions</button>
+
+    <div id="instructions" class="instructions" style="display: none;">
+        <h3>Manual Test Instructions:</h3>
+        <ol>
+            <li>Click "Open Test Page" to open the application</li>
+            <li>Click on the country selector combobox to open it</li>
+            <li>Use the down arrow key to navigate to the bottom of the visible area</li>
+            <li>Continue pressing down arrow when you reach the bottom</li>
+            <li><strong>Expected behavior:</strong> The combobox should scroll down one line at a time, keeping the selected item at the bottom of the viewport</li>
+            <li><strong>Previous problem:</strong> The combobox was scrolling half a page and putting the selected item in the middle</li>
+        </ol>
+
+        <h3>What to Look For:</h3>
+        <ul>
+            <li>Smooth, single-line scrolling (not jumping half a page)</li>
+            <li>Selected item stays at the bottom edge of the viewport when scrolling down</li>
+            <li>Selected item stays at the top edge of the viewport when scrolling up</li>
+            <li>No jarring jumps or large scrolling movements</li>
+        </ul>
+    </div>
+</body>
+</html>

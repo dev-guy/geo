@@ -563,7 +563,7 @@ const SearchCombobox = {
     }
   },
 
-  navigateOptions(direction) {
+  navigateOptionsAdvanced(direction) {
     const options = Array.from(this.el.querySelectorAll('.search-combobox-option'));
     if (options.length === 0) return;
 
@@ -576,30 +576,47 @@ const SearchCombobox = {
 
     let newIndex;
     if (direction === 'down') {
-      newIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
-    } else {
-      newIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+      if (currentIndex === -1) {
+        // No current selection, select first option
+        newIndex = 0;
+      } else if (currentIndex < options.length - 1) {
+        // Move to next option
+        newIndex = currentIndex + 1;
+      } else {
+        // Already at last option, stay there
+        return;
+      }
+    } else { // 'up'
+      if (currentIndex === -1) {
+        // No current selection, select last option
+        newIndex = options.length - 1;
+      } else if (currentIndex > 0) {
+        // Move to previous option
+        newIndex = currentIndex - 1;
+      } else {
+        // At first option, move focus back to search input
+        const searchInput = this.el.querySelector('.search-combobox-search-input');
+        if (searchInput) {
+          searchInput.focus();
+          this.clearAllHighlights();
+
+          // Scroll to make search input visible
+          const scrollArea = this.el.querySelector('.scroll-viewport');
+          if (scrollArea) {
+            scrollArea.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
+            console.log('SearchCombobox: Scrolled to top to show search input');
+          }
+        }
+        return;
+      }
     }
 
     const newOption = options[newIndex];
     if (newOption) {
-      // Clear all selections and reset tabindex
-      options.forEach(opt => {
-        opt.removeAttribute('data-combobox-selected');
-        opt.setAttribute('tabindex', '-1');
-      });
-
-      // Set new selection and make it focusable
-      newOption.setAttribute('data-combobox-selected', '');
-      newOption.setAttribute('tabindex', '0');
-
-      // Scroll the option into view
-      newOption.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-
-      // Focus the option for accessibility
-      newOption.focus();
-
-      console.log(`SearchCombobox: Navigated ${direction} to option:`, newOption.getAttribute('data-combobox-value'));
+      this.highlightOption(newOption, false); // Allow scrolling for navigation
     }
   },
 
@@ -1133,53 +1150,6 @@ const SearchCombobox = {
     }
   },
 
-  navigateOptionsAdvanced(direction) {
-    const options = Array.from(this.el.querySelectorAll('.search-combobox-option'));
-    if (options.length === 0) return;
-
-    let currentIndex = -1;
-    const currentSelected = this.el.querySelector('.search-combobox-option[data-combobox-selected]');
-
-    if (currentSelected) {
-      currentIndex = options.indexOf(currentSelected);
-    }
-
-    let newIndex;
-    if (direction === 'down') {
-      if (currentIndex === -1) {
-        // No current selection, select first option
-        newIndex = 0;
-      } else if (currentIndex < options.length - 1) {
-        // Move to next option
-        newIndex = currentIndex + 1;
-      } else {
-        // Already at last option, stay there
-        return;
-      }
-    } else { // 'up'
-      if (currentIndex === -1) {
-        // No current selection, select last option
-        newIndex = options.length - 1;
-      } else if (currentIndex > 0) {
-        // Move to previous option
-        newIndex = currentIndex - 1;
-      } else {
-        // At first option, move focus back to search input
-        const searchInput = this.el.querySelector('.search-combobox-search-input');
-        if (searchInput) {
-          searchInput.focus();
-          this.clearAllHighlights();
-        }
-        return;
-      }
-    }
-
-    const newOption = options[newIndex];
-    if (newOption) {
-      this.highlightOption(newOption, false); // Allow scrolling for navigation
-    }
-  },
-
   highlightOption(option, preventScroll = false) {
     if (!option) return;
 
@@ -1292,9 +1262,8 @@ const SearchCombobox = {
 
     if (optionTop < viewportTop) {
       // Option is above viewport - scroll up just enough to show it at the top
-      // Calculate the minimal scroll needed to bring the top of the option into view
-      const scrollNeeded = viewportTop - optionTop;
-      newScrollTop = currentScrollTop - scrollNeeded - 5; // Small padding from top
+      // Set scroll position so the option appears at the top of the viewport
+      newScrollTop = Math.max(0, optionTop - 5); // Position option at top with small padding
     } else if (optionBottom > viewportBottom) {
       // Option is below viewport - scroll down just enough to show it at the bottom
       // Calculate the minimal scroll needed to bring the bottom of the option into view
