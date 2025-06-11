@@ -17,6 +17,11 @@ const SearchCombobox = {
     this.dropdownWasOpen = false; // Track dropdown state across updates
     this.debounceDelay = 500;
 
+    // Track mouse position for hover detection
+    window.mouseX = 0;
+    window.mouseY = 0;
+    document.addEventListener('mousemove', this.trackMousePosition);
+
     // Initialize advanced keyboard navigation (no longer dependent on CountrySelector)
     console.log('SearchCombobox: Initializing with advanced keyboard navigation');
 
@@ -333,6 +338,10 @@ const SearchCombobox = {
       if (!isFromSearchInput) {
         event.preventDefault();
         console.log('SearchCombobox: Space key pressed on option (navigation only):', option.getAttribute('data-combobox-value'));
+
+        // Make the currently hovered option the navigation item
+        const hoveredOption = this.findHoveredOption() || option;
+        this.setCurrentNavigationItem(hoveredOption);
       }
       // If from search input, let the space be typed normally
     } else if (event.key === 'Tab' && !event.shiftKey) {
@@ -989,13 +998,27 @@ const SearchCombobox = {
 
   findHoveredOption() {
     // Try to find an option that's currently being hovered
-    // We can use the :hover pseudo-class or check for mouse position
+    // We need to check for actual hover state since :hover doesn't always work reliably in all browsers
     const options = this.el.querySelectorAll('.search-combobox-option');
 
+    // First try to find direct hover on options
     for (const option of options) {
-      // Check if this option matches the :hover pseudo-class
       if (option.matches(':hover')) {
         return option;
+      }
+    }
+
+    // If no direct hover found, check if any element under the mouse is within an option
+    const hoveredElement = document.elementFromPoint(
+      window.mouseX || 0,
+      window.mouseY || 0
+    );
+
+    if (hoveredElement) {
+      // Find closest parent option
+      const closestOption = hoveredElement.closest('.search-combobox-option');
+      if (closestOption) {
+        return closestOption;
       }
     }
 
@@ -1357,6 +1380,9 @@ const SearchCombobox = {
       clearTimeout(this.debounceTimer);
     }
     this.cleanupHandlers();
+
+    // Remove mousemove tracking
+    document.removeEventListener('mousemove', this.trackMousePosition);
   },
 
   setupKeyboardNavigation() {
@@ -1477,34 +1503,71 @@ const SearchCombobox = {
 
       return;
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      // Handle vertical arrow keys - move to options
+      // Handle vertical arrow keys
       event.preventDefault();
-      console.log('SearchCombobox: Arrow down/up from button, moving to options');
 
-      // Find the group this button belongs to
-      const buttonGroup = event.target.closest('.option-group');
-      if (buttonGroup) {
-        // If going down, find the first option in this group
-        if (event.key === 'ArrowDown') {
+      if (event.key === 'ArrowDown') {
+        console.log('SearchCombobox: Arrow down from button, moving to options');
+        // Find the group this button belongs to
+        const buttonGroup = event.target.closest('.option-group');
+        if (buttonGroup) {
+          // Find the first option in this group
           const firstOptionInGroup = buttonGroup.querySelector('.search-combobox-option');
           if (firstOptionInGroup) {
             this.highlightOption(firstOptionInGroup, false);
             return;
           }
         }
-        // If going up, we might want to go to the search input or previous group's last option
-        else {
+
+        // Fallback to normal navigation if we couldn't find a specific target
+        this.navigateOptionsAdvanced('down');
+      } else { // ArrowUp
+        console.log('SearchCombobox: Arrow up from button, finding previous group or search input');
+        // Find the group this button belongs to
+        const currentGroup = event.target.closest('.option-group');
+        if (currentGroup) {
+          // Get all groups in order
+          const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+          const currentGroupIndex = allGroups.indexOf(currentGroup);
+
+          // Look for the previous expanded group
+          for (let i = currentGroupIndex - 1; i >= 0; i--) {
+            const prevGroup = allGroups[i];
+            // Check if this group is expanded (has visible options)
+            const options = prevGroup.querySelectorAll('.search-combobox-option');
+            const visibleOptions = Array.from(options).filter(opt =>
+              !opt.hasAttribute('hidden') &&
+              opt.offsetParent !== null
+            );
+
+            if (visibleOptions.length > 0) {
+              // Get the last visible option in this group
+              const lastVisibleOption = visibleOptions[visibleOptions.length - 1];
+              console.log('SearchCombobox: Found last option in previous expanded group');
+              this.highlightOption(lastVisibleOption, false);
+              return;
+            }
+          }
+
+          // If we get here, no previous expanded group was found
+          // Go to the search input instead
           const searchInput = this.el.querySelector('.search-combobox-search-input');
           if (searchInput) {
+            console.log('SearchCombobox: No previous expanded group, focusing search input');
             searchInput.focus();
             this.clearAllNavigationHighlights();
             return;
           }
         }
-      }
 
-      // Fallback to normal navigation if we couldn't find a specific target
-      this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
+        // Fallback to search input as a last resort
+        const searchInput = this.el.querySelector('.search-combobox-search-input');
+        if (searchInput) {
+          searchInput.focus();
+          this.clearAllNavigationHighlights();
+          return;
+        }
+      }
     } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       // Handle left and right arrow navigation between group buttons
       event.preventDefault();
@@ -1651,14 +1714,20 @@ const SearchCombobox = {
         const hoveredOption = this.findHoveredOption();
         const focusedOption = document.activeElement && document.activeElement.classList.contains('search-combobox-option') ? document.activeElement : null;
 
-        // Only set navigation item if there's a clearly hovered option AND it's different from any focused option
-        if (hoveredOption && hoveredOption !== focusedOption) {
-          // If there is a hovered item that's different from focused item, make it the current navigation item
+        // If there is a hovered option, always make it the current navigation item
+        if (hoveredOption) {
           event.preventDefault();
           this.setCurrentNavigationItem(hoveredOption);
           console.log('SearchCombobox: Set hovered item as current navigation item:', hoveredOption.getAttribute('data-combobox-value'));
-        } else {
-          // Default behavior: space goes into the search box
+        }
+        // If an option has focus but no hover, make the focused option the navigation item
+        else if (focusedOption && !isFromSearchInput) {
+          event.preventDefault();
+          this.setCurrentNavigationItem(focusedOption);
+          console.log('SearchCombobox: Set focused item as current navigation item:', focusedOption.getAttribute('data-combobox-value'));
+        }
+        // Default behavior: space goes into the search box
+        else {
           event.preventDefault();
 
           // Focus the search input if it's not already focused
@@ -2018,6 +2087,12 @@ const SearchCombobox = {
 
     // Return a selector that can find the button by its position
     return `.option-group:nth-child(${groupIndex + 1}) button:nth-child(${buttonIndex + 1})`;
+  },
+
+  // Track mouse position for improved hover detection
+  trackMousePosition(e) {
+    window.mouseX = e.clientX;
+    window.mouseY = e.clientY;
   },
 };
 

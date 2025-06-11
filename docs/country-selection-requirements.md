@@ -10,8 +10,8 @@
 	•	Up Arrow at Top of View while a combobox item has focus: Scrolls up one row; the row above becomes selected and remains at the top of the viewport.
 	•	Down Arrow at Bottom of View while a combobox item has focus: Scrolls down one row; the row below becomes selected and remains at the bottom of the viewport.
 	•	Down Arrow from last row of the last group: Goes to the search input.
-	•	Down Arrow from Group Buttons: Selects the first row in the next uncollapsed group, if there is one, and it is selected. If there is no next uncollapsed group, goes to the search input.
-	•	Up Arrow from Group Buttons: Selects the last row in the previous uncollapsed group, if there is one, and it is selected. If there is no previous uncollapsed group, goes to the search input
+	•	Down Arrow from Group Buttons: Goes to the first row in the next uncollapsed group, if there is one. If there is no next uncollapsed group, goes to the search input.
+	•	Up Arrow from Group Buttons: Goes to the last row in the previous uncollapsed group, if there is one. If there is no previous uncollapsed group, goes to the search input
 	•	Left and right Arrow from a group button goes to the other group button 
 	3.	Tab and Shift-Tab Navigation
 	•	From Search Input:
@@ -52,3 +52,13 @@ Visual and Selection Behavior
 	10.	Mouse Scroll Behavior
 
 	•	Scrolling to the bottom and releasing the mouse should leave the combobox open.
+
+## Scenarios to try
+
+1. open combobox
+2. tab
+3. down arrow
+4. highlight albania
+5. press space
+
+Expected result: albania is highlighted
