@@ -30,7 +30,10 @@ e) Repeat from b
 	•	Otherwise
     - Enter: Updates the selected country and closes the combobox.
     and the button should keep focus
-	  -	Space: Items in the combobox can be highlighted for two reasons: 1) hovering 2) the "current" row that is changed via the up/down arrow keys. There is a checkmark next to the selected items - in the multiple selection case, multiple items can have checkmarks next to them. When hovering over an item and the spacebar is pressed, the hovered item becomes the "current" row such that pressing the down arrow key will change the "current" row to the next row. If there is no hovered item when the spacebar is pressed, the space should be added to the search input depending on where the caret is located, with the exception that the search input self-truncates leading and trailing spaces. For example, hover over Belgium and press space. Then press the down arrow. Belize should then be the "current" item, highlighted in light purple.
+    - Shift-space scrolls up a page
+    - Pressing space while hovering over an item highlights that item. pressing space over an item that is already highlighted scrolls down a page
+	  -	Space: Items in the combobox can be highlighted for two reasons: 1) hovering 2) the "current" row that is changed via the up/down arrow keys. There is a checkmark next to the selected items - in the multiple selection case, multiple items can have checkmarks next to them.
+    - For example, hover over Belgium and press space. Then press the down arrow. Belize should then be the "current" item, highlighted in light purple.
 	5.	Escape Key
 	•	Closes the combobox without changing the selected country.
 
@@ -62,3 +65,16 @@ Visual and Selection Behavior
 5. press space
 
 Expected result: albania is highlighted
+
+---
+
+1. open the combobox
+2. tab
+3. down arrow
+4. hover over Armenia
+5. space
+6. hover over Argentina
+7. space
+8. down arrow
+
+Result: Armenia is highlighted

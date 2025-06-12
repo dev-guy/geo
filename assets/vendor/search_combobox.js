@@ -16,6 +16,7 @@ const SearchCombobox = {
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
     this.debounceDelay = 500;
+    this.currentlyHoveredOption = null; // Track currently hovered option
 
     // Track mouse position for hover detection
     window.mouseX = 0;
@@ -42,6 +43,7 @@ const SearchCombobox = {
     this.setupKeyboardNavigation();
     this.setupWindowResizeHandler();
     this.setupClearButton();
+    this.setupDragPrevention();
 
     // Initialize the selection based on the current value
     console.log('SearchCombobox: About to initialize selection on mount');
@@ -65,6 +67,7 @@ const SearchCombobox = {
 
       // Clear all state except dropdown tracking
       this.searchTerm = '';
+      this.currentlyHoveredOption = null; // Clear hover tracking
       if (this.debounceTimer) {
         clearTimeout(this.debounceTimer);
         this.debounceTimer = null;
@@ -82,6 +85,7 @@ const SearchCombobox = {
       this.setupKeyboardNavigation();
       this.setupWindowResizeHandler();
       this.setupClearButton();
+      this.setupDragPrevention();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -111,6 +115,7 @@ const SearchCombobox = {
       this.setupKeyboardNavigation();
       this.setupWindowResizeHandler();
       this.setupClearButton();
+      this.setupDragPrevention();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -262,24 +267,36 @@ const SearchCombobox = {
         option.removeEventListener('keydown', handler);
       });
     }
+    if (this.boundOptionHoverHandlers) {
+      this.boundOptionHoverHandlers.forEach(({ option, enterHandler, leaveHandler }) => {
+        option.removeEventListener('mouseenter', enterHandler);
+        option.removeEventListener('mouseleave', leaveHandler);
+      });
+    }
 
     this.boundOptionClickHandlers = [];
     this.boundOptionKeydownHandlers = [];
+    this.boundOptionHoverHandlers = [];
 
-    // Set up click and keydown handlers for all options
+    // Set up click, keydown, and hover handlers for all options
     const options = this.el.querySelectorAll('.search-combobox-option');
     options.forEach(option => {
       const clickHandler = this.handleOptionClick.bind(this, option);
       const keydownHandler = this.handleOptionKeydown.bind(this, option);
+      const mouseEnterHandler = this.handleOptionMouseEnter.bind(this, option);
+      const mouseLeaveHandler = this.handleOptionMouseLeave.bind(this, option);
 
       option.addEventListener('click', clickHandler);
       option.addEventListener('keydown', keydownHandler);
+      option.addEventListener('mouseenter', mouseEnterHandler);
+      option.addEventListener('mouseleave', mouseLeaveHandler);
 
       // Make options focusable
       option.setAttribute('tabindex', '-1');
 
       this.boundOptionClickHandlers.push({ option, handler: clickHandler });
       this.boundOptionKeydownHandlers.push({ option, handler: keydownHandler });
+      this.boundOptionHoverHandlers.push({ option, enterHandler: mouseEnterHandler, leaveHandler: mouseLeaveHandler });
     });
 
     console.log(`Set up handlers for ${options.length} search options`);
@@ -342,7 +359,27 @@ const SearchCombobox = {
       }
       // If from search input, let the space be typed normally
     } else if (event.key === 'Tab' && !event.shiftKey) {
-      // Handle Tab from option - check if this is the last option in the last group
+      // Handle Tab from option - find the next group's expand/collapse button
+      const currentGroup = option.closest('.option-group');
+      if (currentGroup) {
+        const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+        const currentGroupIndex = allGroups.indexOf(currentGroup);
+
+        // Look for the next group
+        const nextGroup = allGroups[currentGroupIndex + 1];
+        if (nextGroup) {
+          // Find the expand/collapse button in the next group
+          const nextGroupButton = nextGroup.querySelector('button[title*="Toggle group"]');
+          if (nextGroupButton) {
+            event.preventDefault();
+            nextGroupButton.focus();
+            console.log('SearchCombobox: Tab navigated to next group button');
+            return;
+          }
+        }
+      }
+
+      // If we can't find a next group button, check if this is the last option
       const allOptions = Array.from(this.el.querySelectorAll('.search-combobox-option'));
       const currentIndex = allOptions.indexOf(option);
 
@@ -361,6 +398,19 @@ const SearchCombobox = {
       this.triggerButton.setAttribute('aria-expanded', 'false');
       this.dropdownWasOpen = false;
       this.triggerButton.focus();
+    }
+  },
+
+  handleOptionMouseEnter(option, event) {
+    console.log('SearchCombobox: Mouse entered option:', option.getAttribute('data-combobox-value'));
+    this.currentlyHoveredOption = option;
+  },
+
+  handleOptionMouseLeave(option, event) {
+    console.log('SearchCombobox: Mouse left option:', option.getAttribute('data-combobox-value'));
+    // Only clear if this is the option that was being tracked
+    if (this.currentlyHoveredOption === option) {
+      this.currentlyHoveredOption = null;
     }
   },
 
@@ -693,8 +743,28 @@ const SearchCombobox = {
         // Default behavior - go to last option
         newIndex = options.length - 1;
       } else if (currentIndex > 0) {
-        // Move to previous option
-        newIndex = currentIndex - 1;
+        // Check if we're at the first option of an expanded group
+        const currentOption = options[currentIndex];
+        const currentGroup = currentOption.closest('.option-group');
+
+        if (currentGroup) {
+          const groupOptions = Array.from(currentGroup.querySelectorAll('.search-combobox-option'));
+          const indexInGroup = groupOptions.indexOf(currentOption);
+
+          // If we're at the first option in the group, go to the last option in the same group
+          if (indexInGroup === 0 && groupOptions.length > 1) {
+            const lastOptionInGroup = groupOptions[groupOptions.length - 1];
+            const lastOptionGlobalIndex = options.indexOf(lastOptionInGroup);
+            newIndex = lastOptionGlobalIndex;
+            console.log('SearchCombobox: Up arrow from first in group, going to last in same group');
+          } else {
+            // Normal previous option navigation
+            newIndex = currentIndex - 1;
+          }
+        } else {
+          // No group found, normal navigation
+          newIndex = currentIndex - 1;
+        }
       } else {
         // At first option, move focus back to search input
         const searchInput = this.el.querySelector('.search-combobox-search-input');
@@ -974,9 +1044,24 @@ const SearchCombobox = {
     // We need to check for actual hover state since :hover doesn't always work reliably in all browsers
     const options = this.el.querySelectorAll('.search-combobox-option');
 
-    // First try to find direct hover on options
+    // First check if we have a tracked hovered option
+    if (this.currentlyHoveredOption && this.el.contains(this.currentlyHoveredOption)) {
+      // Verify it's still a valid option
+      const isStillValid = Array.from(options).includes(this.currentlyHoveredOption);
+      if (isStillValid) {
+        console.log('SearchCombobox: Using tracked hovered option:', this.currentlyHoveredOption.getAttribute('data-combobox-value'));
+        return this.currentlyHoveredOption;
+      } else {
+        // Clear invalid reference
+        this.currentlyHoveredOption = null;
+      }
+    }
+
+    // Fallback: try to find direct hover on options
     for (const option of options) {
       if (option.matches(':hover')) {
+        console.log('SearchCombobox: Found hovered option via :hover:', option.getAttribute('data-combobox-value'));
+        this.currentlyHoveredOption = option;
         return option;
       }
     }
@@ -990,11 +1075,15 @@ const SearchCombobox = {
     if (hoveredElement) {
       // Find closest parent option
       const closestOption = hoveredElement.closest('.search-combobox-option');
-      if (closestOption) {
+      if (closestOption && Array.from(options).includes(closestOption)) {
+        console.log('SearchCombobox: Found hovered option via elementFromPoint:', closestOption.getAttribute('data-combobox-value'));
+        this.currentlyHoveredOption = closestOption;
         return closestOption;
       }
     }
 
+    // No hovered option found
+    this.currentlyHoveredOption = null;
     return null;
   },
 
@@ -1009,6 +1098,30 @@ const SearchCombobox = {
     this.scrollToOption(option);
 
     console.log('SearchCombobox: Set current navigation item:', option.getAttribute('data-combobox-value'));
+  },
+
+  scrollPage(direction) {
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (!scrollArea) return;
+
+    const scrollAreaHeight = scrollArea.clientHeight;
+    const currentScrollTop = scrollArea.scrollTop;
+    const pageSize = scrollAreaHeight * 0.8; // Scroll 80% of visible area
+
+    let newScrollTop;
+    if (direction === 'up') {
+      newScrollTop = Math.max(0, currentScrollTop - pageSize);
+    } else { // 'down'
+      const maxScrollTop = scrollArea.scrollHeight - scrollAreaHeight;
+      newScrollTop = Math.min(maxScrollTop, currentScrollTop + pageSize);
+    }
+
+    scrollArea.scrollTo({
+      top: newScrollTop,
+      behavior: 'smooth'
+    });
+
+    console.log(`SearchCombobox: Scrolled ${direction} by ${pageSize}px from ${currentScrollTop} to ${newScrollTop}`);
   },
 
   restoreSearchValue() {
@@ -1246,6 +1359,168 @@ const SearchCombobox = {
   },
 
   /**
+   * Sets up drag prevention functionality
+   */
+  setupDragPrevention() {
+    console.log('SearchCombobox: Setting up drag prevention');
+
+    // Prevent dragging on the entire combobox element
+    this.el.setAttribute('draggable', 'false');
+
+    // Add CSS to prevent text selection and dragging
+    this.el.style.userSelect = 'none';
+    this.el.style.webkitUserSelect = 'none';
+    this.el.style.mozUserSelect = 'none';
+    this.el.style.msUserSelect = 'none';
+
+    // Remove existing drag prevention handlers to avoid duplicates
+    if (this.boundPreventDragStart) {
+      this.el.removeEventListener('dragstart', this.boundPreventDragStart);
+    }
+    if (this.boundPreventSelectStart) {
+      this.el.removeEventListener('selectstart', this.boundPreventSelectStart);
+    }
+    if (this.boundPreventMouseDown) {
+      this.el.removeEventListener('mousedown', this.boundPreventMouseDown);
+    }
+
+    // Create bound handlers
+    this.boundPreventDragStart = this.preventDragStart.bind(this);
+    this.boundPreventSelectStart = this.preventSelectStart.bind(this);
+    this.boundPreventMouseDown = this.preventDragMouseDown.bind(this);
+
+    // Add event listeners to prevent dragging
+    this.el.addEventListener('dragstart', this.boundPreventDragStart);
+    this.el.addEventListener('selectstart', this.boundPreventSelectStart);
+    this.el.addEventListener('mousedown', this.boundPreventMouseDown);
+
+    // Set draggable=false on all child elements that might be draggable
+    const draggableElements = this.el.querySelectorAll('*');
+    draggableElements.forEach(element => {
+      element.setAttribute('draggable', 'false');
+
+      // Specifically prevent dragging on options and trigger
+      if (element.classList.contains('search-combobox-option') ||
+          element.classList.contains('search-combobox-trigger') ||
+          element.classList.contains('search-combobox-pill')) {
+        element.style.userSelect = 'none';
+        element.style.webkitUserSelect = 'none';
+        element.style.mozUserSelect = 'none';
+        element.style.msUserSelect = 'none';
+      }
+    });
+
+    // Allow text selection only in the search input
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    if (searchInput) {
+      searchInput.style.userSelect = 'text';
+      searchInput.style.webkitUserSelect = 'text';
+      searchInput.style.mozUserSelect = 'text';
+      searchInput.style.msUserSelect = 'text';
+    }
+
+    console.log('SearchCombobox: Drag prevention setup complete');
+  },
+
+  /**
+   * Prevents drag start events
+   */
+  preventDragStart(event) {
+    // Allow dragging only if it's from the search input and there's selected text
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    if (event.target === searchInput && searchInput.selectionStart !== searchInput.selectionEnd) {
+      return; // Allow text selection dragging in search input
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('SearchCombobox: Prevented drag start');
+    return false;
+  },
+
+  /**
+   * Prevents text selection start events
+   */
+  preventSelectStart(event) {
+    // Allow text selection only in the search input
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    if (event.target === searchInput) {
+      return; // Allow text selection in search input
+    }
+
+    event.preventDefault();
+    console.log('SearchCombobox: Prevented select start');
+    return false;
+  },
+
+  /**
+   * Prevents drag behavior on mouse down
+   */
+  preventDragMouseDown(event) {
+    // Check if this is a mouse down that could start a drag
+    const searchInput = this.el.querySelector('.search-combobox-search-input');
+
+    // Allow normal mouse behavior in search input
+    if (event.target === searchInput) {
+      return;
+    }
+
+    // For other elements, prevent drag but allow normal click behavior
+    // Only prevent if this looks like a potential drag (mouse move might follow)
+    const target = event.target;
+    if (target.classList.contains('search-combobox-option') ||
+        target.classList.contains('search-combobox-trigger') ||
+        target.classList.contains('search-combobox-pill') ||
+        target.closest('.search-combobox-option') ||
+        target.closest('.search-combobox-trigger') ||
+        target.closest('.search-combobox-pill')) {
+
+      // Store the initial mouse position to detect drag attempts
+      this.mouseDownX = event.clientX;
+      this.mouseDownY = event.clientY;
+      this.mouseDownTime = Date.now();
+
+      // Add temporary mouse move listener to detect drag attempts
+      if (!this.boundDetectDragAttempt) {
+        this.boundDetectDragAttempt = this.detectDragAttempt.bind(this);
+      }
+
+      document.addEventListener('mousemove', this.boundDetectDragAttempt);
+
+      // Clean up the listener after a short time or on mouse up
+      const cleanup = () => {
+        document.removeEventListener('mousemove', this.boundDetectDragAttempt);
+        document.removeEventListener('mouseup', cleanup);
+      };
+      document.addEventListener('mouseup', cleanup);
+    }
+  },
+
+  /**
+   * Detects and prevents drag attempts
+   */
+  detectDragAttempt(event) {
+    if (!this.mouseDownX || !this.mouseDownY) return;
+
+    const deltaX = Math.abs(event.clientX - this.mouseDownX);
+    const deltaY = Math.abs(event.clientY - this.mouseDownY);
+    const deltaTime = Date.now() - this.mouseDownTime;
+
+    // If mouse has moved significantly while button is down, it's likely a drag attempt
+    if ((deltaX > 3 || deltaY > 3) && deltaTime > 50) {
+      event.preventDefault();
+      event.stopPropagation();
+      console.log('SearchCombobox: Detected and prevented drag attempt');
+
+      // Clean up
+      document.removeEventListener('mousemove', this.boundDetectDragAttempt);
+      this.mouseDownX = null;
+      this.mouseDownY = null;
+      this.mouseDownTime = null;
+    }
+  },
+
+  /**
    * Clears all selections in multiple mode
    */
   clearAllMultipleSelections() {
@@ -1320,6 +1595,12 @@ const SearchCombobox = {
         option.removeEventListener('keydown', handler);
       });
     }
+    if (this.boundOptionHoverHandlers) {
+      this.boundOptionHoverHandlers.forEach(({ option, enterHandler, leaveHandler }) => {
+        option.removeEventListener('mouseenter', enterHandler);
+        option.removeEventListener('mouseleave', leaveHandler);
+      });
+    }
     if (this.boundButtonClickHandler) {
       const buttons = this.el.querySelectorAll('button[title*="Toggle group"], button[title*="sort order"]');
       buttons.forEach(button => {
@@ -1337,6 +1618,20 @@ const SearchCombobox = {
     }
     if (this.boundClearHandler && this.clearButton) {
       this.clearButton.removeEventListener('click', this.boundClearHandler);
+    }
+
+    // Clean up drag prevention handlers
+    if (this.boundPreventDragStart) {
+      this.el.removeEventListener('dragstart', this.boundPreventDragStart);
+    }
+    if (this.boundPreventSelectStart) {
+      this.el.removeEventListener('selectstart', this.boundPreventSelectStart);
+    }
+    if (this.boundPreventMouseDown) {
+      this.el.removeEventListener('mousedown', this.boundPreventMouseDown);
+    }
+    if (this.boundDetectDragAttempt) {
+      document.removeEventListener('mousemove', this.boundDetectDragAttempt);
     }
   },
 
@@ -1681,15 +1976,30 @@ const SearchCombobox = {
         const searchInput = this.el.querySelector('.search-combobox-search-input');
         const isFromSearchInput = event.target === searchInput;
 
+        // Check for Shift+Space - scroll up a page
+        if (event.shiftKey) {
+          event.preventDefault();
+          this.scrollPage('up');
+          break;
+        }
+
         // Check if there's a hovered item or if an option currently has focus
         const hoveredOption = this.findHoveredOption();
         const focusedOption = document.activeElement && document.activeElement.classList.contains('search-combobox-option') ? document.activeElement : null;
+        const currentlyNavigated = this.el.querySelector('.search-combobox-option[data-combobox-navigate]');
 
-        // If there is a hovered option, always make it the current navigation item
+        // If there is a hovered option, check if it's already highlighted
         if (hoveredOption) {
           event.preventDefault();
-          this.setCurrentNavigationItem(hoveredOption);
-          console.log('SearchCombobox: Set hovered item as current navigation item:', hoveredOption.getAttribute('data-combobox-value'));
+          // If the hovered option is already highlighted, scroll down a page
+          if (currentlyNavigated === hoveredOption) {
+            this.scrollPage('down');
+            console.log('SearchCombobox: Space on already highlighted item - scrolling down a page');
+          } else {
+            // Set hovered item as current navigation item
+            this.setCurrentNavigationItem(hoveredOption);
+            console.log('SearchCombobox: Set hovered item as current navigation item:', hoveredOption.getAttribute('data-combobox-value'));
+          }
         }
         // If an option has focus but no hover, make the focused option the navigation item
         else if (focusedOption && !isFromSearchInput) {
@@ -1913,17 +2223,35 @@ const SearchCombobox = {
       return;
     }
 
+    // Check if there's a currently selected value
+    const selectEl = this.el.querySelector('.search-combobox-select');
+    const currentValue = selectEl ? selectEl.value : null;
+
     const currentNavigated = this.el.querySelector('.search-combobox-option[data-combobox-navigate]');
     if (currentNavigated) {
       // There is a navigated option - make sure it's visible by scrolling to it
       console.log('SearchCombobox: Scrolling to ensure navigated option is visible:', currentNavigated.getAttribute('data-combobox-value'));
       this.scrollToOption(currentNavigated, false);
+    } else if (currentValue) {
+      // No navigated option but there's a selected value - find and highlight it
+      const selectedOption = this.el.querySelector(`.search-combobox-option[data-combobox-value="${currentValue}"]`);
+      if (selectedOption) {
+        this.highlightOption(selectedOption, false); // Allow scrolling to bring it into view
+        console.log('SearchCombobox: Highlighted and scrolled to selected option:', currentValue);
+      } else {
+        // Selected option not found, highlight first option
+        const firstOption = this.el.querySelector('.search-combobox-option');
+        if (firstOption) {
+          this.highlightOption(firstOption, false);
+          console.log('SearchCombobox: Selected option not found, highlighted first option');
+        }
+      }
     } else {
-      // No option is highlighted, find the first visible option and highlight it
+      // No option is highlighted and no selection, find the first visible option and highlight it
       const firstOption = this.el.querySelector('.search-combobox-option');
       if (firstOption) {
         this.highlightOption(firstOption, false); // Allow scrolling
-        console.log('SearchCombobox: Ensured navigated option:', firstOption.getAttribute('data-combobox-value'));
+        console.log('SearchCombobox: Ensured navigated option (first):', firstOption.getAttribute('data-combobox-value'));
       }
     }
   },
