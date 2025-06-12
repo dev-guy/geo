@@ -18,7 +18,7 @@ test.describe('Country Selector Space Key Issue', () => {
 
     // Step 4: Find and hover over Albania
     // Be more specific by targeting the first Albania option with the ISO code AL
-    const albaniaOption = page.locator('.search-combobox-option[data-combobox-value="AL"]').first();
+    const albaniaOption = page.locator('.combobox-option[data-combobox-value="AL"]').first();
     await albaniaOption.scrollIntoViewIfNeeded();
     await albaniaOption.hover();
 
@@ -56,7 +56,7 @@ test.describe('Country Selector Space Key Issue', () => {
     await expect(albaniaOption).not.toHaveAttribute('data-combobox-navigate', '');
 
     // The next option should now be the navigation item
-    const nextOption = page.locator('.search-combobox-option[data-combobox-navigate]');
+    const nextOption = page.locator('.combobox-option[data-combobox-navigate]');
     await expect(nextOption).toBeVisible();
   });
 });

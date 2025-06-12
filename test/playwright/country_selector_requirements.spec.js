@@ -12,7 +12,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Select the first item
-    const firstOption = page.locator('.search-combobox-option').first();
+    const firstOption = page.locator('.combobox-option').first();
     await firstOption.click();
 
     // Verify an item is selected
@@ -36,7 +36,7 @@ test.describe('Country Selector Requirements', () => {
     const scrollContainer = page.locator('.scroll-viewport');
 
     // Find the first visible option and select it
-    const firstVisibleOption = page.locator('.search-combobox-option').first();
+    const firstVisibleOption = page.locator('.combobox-option').first();
     await firstVisibleOption.click();
 
     // Get initial scroll position
@@ -50,7 +50,7 @@ test.describe('Country Selector Requirements', () => {
     expect(newScrollTop).toBeLessThanOrEqual(initialScrollTop);
 
     // Verify the selected item is now at the top of the viewport
-    const selectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const selectedOption = page.locator('.combobox-option[data-combobox-selected]');
     await expect(selectedOption).toBeVisible();
   });
 
@@ -66,7 +66,7 @@ test.describe('Country Selector Requirements', () => {
     await scrollContainer.evaluate(el => el.scrollTop = el.scrollHeight);
 
     // Find the last visible option and select it
-    const lastVisibleOption = page.locator('.search-combobox-option').last();
+    const lastVisibleOption = page.locator('.combobox-option').last();
     await lastVisibleOption.click();
 
     // Get initial scroll position
@@ -80,7 +80,7 @@ test.describe('Country Selector Requirements', () => {
     expect(newScrollTop).toBeGreaterThanOrEqual(initialScrollTop);
 
     // Verify the selected item is still at the bottom of the viewport
-    const selectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const selectedOption = page.locator('.combobox-option[data-combobox-selected]');
     await expect(selectedOption).toBeVisible();
   });
 
@@ -141,7 +141,7 @@ test.describe('Country Selector Requirements', () => {
 
     // Verify combobox is open and first item in first group is selected
     await expect(page.locator('.search-combobox-dropdown')).not.toHaveAttribute('hidden');
-    const firstOption = page.locator('.search-combobox-option').first();
+    const firstOption = page.locator('.combobox-option').first();
     await expect(firstOption).toHaveAttribute('data-combobox-selected', '');
     await expect(firstOption).toBeVisible();
   });
@@ -155,7 +155,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Select a different option
-    const differentOption = page.locator('.search-combobox-option').nth(5);
+    const differentOption = page.locator('.combobox-option').nth(5);
     await differentOption.click();
 
     // Press Escape
@@ -179,7 +179,7 @@ test.describe('Country Selector Requirements', () => {
     await page.keyboard.press('ArrowDown');
 
     // Get the currently highlighted option's value
-    const highlightedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const highlightedOption = page.locator('.combobox-option[data-combobox-selected]');
     const optionValue = await highlightedOption.getAttribute('data-combobox-value');
 
     // Press Enter
@@ -227,7 +227,7 @@ test.describe('Country Selector Requirements', () => {
     await page.keyboard.press('ArrowDown');
 
     // Get the currently navigated option (light purple)
-    const navigatedOption = page.locator('.search-combobox-option[data-combobox-navigate]');
+    const navigatedOption = page.locator('.combobox-option[data-combobox-navigate]');
     const optionValue = await navigatedOption.getAttribute('data-combobox-value');
 
     // Hover over the option to simulate hover state
@@ -256,7 +256,7 @@ test.describe('Country Selector Requirements', () => {
     await page.keyboard.press('ArrowDown');
 
     // Verify the first item in the first group is selected
-    const firstOption = page.locator('.search-combobox-option').first();
+    const firstOption = page.locator('.combobox-option').first();
     await expect(firstOption).toHaveAttribute('data-combobox-selected', '');
   });
 
@@ -266,7 +266,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Select the first item
-    const firstOption = page.locator('.search-combobox-option').first();
+    const firstOption = page.locator('.combobox-option').first();
     await firstOption.click();
 
     // Press Up arrow
@@ -283,7 +283,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Navigate to the last item
-    const lastOption = page.locator('.search-combobox-option').last();
+    const lastOption = page.locator('.combobox-option').last();
     await lastOption.scrollIntoViewIfNeeded();
     await lastOption.click();
 
@@ -300,7 +300,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Navigate to the last item
-    const lastOption = page.locator('.search-combobox-option').last();
+    const lastOption = page.locator('.combobox-option').last();
     await lastOption.scrollIntoViewIfNeeded();
     await lastOption.click();
 
@@ -332,7 +332,7 @@ test.describe('Country Selector Requirements', () => {
     await expect(searchInput).toBeFocused();
 
     // Verify no option is selected anymore
-    const selectedOptions = page.locator('.search-combobox-option[data-combobox-selected]');
+    const selectedOptions = page.locator('.combobox-option[data-combobox-selected]');
     await expect(selectedOptions).toHaveCount(0);
   });
 
@@ -342,7 +342,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Select an item
-    const selectedOption = page.locator('.search-combobox-option').nth(3);
+    const selectedOption = page.locator('.combobox-option').nth(3);
     await selectedOption.click();
     const initialSelectedValue = await selectedOption.getAttribute('data-combobox-value');
 
@@ -359,7 +359,7 @@ test.describe('Country Selector Requirements', () => {
     expect(newScrollTop).toBe(initialScrollTop);
 
     // Verify selection hasn't changed
-    const stillSelectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const stillSelectedOption = page.locator('.combobox-option[data-combobox-selected]');
     const currentSelectedValue = await stillSelectedOption.getAttribute('data-combobox-value');
     expect(currentSelectedValue).toBe(initialSelectedValue);
 
@@ -368,7 +368,7 @@ test.describe('Country Selector Requirements', () => {
     await collapseButton.click();
 
     // Verify selection is still maintained
-    const finalSelectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const finalSelectedOption = page.locator('.combobox-option[data-combobox-selected]');
     const finalSelectedValue = await finalSelectedOption.getAttribute('data-combobox-value');
     expect(finalSelectedValue).toBe(initialSelectedValue);
   });
@@ -383,7 +383,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForTimeout(500); // Wait for debounced search
 
     // Verify United States appears in the results
-    const unitedStatesOption = page.locator('.search-combobox-option', { hasText: 'United States' });
+    const unitedStatesOption = page.locator('.combobox-option', { hasText: 'United States' });
     await expect(unitedStatesOption).toBeVisible();
 
     // Verify it contains the correct ISO code
@@ -405,7 +405,7 @@ test.describe('Country Selector Requirements', () => {
       await page.keyboard.press('ArrowDown');
 
       // Verify an option is selected
-      const selectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+      const selectedOption = page.locator('.combobox-option[data-combobox-selected]');
       await expect(selectedOption).toBeVisible();
     }
 
@@ -414,7 +414,7 @@ test.describe('Country Selector Requirements', () => {
       await page.keyboard.press('ArrowUp');
 
       // Verify an option is still selected
-      const selectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+      const selectedOption = page.locator('.combobox-option[data-combobox-selected]');
       await expect(selectedOption).toBeVisible();
     }
   });
@@ -425,20 +425,20 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Count initial options
-    const initialCount = await page.locator('.search-combobox-option').count();
+    const initialCount = await page.locator('.combobox-option').count();
 
     // Search for a specific term
     await page.fill('.search-combobox-search-input', 'aus');
     await page.waitForTimeout(500);
 
     // Count filtered options
-    const filteredCount = await page.locator('.search-combobox-option').count();
+    const filteredCount = await page.locator('.combobox-option').count();
 
     // Verify results are filtered
     expect(filteredCount).toBeLessThan(initialCount);
 
     // Verify all visible options contain the search term
-    const options = page.locator('.search-combobox-option');
+    const options = page.locator('.combobox-option');
     const count = await options.count();
 
     for (let i = 0; i < count; i++) {
@@ -461,7 +461,7 @@ test.describe('Country Selector Requirements', () => {
     const firstGroupCollapseButton = page.locator('.group-label button').first();
 
     // Get initial count of visible options in first group
-    const firstGroupOptions = page.locator('.option-group').first().locator('.search-combobox-option');
+    const firstGroupOptions = page.locator('.option-group').first().locator('.combobox-option');
     const initialCount = await firstGroupOptions.count();
 
     // Collapse the first group
@@ -501,7 +501,7 @@ test.describe('Country Selector Requirements', () => {
 
     // c) Tab to first item in first group
     await page.keyboard.press('Tab');
-    const firstItemFirstGroup = page.locator('.option-group').first().locator('.search-combobox-option').first();
+    const firstItemFirstGroup = page.locator('.option-group').first().locator('.combobox-option').first();
     await expect(firstItemFirstGroup).toBeFocused();
 
     // d) Tab to expand/collapse button, second group
@@ -516,7 +516,7 @@ test.describe('Country Selector Requirements', () => {
 
     // f) Tab to first item in second group
     await page.keyboard.press('Tab');
-    const firstItemSecondGroup = page.locator('.option-group').last().locator('.search-combobox-option').first();
+    const firstItemSecondGroup = page.locator('.option-group').last().locator('.combobox-option').first();
     await expect(firstItemSecondGroup).toBeFocused();
   });
 
@@ -526,7 +526,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Select a specific option (let's choose the 5th option to ensure it's not the default)
-    const targetOption = page.locator('.search-combobox-option').nth(4);
+    const targetOption = page.locator('.combobox-option').nth(4);
     await targetOption.click();
     const selectedValue = await targetOption.getAttribute('data-combobox-value');
 
@@ -540,7 +540,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Verify the previously selected item is highlighted and selected
-    const selectedOption = page.locator('.search-combobox-option[data-combobox-selected]');
+    const selectedOption = page.locator('.combobox-option[data-combobox-selected]');
     await expect(selectedOption).toHaveAttribute('data-combobox-value', selectedValue);
 
     // Verify the selected item is visible in the viewport
@@ -564,7 +564,7 @@ test.describe('Country Selector Requirements', () => {
     await page.keyboard.press('ArrowDown');
 
     // Verify focus moved to the first row in the group
-    const firstRowInGroup = page.locator('.option-group').first().locator('.search-combobox-option').first();
+    const firstRowInGroup = page.locator('.option-group').first().locator('.combobox-option').first();
     await expect(firstRowInGroup).toHaveAttribute('data-combobox-selected', '');
     await expect(firstRowInGroup).toBeVisible();
 
@@ -595,7 +595,7 @@ test.describe('Country Selector Requirements', () => {
     await page.keyboard.press('ArrowUp');
 
     // Verify focus moved to the first row in the previous (first) group
-    const firstRowInFirstGroup = page.locator('.option-group').first().locator('.search-combobox-option').first();
+    const firstRowInFirstGroup = page.locator('.option-group').first().locator('.combobox-option').first();
     await expect(firstRowInFirstGroup).toHaveAttribute('data-combobox-selected', '');
     await expect(firstRowInFirstGroup).toBeVisible();
 
@@ -719,7 +719,7 @@ test.describe('Country Selector Requirements', () => {
     await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
 
     // Find a specific option to hover over
-    const targetOption = page.locator('.search-combobox-option').nth(2); // Third option
+    const targetOption = page.locator('.combobox-option').nth(2); // Third option
     const optionValue = await targetOption.getAttribute('data-combobox-value');
 
     // Hover over the option to simulate hover state
@@ -738,7 +738,7 @@ test.describe('Country Selector Requirements', () => {
     await page.keyboard.press('ArrowDown');
 
     // The next option should now be the current navigation item
-    const nextOption = page.locator('.search-combobox-option').nth(3);
+    const nextOption = page.locator('.combobox-option').nth(3);
     await expect(nextOption).toHaveAttribute('data-combobox-navigate', '');
 
     // Close combobox for next test
