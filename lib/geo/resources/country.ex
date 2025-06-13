@@ -1,22 +1,14 @@
-defmodule Geo.Country.Country.ManualGetByIsoCode do
-  use Ash.Resource.ManualRead
-
-  def read(ash_query, _ecto_query, _opts, _context) do
-    iso_code = ash_query.arguments[:iso_code]
-    {:ok, [Geo.Country.Cache.get_by_iso_code!(iso_code)]}
-  end
-end
-
-defmodule Geo.Country.Country do
+defmodule Geo.Resources.Country do
   use Ash.Resource,
-    otp_app: :healthcompass_directory,
+    otp_app: :geo,
     domain: Geo.Geography,
     data_layer: AshPostgres.DataLayer
 
-  use Geo.Resources.IdResource
-  use Geo.Resources.UniqueNameResource, allow_nil?: false
-  use Geo.Resources.UniqueSlugResource, allow_nil?: false
-  use Geo.Resources.TimestampsResource
+  # Attributes for the Country resource
+  use Geo.Resources.Attributes.Id
+  use Geo.Resources.Attributes.Name, allow_nil?: false, unique?: true
+  use Geo.Resources.Attributes.Slug, allow_nil?: false, unique?: true
+  use Geo.Resources.Attributes.Timestamps
 
   postgres do
     repo Geo.Repo
@@ -45,8 +37,19 @@ defmodule Geo.Country.Country do
     identity :unique_iso_code, [:iso_code]
   end
 
+  # Default sort order when listing countries
   preparations do
     prepare build(sort: [iso_code: :asc])
+  end
+
+  # === Manual Actions ===
+  defmodule Manual.GetByIsoCode do
+    use Ash.Resource.ManualRead
+
+    def read(ash_query, _ecto_query, _opts, _context) do
+      iso_code = ash_query.arguments[:iso_code]
+      {:ok, [Geo.Resources.Country.Cache.get_by_iso_code!(iso_code)]}
+    end
   end
 
   actions do
@@ -71,24 +74,25 @@ defmodule Geo.Country.Country do
     end
 
     update :update do
-      accept [:name, :iso_code, :flag, :slug]
+      accept [:name, :slug, :iso_code, :flag]
       require_atomic? false
       change Geo.Resources.Changes.SlugifyName
     end
 
-    # Cached operation for getting by ISO code
+    # Use the cache to get a country by ISO code
     read :get_by_iso_code_cached do
       argument :iso_code, :ci_string, allow_nil?: false
+      get? true
 
-      manual Geo.Country.Country.ManualGetByIsoCode
+      manual Manual.GetByIsoCode
     end
 
-    # Cached operation for selector search
-    action :selector_search, :map do
+    # Search the cache to return a tuple of lists of country records
+    action :search, :map do
       argument :query, :string, allow_nil?: true, default: nil
       run fn input, _context ->
         query = input.arguments.query
-        {iso_code_results, name_results} = Geo.Country.Cache.search!(query)
+        {iso_code_results, name_results} = Geo.Resources.Country.Cache.search!(query)
         {:ok, %{by_iso_code: iso_code_results, by_name: name_results}}
       end
     end

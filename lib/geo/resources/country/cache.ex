@@ -1,4 +1,4 @@
-defmodule Geo.Country.Cache do
+defmodule Geo.Resources.Country.Cache do
   @moduledoc """
   GenServer that caches country data in memory for fast lookup and search operations.
   Loads all countries once at startup and provides efficient search functions.

@@ -10,7 +10,7 @@ defmodule Geo.Application do
     children = [
       GeoWeb.Telemetry,
       Geo.Repo,
-      {Geo.Country.CacheSupervisor, []},
+      {Geo.Resources.Country.CacheSupervisor, []},
       {DNSCluster, query: Application.get_env(:geo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Geo.PubSub},
       # Start the Finch HTTP client for sending emails

@@ -1,21 +1,21 @@
-defmodule Geo.Resources.SlugResource do
+defmodule Geo.Resources.Attributes.Slug do
   @moduledoc """
   A slug is based on the name attribute.
   """
 
   defmacro __using__(opts) do
-    allow_nil = Keyword.get(opts, :allow_nil?, true)
+    allow_nil? = Keyword.get(opts, :allow_nil?, true)
+    unique? = Keyword.get(opts, :unique?, false)
 
-    quote do
+    base_quote = quote do
       attributes do
         attribute :slug, :ci_string do
-          allow_nil? unquote(allow_nil)
+          allow_nil? unquote(allow_nil?)
           writable? true
           generated? true
         end
       end
 
-      # Common validations
       validations do
         # This is \w but lowercase only
         validate match(:slug, {~S/^[a-z0-9-]+$/, "i"}) do
@@ -23,6 +23,18 @@ defmodule Geo.Resources.SlugResource do
           where present(:slug)
         end
       end
+    end
+
+    if unique? do
+      quote do
+        unquote(base_quote)
+
+        identities do
+          identity :unique_slug, [:slug]
+        end
+      end
+    else
+      base_quote
     end
   end
 end

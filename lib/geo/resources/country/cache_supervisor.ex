@@ -1,4 +1,4 @@
-defmodule Geo.Country.CacheSupervisor do
+defmodule Geo.Resources.Country.CacheSupervisor do
   @moduledoc """
   Supervisor for the Country.Cache GenServer that implements a restart strategy
   with a 1-minute delay when the cache fails to start (e.g., due to missing database table).
@@ -18,7 +18,7 @@ defmodule Geo.Country.CacheSupervisor do
   def init(_init_arg) do
     children = [
       %{
-        id: Geo.Country.CacheWorker,
+        id: Geo.Resources.Country.CacheWorker,
         start: {__MODULE__, :start_cache_worker, []},
         restart: :permanent,
         shutdown: 5000,
@@ -35,7 +35,7 @@ defmodule Geo.Country.CacheSupervisor do
   Starts the cache worker with retry logic.
   """
   def start_cache_worker do
-    case Geo.Country.Cache.start_link([]) do
+    case Geo.Resources.Country.Cache.start_link([]) do
       {:ok, pid} ->
         Logger.info("Country.Cache started successfully")
         {:ok, pid}
@@ -53,7 +53,7 @@ defmodule Geo.Country.CacheSupervisor do
     Process.sleep(@restart_delay)
     Logger.info("Retrying Country.Cache startup...")
 
-    case Geo.Country.Cache.start_link([]) do
+    case Geo.Resources.Country.Cache.start_link([]) do
       {:ok, pid} ->
         Logger.info("Country.Cache started successfully on retry")
         # Keep this process alive to maintain the supervision tree
