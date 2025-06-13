@@ -2,17 +2,23 @@
 
 ## Project Overview
 
-Geo is the world's most overengineered country combobox. Countries are stored in a PostegreSQL table and loaded in a cache (implemented as an Elixir Genserver) for fast server-sice selection.
+Geo is the world's most overengineered country combobox. Countries are stored in a PostegreSQL table and loaded in a cache (implemented as an Elixir Genserver) for fast server-side searching.
 
 ![CleanShot 2025-06-12 at 20 40 52@2x](https://github.com/user-attachments/assets/d477b01d-dece-4fff-ac26-d139cfc8a611)
 
 Or:
 
-Geo is a modern Elixir/Phoenix application built with the Ash Framework that provides efficient geographic data management and search capabilities. The application focuses on country data management with high-performance caching and intelligent search functionality designed for user interfaces.
+Geo is a Elixir/Phoenix application built with the Ash Framework that provides efficient geographic data management and search capabilities. The application focuses on country data management with high-performance caching and intelligent search functionality designed for user interfaces.
+
+This project might be useful if you're curious about the Ash Framework (version 3.5+) or if you're looking for slightly more advanced usage like:
+
+- Custom actions
+- DRY: Defining attributes for use across multiple resources
+- Seeding data using bulk upsert
+- Creating a custom component from a Mishka Chelekom component
+- Creating a LiveView component that can be used in multiple LiveViews
 
 ### Architecture
-
-The application follows a clean domain-driven architecture using Ash Framework:
 
 - **Domain Layer**: `Geo.Geography` - Core business logic and operations
 - **Resource Layer**: `Geo.Country.Country` - Data models and validations  
