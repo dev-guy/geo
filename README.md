@@ -12,6 +12,7 @@ Geo is a Elixir/Phoenix application built with the Ash Framework that provides e
 
 This project might be useful if you're curious about the Ash Framework (version 3.5+) or if you're looking for slightly more advanced usage like:
 
+- Custom supervised Genserver
 - Custom actions
 - DRY: Defining attributes for use across multiple resources
 - Seeding data using bulk upsert
