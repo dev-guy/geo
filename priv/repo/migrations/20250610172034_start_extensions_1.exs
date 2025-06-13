@@ -1,4 +1,4 @@
-defmodule Geo.Repo.Migrations.InitializeExtensions1 do
+defmodule Geo.Repo.Migrations.StartExtensions1 do
   @moduledoc """
   Installs any extensions that are mentioned in the repo's `installed_extensions/0` callback
 
@@ -138,6 +138,8 @@ defmodule Geo.Repo.Migrations.InitializeExtensions1 do
     SET search_path = ''
     IMMUTABLE PARALLEL SAFE STRICT;
     """)
+
+    execute("CREATE EXTENSION IF NOT EXISTS \"citext\"")
   end
 
   def down do
@@ -146,5 +148,7 @@ defmodule Geo.Repo.Migrations.InitializeExtensions1 do
     execute(
       "DROP FUNCTION IF EXISTS uuid_generate_v7(), timestamp_from_uuid_v7(uuid), ash_raise_error(jsonb), ash_raise_error(jsonb, ANYCOMPATIBLE), ash_elixir_and(BOOLEAN, ANYCOMPATIBLE), ash_elixir_and(ANYCOMPATIBLE, ANYCOMPATIBLE), ash_elixir_or(ANYCOMPATIBLE, ANYCOMPATIBLE), ash_elixir_or(BOOLEAN, ANYCOMPATIBLE), ash_trim_whitespace(text[])"
     )
+
+    # execute("DROP EXTENSION IF EXISTS \"citext\"")
   end
 end

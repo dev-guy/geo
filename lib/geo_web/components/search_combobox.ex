@@ -718,17 +718,15 @@ defmodule GeoWeb.Components.SearchCombobox do
     <div
       role="option"
       class={[
-        "search-combobox-option cursor-pointer rounded flex justify-between items-center",
+        "combobox-option cursor-pointer rounded flex justify-between items-center",
         "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white",
-        "[&[data-combobox-selected]]:bg-blue-100 [&[data-combobox-selected]]:text-blue-800",
-        "dark:[&[data-combobox-selected]]:bg-blue-900 dark:[&[data-combobox-selected]]:text-blue-200",
         @class
       ]}
       data-combobox-value={@encoded_value}
     >
       {render_slot(@inner_block)}
       <svg
-        class="hidden [[data-combobox-selected]_&]:block shrink-0 w-3.5 h-3.5 search-combobox-icon"
+        class="hidden shrink-0 w-3.5 h-3.5 search-combobox-icon"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -875,23 +873,23 @@ defmodule GeoWeb.Components.SearchCombobox do
   defp border_class(params, _) when is_binary(params), do: params
 
   defp padding_size("extra_small") do
-    ["[&_.search-combobox-trigger]:px-2 [&_.search-combobox-option]:px-2", "[&_.search-combobox-option]:py-0.5"]
+    ["[&_.search-combobox-trigger]:px-2 [&_.combobox-option]:px-2", "[&_.combobox-option]:py-0.5"]
   end
 
   defp padding_size("small") do
-    ["[&_.search-combobox-trigger]:px-3 [&_.search-combobox-option]:px-3", "[&_.search-combobox-option]:py-1"]
+    ["[&_.search-combobox-trigger]:px-3 [&_.combobox-option]:px-3", "[&_.combobox-option]:py-1"]
   end
 
   defp padding_size("medium") do
-    ["[&_.search-combobox-trigger]:px-4 [&_.search-combobox-option]:px-4", "[&_.search-combobox-option]:py-1.5"]
+    ["[&_.search-combobox-trigger]:px-4 [&_.combobox-option]:px-4", "[&_.combobox-option]:py-1.5"]
   end
 
   defp padding_size("large") do
-    ["[&_.search-combobox-trigger]:px-5 [&_.search-combobox-option]:px-5", "[&_.search-combobox-option]:py-2"]
+    ["[&_.search-combobox-trigger]:px-5 [&_.combobox-option]:px-5", "[&_.combobox-option]:py-2"]
   end
 
   defp padding_size("extra_large") do
-    ["[&_.search-combobox-trigger]:px-6 [&_.search-combobox-option]:px-6", "[&_.search-combobox-option]:py-2.5"]
+    ["[&_.search-combobox-trigger]:px-6 [&_.combobox-option]:px-6", "[&_.combobox-option]:py-2.5"]
   end
 
   defp padding_size(params) when is_binary(params), do: params
@@ -910,8 +908,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:bg-[#18181B] dark:text-[#FAFAFA] dark:[&_.search-combobox-trigger]:border-[#27272a]",
       "[&_.search-combobox-dropdown]:bg-white [&_.search-combobox-dropdown]:border-[#e4e4e7]",
       "dark:[&_.search-combobox-dropdown]:bg-[#18181B] dark:[&_.search-combobox-dropdown]:border-[#27272a]",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#e4e4e7] hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#09090b]",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#27272a] dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#FAFAFA]",
+
       "[&_.search-combobox-search-input]:border-[#e4e4e7] dark:[&_.search-combobox-search-input]:border-[#27272a]",
       "[&_.search-combobox-pill]:text-[#09090b] [&_.search-combobox-pill]:bg-[#e4e4e7]",
       "[&_.search-combobox-dropdown]:shadow",
@@ -923,7 +920,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#4B4B4B] text-white dark:[&_.search-combobox-trigger]:bg-[#DDDDDD] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#4B4B4B] dark:[&_.search-combobox-dropdown]:bg-[#E8E8E8]",
-      "hover:[&_.search-combobox-option]:bg-[#282828] dark:hover:[&_.search-combobox-option]:bg-[#E8E8E8]",
+      "hover:[&_.combobox-option]:bg-[#282828] dark:hover:[&_.combobox-option]:bg-[#E8E8E8]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -936,7 +933,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#007F8C] text-white dark:[&_.search-combobox-trigger]:bg-[#01B8CA] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#007F8C] dark:[&_.search-combobox-dropdown]:bg-[#01B8CA]",
-      "hover:[&_.search-combobox-option]:bg-[#016974] dark:hover:[&_.search-combobox-option]:bg-[#77D5E3]",
+      "hover:[&_.combobox-option]:bg-[#016974] dark:hover:[&_.combobox-option]:bg-[#77D5E3]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -948,7 +945,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#266EF1] text-white dark:[&_.search-combobox-trigger]:bg-[#6DAAFB] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#266EF1] dark:[&_.search-combobox-dropdown]:bg-[#6DAAFB]",
-      "hover:[&_.search-combobox-option]:bg-[#175BCC] dark:hover:[&_.search-combobox-option]:bg-[#A9C9FF]",
+      "hover:[&_.combobox-option]:bg-[#175BCC] dark:hover:[&_.combobox-option]:bg-[#A9C9FF]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -960,7 +957,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#0E8345] text-white dark:[&_.search-combobox-trigger]:bg-[#06C167] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#0E8345] dark:[&_.search-combobox-dropdown]:bg-[#06C167]",
-      "hover:[&_.search-combobox-option]:bg-[#166C3B] dark:hover:[&_.search-combobox-option]:bg-[#7FD99A]",
+      "hover:[&_.combobox-option]:bg-[#166C3B] dark:hover:[&_.combobox-option]:bg-[#7FD99A]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -972,7 +969,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#CA8D01] text-white dark:[&_.search-combobox-trigger]:bg-[#FDC034] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#CA8D01] dark:[&_.search-combobox-dropdown]:bg-[#FDC034]",
-      "hover:[&_.search-combobox-option]:bg-[#976A01] dark:hover:[&_.search-combobox-option]:bg-[#FDD067]",
+      "hover:[&_.combobox-option]:bg-[#976A01] dark:hover:[&_.combobox-option]:bg-[#FDD067]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -984,7 +981,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#DE1135] text-white dark:[&_.search-combobox-trigger]:bg-[#FC7F79] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#DE1135] dark:[&_.search-combobox-dropdown]:bg-[#FC7F79]",
-      "hover:[&_.search-combobox-option]:bg-[#BB032A] dark:hover:[&_.search-combobox-option]:bg-[#FFB2AB]",
+      "hover:[&_.combobox-option]:bg-[#BB032A] dark:hover:[&_.combobox-option]:bg-[#FFB2AB]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -996,7 +993,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#0B84BA] text-white dark:[&_.search-combobox-trigger]:bg-[#3EB7ED] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#0B84BA] dark:[&_.search-combobox-dropdown]:bg-[#3EB7ED]",
-      "hover:[&_.search-combobox-option]:bg-[#08638C] dark:hover:[&_.search-combobox-option]:bg-[#6EC9F2]",
+      "hover:[&_.combobox-option]:bg-[#08638C] dark:hover:[&_.combobox-option]:bg-[#6EC9F2]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -1008,7 +1005,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#8750C5] text-white dark:[&_.search-combobox-trigger]:bg-[#BA83F9] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#8750C5] dark:[&_.search-combobox-dropdown]:bg-[#BA83F9]",
-      "hover:[&_.search-combobox-option]:bg-[#653C94] dark:hover:[&_.search-combobox-option]:bg-[#CBA2FA]",
+      "hover:[&_.combobox-option]:bg-[#653C94] dark:hover:[&_.combobox-option]:bg-[#CBA2FA]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -1020,7 +1017,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#A86438] text-white dark:[&_.search-combobox-trigger]:bg-[#DB976B] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#A86438] dark:[&_.search-combobox-dropdown]:bg-[#DB976B]",
-      "hover:[&_.search-combobox-option]:bg-[#7E4B2A] dark:hover:[&_.search-combobox-option]:bg-[#E4B190]",
+      "hover:[&_.combobox-option]:bg-[#7E4B2A] dark:hover:[&_.combobox-option]:bg-[#E4B190]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -1032,7 +1029,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     [
       "[&_.search-combobox-trigger]:bg-[#868686] text-white dark:[&_.search-combobox-trigger]:bg-[#A6A6A6] dark:text-black",
       "[&_.search-combobox-dropdown]:bg-[#868686] dark:[&_.search-combobox-dropdown]:bg-[#A6A6A6]",
-      "hover:[&_.search-combobox-option]:bg-[#727272] dark:hover:[&_.search-combobox-option]:bg-[#BBBBBB]",
+      "hover:[&_.combobox-option]:bg-[#727272] dark:hover:[&_.combobox-option]:bg-[#BBBBBB]",
       "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
       "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
       "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
@@ -1046,8 +1043,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-gray-300 dark:[&_.search-combobox-trigger]:border-gray-300 dark:[&_.search-combobox-trigger]:bg-gray-800",
       "[&_.search-combobox-dropdown]:text-gray-700 [&_.search-combobox-dropdown]:border-gray-700 [&_.search-combobox-dropdown]:bg-gray-50",
       "dark:[&_.search-combobox-dropdown]:text-gray-300 dark:[&_.search-combobox-dropdown]:border-gray-300 dark:[&_.search-combobox-dropdown]:bg-gray-800",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-gray-100 hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-gray-700",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-gray-700 dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-gray-300",
+
       "[&_.search-combobox-search-input]:border-gray-700 dark:[&_.search-combobox-search-input]:border-gray-300",
       "[&_.search-combobox-search-input]:text-gray-700 dark:[&_.search-combobox-search-input]:text-gray-300",
       "[&_.search-combobox-pill]:text-gray-700 [&_.search-combobox-pill]:bg-gray-100",
@@ -1062,8 +1058,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-teal-300 dark:[&_.search-combobox-trigger]:border-teal-300 dark:[&_.search-combobox-trigger]:bg-teal-950",
       "[&_.search-combobox-dropdown]:text-teal-700 [&_.search-combobox-dropdown]:border-teal-700 [&_.search-combobox-dropdown]:bg-teal-50",
       "dark:[&_.search-combobox-dropdown]:text-teal-300 dark:[&_.search-combobox-dropdown]:border-teal-300 dark:[&_.search-combobox-dropdown]:bg-teal-950",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-teal-100 hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-teal-700",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-teal-900 dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-teal-300",
+
       "[&_.search-combobox-search-input]:border-teal-700 dark:[&_.search-combobox-search-input]:border-teal-300",
       "[&_.search-combobox-search-input]:text-teal-700 dark:[&_.search-combobox-search-input]:text-teal-300",
       "[&_.search-combobox-pill]:text-teal-700 [&_.search-combobox-pill]:bg-teal-100",
@@ -1078,8 +1073,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-blue-300 dark:[&_.search-combobox-trigger]:border-blue-300 dark:[&_.search-combobox-trigger]:bg-blue-950",
       "[&_.search-combobox-dropdown]:text-blue-700 [&_.search-combobox-dropdown]:border-blue-700 [&_.search-combobox-dropdown]:bg-blue-50",
       "dark:[&_.search-combobox-dropdown]:text-blue-300 dark:[&_.search-combobox-dropdown]:border-blue-300 dark:[&_.search-combobox-dropdown]:bg-blue-950",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-blue-100 hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-blue-700",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-blue-900 dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-blue-300",
+
       "[&_.search-combobox-search-input]:border-blue-700 dark:[&_.search-combobox-search-input]:border-blue-300",
       "[&_.search-combobox-search-input]:text-blue-700 dark:[&_.search-combobox-search-input]:text-blue-300",
       "[&_.search-combobox-pill]:text-blue-700 [&_.search-combobox-pill]:bg-blue-100",
@@ -1094,8 +1088,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-green-300 dark:[&_.search-combobox-trigger]:border-green-300 dark:[&_.search-combobox-trigger]:bg-green-950",
       "[&_.search-combobox-dropdown]:text-green-700 [&_.search-combobox-dropdown]:border-green-700 [&_.search-combobox-dropdown]:bg-green-50",
       "dark:[&_.search-combobox-dropdown]:text-green-300 dark:[&_.search-combobox-dropdown]:border-green-300 dark:[&_.search-combobox-dropdown]:bg-green-950",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-green-100 hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-green-700",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-green-900 dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-green-300",
+
       "[&_.search-combobox-search-input]:border-green-700 dark:[&_.search-combobox-search-input]:border-green-300",
       "[&_.search-combobox-search-input]:text-green-700 dark:[&_.search-combobox-search-input]:text-green-300",
       "[&_.search-combobox-pill]:text-green-700 [&_.search-combobox-pill]:bg-green-100",
@@ -1110,8 +1103,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-red-300 dark:[&_.search-combobox-trigger]:border-red-300 dark:[&_.search-combobox-trigger]:bg-red-950",
       "[&_.search-combobox-dropdown]:text-red-700 [&_.search-combobox-dropdown]:border-red-700 [&_.search-combobox-dropdown]:bg-red-50",
       "dark:[&_.search-combobox-dropdown]:text-red-300 dark:[&_.search-combobox-dropdown]:border-red-300 dark:[&_.search-combobox-dropdown]:bg-red-950",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-red-100 hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-red-700",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-red-900 dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-red-300",
+
       "[&_.search-combobox-search-input]:border-red-700 dark:[&_.search-combobox-search-input]:border-red-300",
       "[&_.search-combobox-search-input]:text-red-700 dark:[&_.search-combobox-search-input]:text-red-300",
       "[&_.search-combobox-pill]:text-red-700 [&_.search-combobox-pill]:bg-red-100",
@@ -1126,8 +1118,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#6EC9F2] dark:[&_.search-combobox-trigger]:border-[#6EC9F2] dark:[&_.search-combobox-trigger]:bg-[#03212F]",
       "[&_.search-combobox-dropdown]:text-[#0B84BA] [&_.search-combobox-dropdown]:border-[#0B84BA] [&_.search-combobox-dropdown]:bg-[#E7F6FD]",
       "dark:[&_.search-combobox-dropdown]:text-[#6EC9F2] dark:[&_.search-combobox-dropdown]:border-[#6EC9F2] dark:[&_.search-combobox-dropdown]:bg-[#03212F]",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#B8E6F7] hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#0B84BA]",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#053247] dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#6EC9F2]",
+
       "[&_.search-combobox-search-input]:border-[#0B84BA] dark:[&_.search-combobox-search-input]:border-[#6EC9F2]",
       "[&_.search-combobox-search-input]:text-[#0B84BA] dark:[&_.search-combobox-search-input]:text-[#6EC9F2]",
       "[&_.search-combobox-pill]:text-[#0B84BA] [&_.search-combobox-pill]:bg-[#B8E6F7]",
@@ -1142,8 +1133,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#CBA2FA] dark:[&_.search-combobox-trigger]:border-[#CBA2FA] dark:[&_.search-combobox-trigger]:bg-[#221431]",
       "[&_.search-combobox-dropdown]:text-[#653C94] [&_.search-combobox-dropdown]:border-[#653C94] [&_.search-combobox-dropdown]:bg-[#F6F0FE]",
       "dark:[&_.search-combobox-dropdown]:text-[#CBA2FA] dark:[&_.search-combobox-dropdown]:border-[#CBA2FA] dark:[&_.search-combobox-dropdown]:bg-[#221431]",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#E8D5FC] hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#653C94]",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#352049] dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#CBA2FA]",
+
       "[&_.search-combobox-search-input]:border-[#653C94] dark:[&_.search-combobox-search-input]:border-[#CBA2FA]",
       "[&_.search-combobox-search-input]:text-[#653C94] dark:[&_.search-combobox-search-input]:text-[#CBA2FA]",
       "[&_.search-combobox-pill]:text-[#653C94] [&_.search-combobox-pill]:bg-[#E8D5FC]",
@@ -1158,8 +1148,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#E4B190] dark:[&_.search-combobox-trigger]:border-[#E4B190] dark:[&_.search-combobox-trigger]:bg-[#2A190E]",
       "[&_.search-combobox-dropdown]:text-[#7E4B2A] [&_.search-combobox-dropdown]:border-[#7E4B2A] [&_.search-combobox-dropdown]:bg-[#FBF2ED]",
       "dark:[&_.search-combobox-dropdown]:text-[#E4B190] dark:[&_.search-combobox-dropdown]:border-[#E4B190] dark:[&_.search-combobox-dropdown]:bg-[#2A190E]",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#F0DCC9] hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#7E4B2A]",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#42261C] dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#E4B190]",
+
       "[&_.search-combobox-search-input]:border-[#7E4B2A] dark:[&_.search-combobox-search-input]:border-[#E4B190]",
       "[&_.search-combobox-search-input]:text-[#7E4B2A] dark:[&_.search-combobox-search-input]:text-[#E4B190]",
       "[&_.search-combobox-pill]:text-[#7E4B2A] [&_.search-combobox-pill]:bg-[#F0DCC9]",
@@ -1174,8 +1163,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#BBBBBB] dark:[&_.search-combobox-trigger]:border-[#BBBBBB] dark:[&_.search-combobox-trigger]:bg-[#4B4B4B]",
       "[&_.search-combobox-dropdown]:text-[#727272] [&_.search-combobox-dropdown]:border-[#727272] [&_.search-combobox-dropdown]:bg-[#F3F3F3]",
       "dark:[&_.search-combobox-dropdown]:text-[#BBBBBB] dark:[&_.search-combobox-dropdown]:border-[#BBBBBB] dark:[&_.search-combobox-dropdown]:bg-[#4B4B4B]",
-      "hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#E8E8E8] hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#727272]",
-      "dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:bg-[#606060] dark:hover:[&_.search-combobox-option:not([data-combobox-navigate])]:text-[#BBBBBB]",
+
       "[&_.search-combobox-search-input]:border-[#727272] dark:[&_.search-combobox-search-input]:border-[#BBBBBB]",
       "[&_.search-combobox-search-input]:text-[#727272] dark:[&_.search-combobox-search-input]:text-[#BBBBBB]",
       "[&_.search-combobox-pill]:text-[#727272] [&_.search-combobox-pill]:bg-[#E8E8E8]",

@@ -1,7 +1,7 @@
 defmodule GeoWeb.CountrySelector do
   use GeoWeb, :live_component
 
-    @impl true
+  @impl true
   def update(assigns, socket) do
     # Convert selected_country from Ash resource to internal format if needed
     assigns = convert_selected_country_to_internal_format(assigns)
@@ -16,22 +16,20 @@ defmodule GeoWeb.CountrySelector do
     if socket.assigns[:original_countries] do
       {:ok, assign(socket, assigns)}
     else
-      # Get initial countries - returns a single list, we duplicate for both groups
-      all_countries = Geo.Geography.selector_search_countries!()
-      countries_by_iso = all_countries
-      countries_by_name = all_countries
+      %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!()
+      original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
 
       socket =
         socket
-        |> assign(:original_countries, %{iso_code_group: countries_by_iso, name_group: countries_by_name})
-        |> assign(:current_countries, %{iso_code_group: countries_by_iso, name_group: countries_by_name})
+        |> assign(:original_countries, original_countries)
+        |> assign(:current_countries, original_countries)
         |> assign(:selected_country, nil)
         |> assign(:iso_code_group_collapsed, false)
         |> assign(:name_group_collapsed, false)
         |> assign(assigns)
 
       # Determine sort orders for each group
-      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso, :iso_code)
+      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso_code, :iso_code)
       {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
 
       socket =
@@ -99,6 +97,7 @@ defmodule GeoWeb.CountrySelector do
           phx-target={@myself}
           variant="bordered"
           color="primary"
+          height="h-fit max-h-[32rem]"
           enable_group_sorting={true}
           sort_groups={false}
           toggle_group_sort_event="toggle_group_sort"
@@ -140,51 +139,23 @@ defmodule GeoWeb.CountrySelector do
   @impl true
   def handle_event("search_combobox_updated", %{"value" => query}, socket) do
     # Check if trimmed query is empty, but keep original query for search
-    trimmed_query = String.trim(query)
+    %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!(query)
+    original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
 
-    # If trimmed query is empty, use original countries and restore original sort orders
-    if trimmed_query == "" do
-      # Restore original sort orders from the full country list
-      all_countries = Geo.Geography.selector_search_countries!()
-      {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(all_countries, :iso_code)
-      {name_sort_orders, name_sort_order} = determine_sort_orders(all_countries, :name)
+    # Recalculate sort orders based on the search results
+    {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(countries_by_iso_code, :iso_code)
+    {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
 
-      socket =
-        socket
-        |> assign(:current_countries, socket.assigns.original_countries)
-        |> assign(:iso_code_sort_orders, iso_code_sort_orders)
-        |> assign(:name_sort_orders, name_sort_orders)
-        |> assign(:iso_code_sort_order, iso_code_sort_order)
-        |> assign(:name_sort_order, name_sort_order)
+    socket =
+      socket
+      |> assign(:current_countries, original_countries)
+      |> assign(:original_countries, original_countries)
+      |> assign(:iso_code_sort_orders, iso_code_sort_orders)
+      |> assign(:name_sort_orders, name_sort_orders)
+      |> assign(:iso_code_sort_order, iso_code_sort_order)
+      |> assign(:name_sort_order, name_sort_order)
 
-      {:noreply, socket}
-    else
-      try do
-        search_results = Geo.Geography.selector_search_countries!(query)
-
-        # Recalculate sort orders based on the search results
-        {iso_code_sort_orders, iso_code_sort_order} = determine_sort_orders(search_results, :iso_code)
-        {name_sort_orders, name_sort_order} = determine_sort_orders(search_results, :name)
-
-        # Apply the determined sort orders to the results
-        filtered_iso = sort_group(search_results, :iso_code, iso_code_sort_order)
-        filtered_name = sort_group(search_results, :name, name_sort_order)
-
-        socket =
-          socket
-          |> assign(:current_countries, %{iso_code_group: filtered_iso, name_group: filtered_name})
-          |> assign(:iso_code_sort_orders, iso_code_sort_orders)
-          |> assign(:name_sort_orders, name_sort_orders)
-          |> assign(:iso_code_sort_order, iso_code_sort_order)
-          |> assign(:name_sort_order, name_sort_order)
-
-        {:noreply, socket}
-      rescue
-        _error ->
-          socket = assign(socket, :current_countries, %{iso_code_group: [], name_group: []})
-          {:noreply, socket}
-      end
-    end
+    {:noreply, socket}
   end
 
   def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
@@ -193,7 +164,12 @@ defmodule GeoWeb.CountrySelector do
         orders = socket.assigns.iso_code_sort_orders
         current = socket.assigns.iso_code_sort_order
         new = next_in_list(orders, current)
-        updated = sort_group(socket.assigns.current_countries.iso_code_group, :iso_code, new)
+
+        updated = if new == :original do
+          socket.assigns.original_countries.iso_code_group
+        else
+          sort_group(socket.assigns.current_countries.iso_code_group, :iso_code, new)
+        end
 
         socket =
           socket
@@ -209,7 +185,12 @@ defmodule GeoWeb.CountrySelector do
         orders = socket.assigns.name_sort_orders
         current = socket.assigns.name_sort_order
         new = next_in_list(orders, current)
-        updated = sort_group(socket.assigns.current_countries.name_group, :name, new)
+
+        updated = if new == :original do
+          socket.assigns.original_countries.name_group
+        else
+          sort_group(socket.assigns.current_countries.name_group, :name, new)
+        end
 
         socket =
           socket
@@ -302,6 +283,9 @@ defmodule GeoWeb.CountrySelector do
     do: list |> Enum.sort_by(&Map.get(&1, field)) |> Enum.reverse()
 
   defp sort_group(list, _field, :original), do: list
+
+  # Handle nil sort order (when there's only 1 item, no sorting needed)
+  defp sort_group(list, _field, nil), do: list
 
   defp next_in_list(list, current) do
     idx = Enum.find_index(list, &(&1 == current)) || 0

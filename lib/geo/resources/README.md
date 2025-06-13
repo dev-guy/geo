@@ -1,0 +1,1 @@
+These are mixin macros for Ash resources

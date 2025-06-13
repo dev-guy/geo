@@ -13,7 +13,7 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -25,9 +25,9 @@
       "type": "citext"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
-      "generated?": false,
+      "generated?": true,
       "precision": null,
       "primary_key?": false,
       "references": null,
@@ -82,7 +82,7 @@
       "scale": null,
       "size": null,
       "source": "flag",
-      "type": "citext"
+      "type": "text"
     }
   ],
   "base_filter": null,
@@ -90,7 +90,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "B6C543D676411D619958F36D83373CFF67E2179F1D4D6C74B14BF38580FFE3E5",
+  "hash": "E12B87EABA2106C1CC729955E41640FCCDA093D48DF94954210ED2AD94A18567",
   "identities": [
     {
       "all_tenants?": false,
@@ -103,6 +103,20 @@
         }
       ],
       "name": "unique_iso_code",
+      "nils_distinct?": true,
+      "where": null
+    },
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "countries_unique_name_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "name"
+        }
+      ],
+      "name": "unique_name",
       "nils_distinct?": true,
       "where": null
     },
