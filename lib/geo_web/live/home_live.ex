@@ -28,7 +28,7 @@ defmodule GeoWeb.HomeLive do
 
       <%= if @selected_country do %>
         <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h2 class="text-lg font-semibold mb-2">Selected Country (Ash Resource):</h2>
+          <h2 class="text-lg font-semibold mb-2">Selected Country:</h2>
           <div class="flex items-center">
             <span class="text-2xl mr-3">{to_string(@selected_country.flag)}</span>
             <div>

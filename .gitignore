@@ -37,3 +37,7 @@ geo-*.tar
 npm-debug.log
 /assets/node_modules/
 
+node_modules
+test-results
+playwright-report
+

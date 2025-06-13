@@ -1,4 +1,4 @@
-defmodule :"Elixir.Geo.Repo.Migrations.Add Country resource" do
+defmodule Geo.Repo.Migrations.Start do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -10,8 +10,8 @@ defmodule :"Elixir.Geo.Repo.Migrations.Add Country resource" do
   def up do
     create table(:countries, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("uuid_generate_v7()"), primary_key: true
-      add :name, :citext
-      add :slug, :citext
+      add :name, :citext, null: false
+      add :slug, :citext, null: false
 
       add :created_at, :utc_datetime_usec,
         null: false,
@@ -22,16 +22,20 @@ defmodule :"Elixir.Geo.Repo.Migrations.Add Country resource" do
         default: fragment("(now() AT TIME ZONE 'utc')")
 
       add :iso_code, :citext, null: false
-      add :flag, :citext, null: false
+      add :flag, :text, null: false
     end
 
     create unique_index(:countries, [:iso_code], name: "countries_unique_iso_code_index")
+
+    create unique_index(:countries, [:name], name: "countries_unique_name_index")
 
     create unique_index(:countries, [:slug], name: "countries_unique_slug_index")
   end
 
   def down do
     drop_if_exists unique_index(:countries, [:slug], name: "countries_unique_slug_index")
+
+    drop_if_exists unique_index(:countries, [:name], name: "countries_unique_name_index")
 
     drop_if_exists unique_index(:countries, [:iso_code], name: "countries_unique_iso_code_index")
 
