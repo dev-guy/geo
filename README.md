@@ -34,10 +34,9 @@ The application follows a clean domain-driven architecture using Ash Framework:
 
 ## Usage
 
-To start your Phoenix server:
-
-  * Run `mix setup` to install and setup dependencies
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+1. Install PostgreSQL
+2. `mix setup` to install and setup dependencies
+3. `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
