@@ -78,3 +78,5 @@ Expected result: albania is highlighted
 8. down arrow
 
 Result: Armenia is highlighted
+
+

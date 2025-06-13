@@ -1116,6 +1116,116 @@ const SearchCombobox = {
     console.log(`SearchCombobox: Scrolled ${direction} by ${pageSize}px from ${currentScrollTop} to ${newScrollTop}`);
   },
 
+  scrollPageAndUpdateHighlight(direction) {
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (!scrollArea) return;
+
+    // Store the scroll direction for use in updateHighlightAfterScroll
+    this.lastScrollDirection = direction;
+
+    const scrollAreaHeight = scrollArea.clientHeight;
+    const currentScrollTop = scrollArea.scrollTop;
+    const pageSize = scrollAreaHeight * 0.8; // Scroll 80% of visible area
+
+    let newScrollTop;
+    if (direction === 'up') {
+      newScrollTop = Math.max(0, currentScrollTop - pageSize);
+    } else { // 'down'
+      const maxScrollTop = scrollArea.scrollHeight - scrollAreaHeight;
+      newScrollTop = Math.min(maxScrollTop, currentScrollTop + pageSize);
+    }
+
+    // Perform the scroll
+    scrollArea.scrollTo({
+      top: newScrollTop,
+      behavior: 'smooth'
+    });
+
+    console.log(`SearchCombobox: Scrolled ${direction} by ${pageSize}px from ${currentScrollTop} to ${newScrollTop}`);
+
+    // After scrolling, find the first visible option and highlight it
+    // Use a timeout to wait for the smooth scroll to complete
+    setTimeout(() => {
+      this.updateHighlightAfterScroll();
+    }, 300); // Wait for smooth scroll animation to complete
+  },
+
+    updateHighlightAfterScroll() {
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (!scrollArea) return;
+
+    const options = Array.from(this.el.querySelectorAll('.combobox-option'));
+    if (options.length === 0) return;
+
+    // Get the currently highlighted option (before the scroll)
+    const currentHighlighted = this.el.querySelector('.combobox-option[data-combobox-navigate]');
+    if (!currentHighlighted) {
+      // No current highlight, just highlight the first visible option
+      const firstVisible = options.find(option => {
+        const optionTop = option.offsetTop;
+        const optionBottom = optionTop + option.offsetHeight;
+        const scrollTop = scrollArea.scrollTop;
+        const scrollBottom = scrollTop + scrollArea.clientHeight;
+        return optionBottom > scrollTop && optionTop < scrollBottom;
+      });
+
+      if (firstVisible) {
+        this.setCurrentNavigationItem(firstVisible);
+        console.log('SearchCombobox: No previous highlight, selected first visible:', firstVisible.getAttribute('data-combobox-value'));
+      }
+      return;
+    }
+
+    // Calculate how many rows fit in one viewport
+    const viewportHeight = scrollArea.clientHeight;
+    const averageRowHeight = options.length > 0 ? (options[options.length - 1].offsetTop + options[options.length - 1].offsetHeight) / options.length : 40;
+    const rowsPerViewport = Math.floor(viewportHeight / averageRowHeight);
+
+    // Find the index of the currently highlighted option
+    const currentIndex = options.indexOf(currentHighlighted);
+    if (currentIndex === -1) return;
+
+    // Calculate target index based on scroll direction
+    // We need to determine if we scrolled up or down by checking the last scroll direction
+    const scrollDirection = this.lastScrollDirection || 'down'; // Default to down if unknown
+
+    let targetIndex;
+    if (scrollDirection === 'down') {
+      targetIndex = Math.min(options.length - 1, currentIndex + rowsPerViewport);
+    } else {
+      targetIndex = Math.max(0, currentIndex - rowsPerViewport);
+    }
+
+    const targetOption = options[targetIndex];
+    if (targetOption) {
+      // Set the navigation highlight
+      this.setCurrentNavigationItem(targetOption);
+
+      // Center the target option in the viewport
+      const optionTop = targetOption.offsetTop;
+      const optionHeight = targetOption.offsetHeight;
+      const optionCenter = optionTop + (optionHeight / 2);
+
+      // Calculate the scroll position that would center the option
+      const targetScrollTop = optionCenter - (viewportHeight / 2);
+
+      // Ensure we don't scroll beyond bounds
+      const maxScrollTop = scrollArea.scrollHeight - viewportHeight;
+      const finalScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+
+      // Only scroll if there's a meaningful difference
+      if (Math.abs(finalScrollTop - scrollArea.scrollTop) > 5) {
+        scrollArea.scrollTo({
+          top: finalScrollTop,
+          behavior: 'smooth'
+        });
+        console.log(`SearchCombobox: Centered target option ${targetOption.getAttribute('data-combobox-value')} in viewport (scroll: ${scrollArea.scrollTop} -> ${finalScrollTop})`);
+      }
+
+      console.log(`SearchCombobox: Moved highlight ${scrollDirection} by ${Math.abs(targetIndex - currentIndex)} rows from ${currentHighlighted.getAttribute('data-combobox-value')} to ${targetOption.getAttribute('data-combobox-value')}`);
+    }
+  },
+
   restoreSearchValue() {
     const searchInput = this.el.querySelector('.search-combobox-search-input');
     if (searchInput && this.searchTerm && searchInput.value !== this.searchTerm) {
@@ -2004,10 +2114,10 @@ const SearchCombobox = {
         if (isMouseOverScrollArea) {
           event.preventDefault();
           if (event.shiftKey) {
-            this.scrollPage('up');
+            this.scrollPageAndUpdateHighlight('up');
             console.log('SearchCombobox: Shift+Space with mouse over scroll area - scrolling up a page');
           } else {
-            this.scrollPage('down');
+            this.scrollPageAndUpdateHighlight('down');
             console.log('SearchCombobox: Space with mouse over scroll area - scrolling down a page');
           }
         } else if (isFromSearchInput) {
