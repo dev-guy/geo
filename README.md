@@ -21,13 +21,16 @@ The application follows a clean domain-driven architecture using Ash Framework:
 - **Interactive UI**: Real-time search with grouped, sortable results
 - **Upsert Operations**: Efficient create-or-update operations using unique identities
 
+### Requirements
+
+- PostgreSQL
+
 ### Technology Stack
 
-- **Backend**: Elixir with Phoenix Framework
-- **Frontend**: Phoenix LiveView with Tailwind CSS
+- **Backend**: Elixir
+- **Frontend**: Phoenix LiveView with Mishka Chelekom components
 - **Database**: PostgreSQL with Ecto/AshPostgres
-- **Framework**: Ash Framework for domain modeling
-- **Caching**: Custom caching layer for performance optimization
+- **Application**: Ash Framework for domain modeling
 
 ## Usage
 
