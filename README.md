@@ -48,14 +48,19 @@ This project might be useful if you're curious about the Ash Framework (version 
 ## Usage
 
 1. Install PostgreSQL
-2. `mix setup` to install and setup dependencies
-3. `mix phx.server` or inside IEx with `iex -S mix phx.server`
+2. Install `nodejs`
+3. `mix setup` to install and setup dependencies
+4. `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
 
-## Architecture Diagrams
+## Running Tests
+
+1. UI: `npm test`
+
+## Architecture
 
 ### Ash Resources Overview
 

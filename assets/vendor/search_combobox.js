@@ -210,8 +210,17 @@ const SearchCombobox = {
   },
 
   setSelectedOption(option) {
-    // This method is only for updating the display during initialization
-    // The actual highlighting will happen when the dropdown opens
+    // Clear previous selection attributes from all options
+    this.el.querySelectorAll('.combobox-option[data-combobox-selected]')
+      .forEach(opt => opt.removeAttribute('data-combobox-selected'));
+
+    // Set the selected attribute on the current option
+    if (option) {
+      option.setAttribute('data-combobox-selected', '');
+      console.log('setSelectedOption: set data-combobox-selected on option:', option.getAttribute('data-combobox-value'));
+    }
+
+    // Update the display
     this.updateSingleDisplay(option);
   },
 
@@ -468,7 +477,15 @@ const SearchCombobox = {
     const hasSearchContent = searchInput && searchInput.value && searchInput.value.trim() !== '';
     const wasSearchFocused = searchInput && document.activeElement === searchInput;
 
-    // Don't clear navigation highlights here - selection is separate from navigation/hover state
+    // Clear previous selection attributes from all options
+    this.el.querySelectorAll('.combobox-option[data-combobox-selected]')
+      .forEach(opt => opt.removeAttribute('data-combobox-selected'));
+
+    // Set the selected attribute on the current option
+    if (option) {
+      option.setAttribute('data-combobox-selected', '');
+      console.log('setSingleSelection: set data-combobox-selected on option:', value);
+    }
 
     // Update select element
     selectEl.value = value;
@@ -2215,11 +2232,7 @@ const SearchCombobox = {
         opt.removeAttribute('tabindex');
       });
 
-    // Also clear any lingering data-combobox-selected attributes that might be causing turquoise highlighting
-    this.el.querySelectorAll('.combobox-option[data-combobox-selected]')
-      .forEach(opt => {
-        opt.removeAttribute('data-combobox-selected');
-      });
+    // Note: We no longer clear data-combobox-selected here as it's used for actual selection state
   },
 
   /**
@@ -2228,8 +2241,8 @@ const SearchCombobox = {
   clearOptionConflictingAttributes(option) {
     if (!option) return;
 
-    // Remove ALL possible conflicting attributes that could cause dual highlighting
-    option.removeAttribute('data-combobox-selected');
+    // Remove conflicting attributes that could cause dual highlighting
+    // Note: We preserve data-combobox-selected as it's used for actual selection state
     option.removeAttribute('data-combobox-highlighted');
     option.removeAttribute('data-combobox-active');
     option.removeAttribute('data-selected');
@@ -2251,9 +2264,8 @@ const SearchCombobox = {
     // Comprehensive cleanup of all visual state attributes and classes that might cause highlighting issues
     const options = this.el.querySelectorAll('.combobox-option');
     options.forEach(opt => {
-      // Remove any combobox-related data attributes (be extra aggressive to prevent dual highlighting)
+      // Remove navigation and highlighting attributes (preserve data-combobox-selected for selection state)
       opt.removeAttribute('data-combobox-navigate');
-      opt.removeAttribute('data-combobox-selected');
       opt.removeAttribute('data-combobox-highlighted');
       opt.removeAttribute('data-combobox-active');
       opt.removeAttribute('data-selected');
@@ -2287,8 +2299,7 @@ const SearchCombobox = {
     // Additional deferred clearing to handle race conditions with LiveView updates
     const options = this.el.querySelectorAll('.combobox-option');
     options.forEach(opt => {
-      // Focus only on the most problematic attributes
-      opt.removeAttribute('data-combobox-selected');
+      // Focus only on the most problematic attributes (preserve data-combobox-selected)
       opt.removeAttribute('data-combobox-highlighted');
 
       // Clear any lingering CSS classes
@@ -2591,32 +2602,8 @@ const SearchCombobox = {
    * Sets up a MutationObserver to watch for problematic attributes being added back
    */
   setupAttributeWatcher() {
-    // Create a MutationObserver to watch for data-combobox-selected being added back
-    this.attributeObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes') {
-          const target = mutation.target;
-
-          // If data-combobox-selected is added to an option that doesn't have data-combobox-navigate, remove it
-          if (mutation.attributeName === 'data-combobox-selected' &&
-              target.classList.contains('combobox-option') &&
-              !target.hasAttribute('data-combobox-navigate')) {
-
-            console.log('SearchCombobox: Detected unwanted data-combobox-selected, removing from:', target.getAttribute('data-combobox-value'));
-            target.removeAttribute('data-combobox-selected');
-          }
-        }
-      });
-    });
-
-    // Start observing the combobox element for attribute changes
-    this.attributeObserver.observe(this.el, {
-      attributes: true,
-      attributeFilter: ['data-combobox-selected'],
-      subtree: true
-    });
-
-    console.log('SearchCombobox: Attribute watcher setup complete');
+    // Note: We no longer watch for data-combobox-selected as it's now used for legitimate selection state
+    console.log('SearchCombobox: Attribute watcher setup complete (no longer watching data-combobox-selected)');
   },
 
   /**

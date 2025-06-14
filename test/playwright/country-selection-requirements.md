@@ -1,7 +1,10 @@
 # Combobox Keyboard and Focus Behavior
 
-	1.	Typing Characters
-	•	Typing a letter when an item is selected should append the character to the search input and move focus to the input.
+1.	Typing Characters When the Combobox is Open
+
+  k
+	•	Typing a letter, dash, quote, or space when an item is selected should append the character to the search input and move focus to the input.
+
 	2.	Arrow Key Navigation
 	•	Down Arrow from Search Box: Moves focus to the first item in the first group.
 	•	Up Arrow from Search Box: Moves to the last item in the last group.
@@ -78,5 +81,7 @@ Expected result: albania is highlighted
 8. down arrow
 
 Result: Armenia is highlighted
+
+---
 
 
