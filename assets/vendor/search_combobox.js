@@ -475,16 +475,18 @@ const SearchCombobox = {
 
         // Only set navigation state if we're not in the middle of keyboard navigation
     // This prevents hover from interfering with keyboard navigation sequences
-    // Use a shorter delay (100ms) to prevent hover interference after keyboard navigation
+    // Use a shorter delay (80ms) to prevent hover interference after keyboard navigation
     const timeSinceLastKeyboardNav = Date.now() - this.lastKeyboardNavigationTime;
-    const isRecentKeyboardNavigation = timeSinceLastKeyboardNav < 100;
+    const isRecentKeyboardNavigation = timeSinceLastKeyboardNav < 80;
 
     // Get the currently navigated option to check if hover is on a different option
     const currentNavigated = this.el.querySelector('.combobox-option[data-combobox-navigate]');
     const isHoveringDifferentOption = currentNavigated && currentNavigated !== option;
 
     // Only prevent hover if there was recent keyboard navigation AND we're hovering a different option
-    const shouldPreventHover = (this.isKeyboardNavigating || isRecentKeyboardNavigation) && isHoveringDifferentOption;
+    // But if enough time has passed (200ms+), always allow hover regardless
+    const hasEnoughTimePassed = timeSinceLastKeyboardNav >= 200;
+    const shouldPreventHover = !hasEnoughTimePassed && (this.isKeyboardNavigating || isRecentKeyboardNavigation) && isHoveringDifferentOption;
 
     if (!shouldPreventHover) {
       this.setCurrentNavigationItem(option);
@@ -805,7 +807,7 @@ const SearchCombobox = {
     this.keyboardNavigationTimeout = setTimeout(() => {
       this.isKeyboardNavigating = false;
       console.log('SearchCombobox: Keyboard navigation flag cleared');
-    }, 30); // Very short delay to allow faster mouse interaction after keyboard navigation
+    }, 50); // Short delay to allow faster mouse interaction after keyboard navigation
 
     // Clear any mouse hover state to prevent interference with keyboard navigation
     this.currentlyHoveredOption = null;

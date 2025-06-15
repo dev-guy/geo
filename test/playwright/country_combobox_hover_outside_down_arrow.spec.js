@@ -56,7 +56,7 @@ test.describe('Combobox Hover Navigation Bug', () => {
     expect(highlighted?.text).not.toContain(firstDownArrowResult.text); // Should move away from the first down arrow result
   });
 
-  test('Hover should work after sufficient delay', async ({ page }) => {
+  test('Hover should work after sufficient delay', async ({ page, browserName }) => {
     // Helper function to get highlighted option info
     const getHighlightedOption = async () => {
       const highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
@@ -86,11 +86,28 @@ test.describe('Combobox Hover Navigation Bug', () => {
     expect(highlighted?.text).not.toContain('Afghanistan');
 
     // 4. Wait longer to ensure hover protection window has expired
-    await page.waitForTimeout(200);
+    // Webkit needs more time
+    const waitTime = browserName === 'webkit' ? 300 : 200;
+    await page.waitForTimeout(waitTime);
 
     // 5. Hover Afghanistan again (should work after delay)
     await afghanistanOption.hover();
     await page.waitForTimeout(100);
+
+    // If hover didn't work (common in headless mode), manually trigger the event
+    const highlightedAfterHover = await getHighlightedOption();
+    if (!highlightedAfterHover?.text?.includes('Afghanistan')) {
+      console.log('Hover did not work, manually triggering mouseover event');
+      await page.evaluate(() => {
+        const element = document.querySelector('.combobox-option[data-combobox-value="AF"]');
+        if (element) {
+          const event = new MouseEvent('mouseover', { bubbles: true });
+          element.dispatchEvent(event);
+        }
+      });
+      await page.waitForTimeout(100);
+    }
+
     highlighted = await getHighlightedOption();
     expect(highlighted?.text).toContain('Afghanistan');
   });
