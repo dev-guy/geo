@@ -174,9 +174,6 @@ const SearchCombobox = {
     const delays = [50, 100, 200, 400, 800]; // Progressive backoff
 
     if (attempt >= maxAttempts) {
-        value: opt.getAttribute('data-combobox-value'),
-        text: opt.textContent.trim()
-      })));
       return;
     }
 
