@@ -490,11 +490,14 @@ const SearchCombobox = {
     const shouldPreventHover = !hasEnoughTimePassed && (this.isKeyboardNavigating || isRecentKeyboardNavigation) && isHoveringDifferentOption;
 
         if (!shouldPreventHover) {
-      // For hover, just track the hovered option without setting any attributes
+      // For hover, actually highlight the option by setting the navigation state
       this.isHoverNavigation = true; // Mark this as hover navigation
       this.hoveredOption = option; // Track the hovered option
 
-      console.log('SearchCombobox: Tracking hover on:', option.getAttribute('data-combobox-value'));
+      // Actually highlight the option by setting the data-combobox-navigate attribute
+      this.setCurrentNavigationItem(option, true); // Prevent scroll for hover
+
+      console.log('SearchCombobox: Highlighted hover option:', option.getAttribute('data-combobox-value'));
     } else {
       console.log('SearchCombobox: Skipping hover navigation due to active or recent keyboard navigation on different option');
     }
