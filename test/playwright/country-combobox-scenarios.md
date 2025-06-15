@@ -33,8 +33,6 @@ Actual: There are additional rows above the highlighted row
 
 ---
 
-add a test and fix the implementaton for the following
-
 1. open combobox
 2. hover over afghanistan
 3. scroll the combobox one page
@@ -42,11 +40,8 @@ add a test and fix the implementaton for the following
 5. tab
 
 Expected: the sort button in the first group has focus
-Actual: the expand/collapse button for the second group has focus
 
 ---
-
-add a test and fix the implementaton for the following
 
 1. open combobox
 2. down arrow
