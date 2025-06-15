@@ -530,4 +530,80 @@ test.describe('Country Selector Requirements', () => {
     expect(relativeTop).toBeGreaterThan(topThreshold);
     await expect(highlightedOption).toBeInViewport();
   });
+
+  test('Tab navigation after hover and scroll should focus correct group sort button', async ({ page }) => {
+    // Helper function to get focused element info
+    const getFocusedElementInfo = async () => {
+      const focusedElement = await page.evaluate(() => {
+        const focused = document.activeElement;
+        if (!focused) return null;
+
+        return {
+          tagName: focused.tagName,
+          title: focused.title || '',
+          className: focused.className || '',
+          textContent: focused.textContent?.trim() || '',
+          groupInfo: (() => {
+            const group = focused.closest('.option-group');
+            if (group) {
+              const groupLabel = group.querySelector('.group-label');
+              return groupLabel ? groupLabel.textContent.trim() : 'Unknown Group';
+            }
+            return 'No Group';
+          })()
+        };
+      });
+      return focusedElement;
+    };
+
+    // 1. Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // 2. Hover over Afghanistan (first option in first group)
+    const afghanistanOption = page.locator('.combobox-option[data-combobox-value="AF"]').first();
+    await afghanistanOption.hover();
+    await page.waitForTimeout(100);
+
+    // Verify Afghanistan is highlighted
+    const highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+    const highlightedValue = await highlightedOption.getAttribute('data-combobox-value');
+    expect(highlightedValue).toBe('AF');
+
+    // 3. Scroll the combobox one page down
+    const scrollArea = page.locator('.scroll-viewport');
+    await scrollArea.evaluate(el => {
+      const pageSize = el.clientHeight * 0.8;
+      el.scrollTo({ top: el.scrollTop + pageSize, behavior: 'instant' });
+    });
+    await page.waitForTimeout(200);
+
+    // 4. Tab (should go to first group's expand/collapse button)
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(100);
+
+    let focusedInfo = await getFocusedElementInfo();
+    console.log('After first tab:', focusedInfo);
+
+    // Should be on the first group's expand/collapse button
+    expect(focusedInfo.tagName).toBe('BUTTON');
+    expect(focusedInfo.title).toContain('Toggle group');
+
+    // 5. Tab again (should go to first group's sort button)
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(100);
+
+    focusedInfo = await getFocusedElementInfo();
+    console.log('After second tab:', focusedInfo);
+
+    // Expected: the sort button in the first group has focus
+    expect(focusedInfo.tagName).toBe('BUTTON');
+    expect(focusedInfo.title).toContain('sort order');
+
+    // Verify it's in the first group (should be "By Name" group)
+    expect(focusedInfo.groupInfo).toContain('By Name');
+
+    console.log('SUCCESS: Sort button in first group has focus after hover, scroll, and two tabs');
+  });
 });

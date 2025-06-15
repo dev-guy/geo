@@ -1339,6 +1339,9 @@ const SearchCombobox = {
     const scrollArea = this.el.querySelector('.scroll-viewport');
     if (!scrollArea) return;
 
+    // Clear hovered option reference when scrolling to prevent stale references
+    this.currentlyHoveredOption = null;
+
     const scrollAreaHeight = scrollArea.clientHeight;
     const currentScrollTop = scrollArea.scrollTop;
     const pageSize = scrollAreaHeight * 0.8; // Scroll 80% of visible area
@@ -1365,6 +1368,9 @@ const SearchCombobox = {
 
     // Store the scroll direction for use in updateHighlightAfterScroll
     this.lastScrollDirection = direction;
+
+    // Clear hovered option reference when scrolling to prevent stale references
+    this.currentlyHoveredOption = null;
 
     const scrollAreaHeight = scrollArea.clientHeight;
     const currentScrollTop = scrollArea.scrollTop;
@@ -2185,28 +2191,6 @@ const SearchCombobox = {
       const currentButton = event.target;
       const buttonGroup = currentButton.closest('.option-group');
 
-      // Check if there's a hovered option - if so, use that as reference for next group navigation
-      const hoveredOption = this.findHoveredOption();
-      if (hoveredOption) {
-        const hoveredOptionGroup = hoveredOption.closest('.option-group');
-        if (hoveredOptionGroup) {
-          const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
-          const hoveredGroupIndex = allGroups.indexOf(hoveredOptionGroup);
-
-          // Look for the next group after the hovered option's group
-          const nextGroup = allGroups[hoveredGroupIndex + 1];
-          if (nextGroup) {
-            // Find the expand/collapse button in the next group
-            const nextGroupButton = nextGroup.querySelector('button[title*="Toggle group"]');
-            if (nextGroupButton) {
-              nextGroupButton.focus();
-              console.log('SearchCombobox: Tab navigated to next group button based on hovered option:', hoveredOption.getAttribute('data-combobox-value'));
-              return;
-            }
-          }
-        }
-      }
-
       if (buttonGroup) {
         // Check if this is a sort button (last button in group)
         const groupButtons = Array.from(buttonGroup.querySelectorAll('button'));
@@ -2222,13 +2206,38 @@ const SearchCombobox = {
         }
       }
 
-      // For other buttons or if no option found, manually move focus to the next focusable element
-      const focusable = Array.from(this.el.querySelectorAll('button, [tabindex]:not([tabindex="-1"])'));
-      const currentIndex = focusable.indexOf(currentButton);
-      if (currentIndex !== -1 && currentIndex < focusable.length - 1) {
-        focusable[currentIndex + 1].focus();
+      // For other buttons (expand/collapse), move to next button in sequence
+      // Get all buttons in order: [group1_collapse, group1_sort, group2_collapse, group2_sort, ...]
+      const allButtons = [];
+      const groups = Array.from(this.el.querySelectorAll('.option-group'));
+
+      groups.forEach(group => {
+        const groupButtons = Array.from(group.querySelectorAll('button'));
+        allButtons.push(...groupButtons);
+      });
+
+      const currentIndex = allButtons.indexOf(currentButton);
+      if (currentIndex !== -1 && currentIndex < allButtons.length - 1) {
+        allButtons[currentIndex + 1].focus();
+        console.log('SearchCombobox: Tab navigated to next button in sequence');
+        return;
       }
-      console.log('SearchCombobox: Letting default tab behavior handle this');
+
+      // If we're at the last button, go to first option in current group or first visible option
+      if (buttonGroup) {
+        const firstOptionInGroup = buttonGroup.querySelector('.combobox-option');
+        if (firstOptionInGroup) {
+          this.highlightOption(firstOptionInGroup, false);
+          return;
+        }
+      }
+
+      // Fallback to first visible option
+      const firstVisibleOption = this.el.querySelector('.combobox-option');
+      if (firstVisibleOption) {
+        this.highlightOption(firstVisibleOption, false);
+      }
+      console.log('SearchCombobox: Tab fallback to first visible option');
     } else if (event.key === 'Tab' && event.shiftKey) {
       event.preventDefault(); // Always prevent default for Shift+Tab
       // Handle Shift+Tab from buttons
