@@ -1,4 +1,4 @@
-# Geo - Geographic Data Management System
+# Geo - An Elixir LiveView Ash Country Chooser
 
 ## License
 
