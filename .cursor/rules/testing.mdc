@@ -1,8 +1,10 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: true
 ---
 Always run playwright tests in the background
 
 The Phoenix server (`mix phx.server`) is always running. Do not try to start it.
+
+Do not run playwright with the --headed option

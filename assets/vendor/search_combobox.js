@@ -40,6 +40,7 @@ const SearchCombobox = {
     this.keyboardNavigationTimeout = null;
     this.lastKeyboardNavigationTime = 0;
     this.hoverTimeout = null;
+    this.isHoverNavigation = false; // Track if current navigation was set by hover
 
     this.setupTriggerButton();
     this.setupSearchIntercept();
@@ -415,7 +416,7 @@ const SearchCombobox = {
         if (!currentNavigated) {
           // No current navigation, use the hovered option or the option that received the event
           const hoveredOption = this.findHoveredOption() || option;
-          this.setCurrentNavigationItem(hoveredOption);
+          this.setCurrentNavigationItem(hoveredOption, true); // Prevent scroll for space key navigation
         }
         // If there's already navigation, space key does nothing (don't interfere)
       }
@@ -488,8 +489,12 @@ const SearchCombobox = {
     const hasEnoughTimePassed = timeSinceLastKeyboardNav >= 200;
     const shouldPreventHover = !hasEnoughTimePassed && (this.isKeyboardNavigating || isRecentKeyboardNavigation) && isHoveringDifferentOption;
 
-    if (!shouldPreventHover) {
-      this.setCurrentNavigationItem(option);
+        if (!shouldPreventHover) {
+      // For hover, just track the hovered option without setting any attributes
+      this.isHoverNavigation = true; // Mark this as hover navigation
+      this.hoveredOption = option; // Track the hovered option
+
+      console.log('SearchCombobox: Tracking hover on:', option.getAttribute('data-combobox-value'));
     } else {
       console.log('SearchCombobox: Skipping hover navigation due to active or recent keyboard navigation on different option');
     }
@@ -506,6 +511,10 @@ const SearchCombobox = {
         this.hoverTimeout = null;
       }
     }
+
+    // Clear hover highlight
+    option.removeAttribute('data-hover-highlight');
+    this.isHoverNavigation = false;
 
     // If mouse is leaving the combobox area entirely, reset keyboard navigation protection
     if (event.relatedTarget && !this.el.contains(event.relatedTarget)) {
@@ -724,6 +733,7 @@ const SearchCombobox = {
       if (currentValue) {
         const selectedOption = this.el.querySelector(`.combobox-option[data-combobox-value="${currentValue}"]`);
         if (selectedOption) {
+          this.isHoverNavigation = false; // Clear hover navigation flag for dropdown open
           this.setCurrentNavigationItem(selectedOption);
           console.log('SearchCombobox: Immediately highlighted selected option on open:', currentValue);
         }
@@ -801,6 +811,7 @@ const SearchCombobox = {
     // Set keyboard navigation flag to prevent mouse hover interference
     this.isKeyboardNavigating = true;
     this.lastKeyboardNavigationTime = Date.now();
+    this.isHoverNavigation = false; // Clear hover navigation flag for keyboard navigation
 
     // Clear the flag after a short delay to allow mouse interaction again
     clearTimeout(this.keyboardNavigationTimeout);
@@ -1293,21 +1304,32 @@ const SearchCombobox = {
     return null;
   },
 
-    setCurrentNavigationItem(option) {
-    // Clear all visual states first (includes navigation highlights)
-    this.clearAllVisualStates();
+    setCurrentNavigationItem(option, preventScroll = false) {
+    // Only clear visual states if not hover navigation to prevent scroll issues
+    if (!this.isHoverNavigation) {
+      // Clear all visual states first (includes navigation highlights)
+      this.clearAllVisualStates();
 
-    // Extra aggressive clearing for the specific option we're about to highlight
-    // to prevent dual highlighting (turquoise + blue)
-    this.clearOptionConflictingAttributes(option);
+      // Extra aggressive clearing for the specific option we're about to highlight
+      // to prevent dual highlighting (turquoise + blue)
+      this.clearOptionConflictingAttributes(option);
+    } else {
+      // For hover navigation, just clear the previous navigation highlight
+      const previousNavigated = this.el.querySelector('.combobox-option[data-combobox-navigate]');
+      if (previousNavigated) {
+        previousNavigated.removeAttribute('data-combobox-navigate');
+      }
+    }
 
     // Set this option as the current navigation item (blue)
     option.setAttribute('data-combobox-navigate', '');
 
-    // Make sure it's visible
-    this.scrollToOption(option);
+    // Make sure it's visible, but only scroll if not prevented (e.g., for keyboard navigation)
+    if (!preventScroll) {
+      this.scrollToOption(option);
+    }
 
-    console.log('SearchCombobox: Set current navigation item:', option.getAttribute('data-combobox-value'));
+    console.log('SearchCombobox: Set current navigation item:', option.getAttribute('data-combobox-value'), preventScroll ? '(no scroll)' : '(with scroll)');
   },
 
   scrollPage(direction) {
@@ -2554,7 +2576,8 @@ const SearchCombobox = {
         const groupOptions = Array.from(optionGroup.querySelectorAll('.combobox-option'));
         const isFirstInGroup = groupOptions.indexOf(option) === 0;
 
-        if (isFirstInGroup) {
+        // Only show group label automatically if it's forced or if the group label is already visible
+        if (isFirstInGroup && forceGroupLabelVisible) {
           shouldShowGroupLabel = true;
         }
       }
@@ -2594,19 +2617,27 @@ const SearchCombobox = {
       }
     }
 
-    // Calculate scroll position for consistent behavior during keyboard navigation
-    // Always position the option at the bottom of the viewport for consistent UX
+        // Only scroll if the option is not fully visible in the viewport
+    if (isFullyVisible) {
+      // Option is already fully visible - no scroll needed
+      console.log('SearchCombobox: Option is fully visible, no scroll needed');
+      return;
+    }
+
+    // Calculate scroll position only when necessary
     let newScrollTop = currentScrollTop;
 
     if (optionTop < viewportTop) {
-      // Option is above viewport - scroll up to position it at the bottom of viewport
-      // This ensures consistent behavior regardless of scroll direction
-      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight + 5); // Position option at bottom with small padding
+      // Option is above viewport - scroll up to show it at the top
+      console.log('SearchCombobox: Option above viewport, scrolling up to show it');
+      newScrollTop = Math.max(0, optionTop - 15);
     } else if (optionBottom > viewportBottom) {
-      // Option is below viewport - scroll down to position it at the bottom of viewport
-      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight + 5); // Position option at bottom with small padding
+      // Option is below viewport - scroll down to show it at the bottom
+      console.log('SearchCombobox: Option below viewport, scrolling down to show it');
+      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight + 15);
     } else {
-      // Option is already visible, no scroll needed
+      // This shouldn't happen since we already checked isFullyVisible above
+      console.log('SearchCombobox: Option is partially visible, no scroll needed');
       return;
     }
 
@@ -2618,9 +2649,10 @@ const SearchCombobox = {
     if (Math.abs(newScrollTop - currentScrollTop) > 1) {
       scrollArea.scrollTo({
         top: newScrollTop,
-        behavior: 'smooth'
+        behavior: 'instant'
       });
-      console.log(`SearchCombobox: Consistent scroll from ${currentScrollTop} to ${newScrollTop} (diff: ${newScrollTop - currentScrollTop}) for option ${option.getAttribute('data-combobox-value')} - positioned at bottom of viewport`);
+      const positionDescription = newScrollTop <= optionTop ? 'at top of viewport' : 'at bottom of viewport';
+      console.log(`SearchCombobox: Consistent scroll from ${currentScrollTop} to ${newScrollTop} (diff: ${newScrollTop - currentScrollTop}) for option ${option.getAttribute('data-combobox-value')} - positioned ${positionDescription}`);
     }
   },
 
@@ -2641,9 +2673,13 @@ const SearchCombobox = {
 
     const currentNavigated = this.el.querySelector('.combobox-option[data-combobox-navigate]');
     if (currentNavigated) {
-      // There is a navigated option - make sure it's visible by scrolling to it
-      console.log('SearchCombobox: Scrolling to ensure navigated option is visible:', currentNavigated.getAttribute('data-combobox-value'));
-      this.scrollToOption(currentNavigated, false);
+      // There is a navigated option - only scroll if it wasn't set by hover
+      if (this.isHoverNavigation) {
+        console.log('SearchCombobox: Skipping scroll for hover-navigated option:', currentNavigated.getAttribute('data-combobox-value'));
+      } else {
+        console.log('SearchCombobox: Scrolling to ensure navigated option is visible:', currentNavigated.getAttribute('data-combobox-value'));
+        this.scrollToOption(currentNavigated, false);
+      }
     } else if (currentValue) {
       // No navigated option but there's a selected value - find and highlight it
       const selectedOption = this.el.querySelector(`.combobox-option[data-combobox-value="${currentValue}"]`);

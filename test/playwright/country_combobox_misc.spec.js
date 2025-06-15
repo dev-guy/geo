@@ -382,4 +382,152 @@ test.describe('Country Selector Requirements', () => {
 
     console.log(`SUCCESS: Down arrow from last item correctly wrapped to first item (${finalOptionValue})`);
   });
+
+  test('Requirement 4: Highlighted row should be at top of viewport after navigation', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Start from the search input and navigate down 10 times
+    console.log('=== Pressing Down Arrow 10 times ===');
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press('ArrowDown');
+      await page.waitForTimeout(50); // Small delay between presses
+    }
+
+    // Get the currently highlighted option after 10 down arrows
+    let highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+    let optionValue = await highlightedOption.getAttribute('data-combobox-value');
+    console.log(`After 10 down arrows: ${optionValue} is highlighted`);
+
+    // Now press up arrow 11 times
+    console.log('=== Pressing Up Arrow 11 times ===');
+    for (let i = 0; i < 11; i++) {
+      await page.keyboard.press('ArrowUp');
+      await page.waitForTimeout(50); // Small delay between presses
+    }
+
+    // Get the currently highlighted option after 11 up arrows
+    highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+    optionValue = await highlightedOption.getAttribute('data-combobox-value');
+    console.log(`After 11 up arrows: ${optionValue} is highlighted`);
+
+    // Get the dropdown container to check viewport
+    const dropdown = page.locator('.search-combobox-dropdown');
+
+    // Get the bounding boxes
+    const highlightedBox = await highlightedOption.boundingBox();
+    const dropdownBox = await dropdown.boundingBox();
+
+    console.log('Highlighted option position:', highlightedBox);
+    console.log('Dropdown position:', dropdownBox);
+
+    // Calculate relative position within the viewport
+    const relativeTop = highlightedBox.y - dropdownBox.y;
+    const relativeBottom = relativeTop + highlightedBox.height;
+    const viewportHeight = dropdownBox.height;
+
+    console.log(`Relative position: top=${relativeTop}, bottom=${relativeBottom}, viewport height=${viewportHeight}`);
+
+    // The highlighted row should be at the top of the viewport
+    // This means there should be no additional rows above the highlighted row
+    const topThreshold = 75; // Allow for some padding/margin at the top and browser differences
+
+    console.log(`Expected: highlighted row top (${relativeTop}) should be <= ${topThreshold} (near top of viewport)`);
+
+    // The bug is that there are additional rows above the highlighted row
+    // The highlighted row should be at or very near the top of the viewport
+    expect(relativeTop).toBeLessThanOrEqual(topThreshold);
+
+    // Additional check: the highlighted option should be visible and not cut off
+    await expect(highlightedOption).toBeInViewport();
+
+    // Verify there are no visible options above the highlighted one in the viewport
+    const allVisibleOptions = page.locator('.combobox-option').filter({ hasText: /.+/ });
+    const visibleOptionsCount = await allVisibleOptions.count();
+
+    // Find the index of the highlighted option among visible options
+    let highlightedIndex = -1;
+    for (let i = 0; i < visibleOptionsCount; i++) {
+      const option = allVisibleOptions.nth(i);
+      const hasNavigateAttr = await option.getAttribute('data-combobox-navigate');
+      if (hasNavigateAttr !== null) {
+        highlightedIndex = i;
+        break;
+      }
+    }
+
+    console.log(`Highlighted option is at index ${highlightedIndex} among ${visibleOptionsCount} visible options`);
+
+    // Check if there are options above the highlighted one that are visible in viewport
+    let optionsAboveInViewport = 0;
+    for (let i = 0; i < highlightedIndex; i++) {
+      const option = allVisibleOptions.nth(i);
+      const isInViewport = await option.isVisible();
+      if (isInViewport) {
+        const optionBox = await option.boundingBox();
+        // Check if the option is actually within the dropdown viewport
+        if (optionBox && optionBox.y >= dropdownBox.y && optionBox.y < highlightedBox.y) {
+          optionsAboveInViewport++;
+          const optionVal = await option.getAttribute('data-combobox-value');
+          console.log(`Option above highlighted in viewport: ${optionVal} at y=${optionBox.y}`);
+        }
+      }
+    }
+
+    console.log(`Number of options above highlighted that are visible in viewport: ${optionsAboveInViewport}`);
+
+    // The requirement is that the highlighted row should be at the top of viewport
+    // So there should be 0 options above it that are visible in the viewport
+    expect(optionsAboveInViewport).toBe(0);
+  });
+
+  test('Normal navigation should not position at top of viewport', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Hover over Afghanistan to establish a starting point
+    const afghanistanOption = page.locator('.combobox-option[data-combobox-value="AF"]').first();
+    await afghanistanOption.hover();
+    await page.waitForTimeout(100);
+
+    // Navigate down 3 times
+    console.log('=== Pressing Down Arrow 3 times ===');
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press('ArrowDown');
+      await page.waitForTimeout(50);
+    }
+
+    // Get the currently highlighted option
+    const highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+    const optionValue = await highlightedOption.getAttribute('data-combobox-value');
+    console.log(`After 3 down arrows: ${optionValue} is highlighted`);
+
+    // Get the dropdown container to check viewport
+    const dropdown = page.locator('.search-combobox-dropdown');
+
+    // Get the bounding boxes
+    const highlightedBox = await highlightedOption.boundingBox();
+    const dropdownBox = await dropdown.boundingBox();
+
+    // Calculate relative position within the viewport
+    const relativeTop = highlightedBox.y - dropdownBox.y;
+    const viewportHeight = dropdownBox.height;
+
+    console.log(`Relative position: top=${relativeTop}, viewport height=${viewportHeight}`);
+
+    // For normal navigation, the highlighted option should NOT be at the top of the viewport
+    // It should be positioned more naturally (not at the very top)
+    const topThreshold = 55;
+
+    console.log(`Expected: highlighted row top (${relativeTop}) should be > ${topThreshold} (NOT at top of viewport for normal navigation)`);
+
+    // The highlighted option should be visible but not necessarily at the top
+    expect(relativeTop).toBeGreaterThan(topThreshold);
+    await expect(highlightedOption).toBeInViewport();
+  });
 });
