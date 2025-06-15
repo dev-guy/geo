@@ -129,4 +129,66 @@ test.describe('Country Selector Requirements', () => {
       console.log(`WARNING: Could not detect group name properly`);
     }
   });
+
+  test('Requirement 3: Viewport scrolling after navigation - selection should be at bottom of viewport', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Type "ag" in the search box
+    const searchInput = page.locator('.search-combobox-search-input');
+    await searchInput.fill('ag');
+    await page.waitForTimeout(1000); // Wait for search results
+
+    // Hover over the first country in the first group
+    const firstOption = page.locator('.combobox-option').first();
+    await firstOption.hover();
+
+    // Wait a moment for hover to register
+    await page.waitForTimeout(100);
+
+    // Press down arrow 9 times
+    console.log('=== Pressing Down Arrow 9 times ===');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowDown');
+      await page.waitForTimeout(50); // Small delay between presses
+    }
+
+    // Get the currently highlighted option
+    const highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+
+    // Get the dropdown container to check viewport
+    const dropdown = page.locator('.search-combobox-dropdown');
+
+    // Get the bounding boxes
+    const highlightedBox = await highlightedOption.boundingBox();
+    const dropdownBox = await dropdown.boundingBox();
+
+    console.log('Highlighted option position:', highlightedBox);
+    console.log('Dropdown position:', dropdownBox);
+
+    // Calculate relative position within the viewport
+    const relativeTop = highlightedBox.y - dropdownBox.y;
+    const relativeBottom = relativeTop + highlightedBox.height;
+    const viewportHeight = dropdownBox.height;
+
+    console.log(`Relative position: top=${relativeTop}, bottom=${relativeBottom}, viewport height=${viewportHeight}`);
+
+    // The selection should be at the bottom of the viewport, not at the top
+    // We expect the bottom of the highlighted option to be near the bottom of the viewport
+    const bottomThreshold = viewportHeight * 0.7; // At least 70% down the viewport
+    const topThreshold = viewportHeight * 0.3; // Not in the top 30% of the viewport
+
+    console.log(`Expected: selection bottom (${relativeBottom}) should be > ${bottomThreshold} (70% of viewport)`);
+    console.log(`Expected: selection top (${relativeTop}) should be > ${topThreshold} (30% of viewport)`);
+
+    // The bug is that selection appears at the top of viewport instead of bottom
+    // This test should fail initially, showing the bug
+    expect(relativeBottom).toBeGreaterThan(bottomThreshold);
+    expect(relativeTop).toBeGreaterThan(topThreshold);
+
+    // Additional check: the highlighted option should be visible and not cut off
+    await expect(highlightedOption).toBeInViewport();
+  });
 });

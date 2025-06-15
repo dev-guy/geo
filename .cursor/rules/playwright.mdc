@@ -1,0 +1,6 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+when running playwright, disable the HTML report server

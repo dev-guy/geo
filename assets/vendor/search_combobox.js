@@ -35,6 +35,10 @@ const SearchCombobox = {
     this.hasScrolledThisSession = false;
     this.isButtonInteraction = false;
 
+    // Initialize keyboard navigation tracking
+    this.isKeyboardNavigating = false;
+    this.keyboardNavigationTimeout = null;
+
     this.setupTriggerButton();
     this.setupSearchIntercept();
     this.setupDropdownObserver();
@@ -419,8 +423,11 @@ const SearchCombobox = {
     console.log('SearchCombobox: Mouse entered option:', option.getAttribute('data-combobox-value'));
     this.currentlyHoveredOption = option;
 
-    // Set navigation state on mouse hover so Enter key will select the hovered option
-    this.setCurrentNavigationItem(option);
+    // Only set navigation state on mouse hover if we're not in keyboard navigation mode
+    // This prevents mouse hover from interfering with keyboard navigation
+    if (!this.isKeyboardNavigating) {
+      this.setCurrentNavigationItem(option);
+    }
   },
 
   handleOptionMouseLeave(option, event) {
@@ -710,6 +717,15 @@ const SearchCombobox = {
     const options = Array.from(this.el.querySelectorAll('.combobox-option'));
     if (options.length === 0) return;
 
+    // Set keyboard navigation flag to prevent mouse hover interference
+    this.isKeyboardNavigating = true;
+
+    // Clear the flag after a short delay to allow mouse interaction again
+    clearTimeout(this.keyboardNavigationTimeout);
+    this.keyboardNavigationTimeout = setTimeout(() => {
+      this.isKeyboardNavigating = false;
+    }, 500);
+
     let currentIndex = -1;
     const currentNavigated = this.el.querySelector('.combobox-option[data-combobox-navigate]');
 
@@ -821,6 +837,10 @@ const SearchCombobox = {
     if (newOption) {
       // Extra clearing before highlighting to prevent turquoise highlighting issues
       this.clearAllVisualStates();
+
+      // Clear any mouse hover state to prevent interference with keyboard navigation
+      this.currentlyHoveredOption = null;
+
       this.highlightOption(newOption, false); // Allow scrolling for navigation
       console.log(`SearchCombobox: Navigated to option at index ${newIndex}: ${newOption.getAttribute('data-combobox-value')}`);
     }
@@ -2202,7 +2222,7 @@ const SearchCombobox = {
   highlightOption(option, preventScroll = false) {
     if (!option) return;
 
-        // Clear all visual states first to ensure clean slate (includes navigation highlights)
+    // Clear all visual states first to ensure clean slate (includes navigation highlights)
     this.clearAllVisualStates();
 
     // Extra aggressive clearing for the specific option we're about to highlight
@@ -2213,6 +2233,7 @@ const SearchCombobox = {
     option.setAttribute('data-combobox-navigate', '');
 
     // Make sure the option is visible (unless prevented)
+    // Ignore mouse hover position during keyboard navigation - always scroll consistently
     if (!preventScroll) {
       this.scrollToOption(option);
     }
@@ -2410,18 +2431,17 @@ const SearchCombobox = {
       }
     }
 
-    // Calculate minimal scroll needed for true single-line scrolling
+    // Calculate scroll position for consistent behavior during keyboard navigation
+    // Always position the option at the bottom of the viewport for consistent UX
     let newScrollTop = currentScrollTop;
 
     if (optionTop < viewportTop) {
-      // Option is above viewport - scroll up just enough to show it at the top
-      // Set scroll position so the option appears at the top of the viewport
-      newScrollTop = Math.max(0, optionTop - 5); // Position option at top with small padding
+      // Option is above viewport - scroll up to position it at the bottom of viewport
+      // This ensures consistent behavior regardless of scroll direction
+      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight + 5); // Position option at bottom with small padding
     } else if (optionBottom > viewportBottom) {
-      // Option is below viewport - scroll down just enough to show it at the bottom
-      // Calculate the minimal scroll needed to bring the bottom of the option into view
-      const scrollNeeded = optionBottom - viewportBottom;
-      newScrollTop = currentScrollTop + scrollNeeded + 5; // Small padding
+      // Option is below viewport - scroll down to position it at the bottom of viewport
+      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight + 5); // Position option at bottom with small padding
     } else {
       // Option is already visible, no scroll needed
       return;
@@ -2437,7 +2457,7 @@ const SearchCombobox = {
         top: newScrollTop,
         behavior: 'smooth'
       });
-      console.log(`SearchCombobox: Minimal scroll from ${currentScrollTop} to ${newScrollTop} (diff: ${newScrollTop - currentScrollTop}) for option ${option.getAttribute('data-combobox-value')}`);
+      console.log(`SearchCombobox: Consistent scroll from ${currentScrollTop} to ${newScrollTop} (diff: ${newScrollTop - currentScrollTop}) for option ${option.getAttribute('data-combobox-value')} - positioned at bottom of viewport`);
     }
   },
 
