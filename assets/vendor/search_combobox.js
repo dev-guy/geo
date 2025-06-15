@@ -771,14 +771,39 @@ const SearchCombobox = {
           const groupOptions = Array.from(currentGroup.querySelectorAll('.combobox-option'));
           const indexInGroup = groupOptions.indexOf(currentOption);
 
-          // If we're at the first option in the group, go to the last option in the same group
-          if (indexInGroup === 0 && groupOptions.length > 1) {
-            const lastOptionInGroup = groupOptions[groupOptions.length - 1];
-            const lastOptionGlobalIndex = options.indexOf(lastOptionInGroup);
-            newIndex = lastOptionGlobalIndex;
-            console.log('SearchCombobox: Up arrow from first in group, going to last in same group');
+          // If we're at the first option in the group, try to go to the previous group's last option
+          if (indexInGroup === 0) {
+            // Find all groups
+            const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+            const currentGroupIndex = allGroups.indexOf(currentGroup);
+
+            // Look for the previous group with visible options
+            let foundPreviousGroup = false;
+            for (let i = currentGroupIndex - 1; i >= 0; i--) {
+              const prevGroup = allGroups[i];
+              const prevGroupOptions = Array.from(prevGroup.querySelectorAll('.combobox-option'));
+              const visiblePrevOptions = prevGroupOptions.filter(opt =>
+                !opt.hasAttribute('hidden') && opt.offsetParent !== null
+              );
+
+              if (visiblePrevOptions.length > 0) {
+                // Go to the last visible option in the previous group
+                const lastOptionInPrevGroup = visiblePrevOptions[visiblePrevOptions.length - 1];
+                const lastOptionGlobalIndex = options.indexOf(lastOptionInPrevGroup);
+                newIndex = lastOptionGlobalIndex;
+                console.log('SearchCombobox: Up arrow from first in group, going to last option in previous group');
+                foundPreviousGroup = true;
+                break;
+              }
+            }
+
+            // If no previous group found, use normal navigation (go to previous option)
+            if (!foundPreviousGroup) {
+              newIndex = currentIndex - 1;
+              console.log('SearchCombobox: Up arrow from first in group, no previous group found, using normal navigation');
+            }
           } else {
-            // Normal previous option navigation
+            // Normal previous option navigation within the same group
             newIndex = currentIndex - 1;
           }
         } else {
