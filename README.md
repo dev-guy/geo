@@ -20,11 +20,12 @@ This project might be useful if you're curious about the Ash Framework (version 
 
 Resources:
 
-- Using Ash with a custom supervised Genserver
-- Definint custom resource actions
-- DRY: Defining attributes for use across multiple resources
+- Using Ash with a custom supervised GenServer with retry logic
+- Defining custom resource actions including manual reads and map actions
+- DRY: Modular attribute definitions using `__using__` macros for reusable resource components
 - A NOT NULL column (slug) that is computed automatically (via a custom change) if not provided
 - Seeding data using bulk upsert
+- Custom supervision strategy with delayed restart for database-dependent services
 
 LiveView:
 
@@ -37,15 +38,17 @@ LiveView:
 ### Architecture
 
 - **Domain Layer**: `Geo.Geography` - Core business logic and operations
-- **Resource Layer**: `Geo.Resources.Country.Country` - Data models and validations  
+- **Resource Layer**: `Geo.Resources.Country` - Data models and validations with modular attributes
 - **Web Layer**: Phoenix LiveView components for interactive UI
-- **Caching Layer**: High-performance country lookup and search caching
+- **Caching Layer**: High-performance country lookup and search caching with supervised GenServer
+- **Attribute Layer**: Reusable attribute modules (`Geo.Resources.Attributes.*`) for DRY resource definitions
+- **Change Layer**: Custom change modules for automatic data transformations
 
 ### Key Features
 
 - **Country Management**: Full CRUD operations for country data (ISO codes, names, flags, slugs)
 - **Intelligent Search**: Multi-criteria search with prioritized results (ISO codes, names)
-- **High-Performance Caching**: Sub-millisecond country lookups via `Geo.Resources.Country.Cache`
+- **High-Performance Caching**: Fast searches via `Geo.Resources.Country.Cache` with automatic refresh every 10 minutes
 - **Interactive UI**: Real-time search with grouped, sortable results
 - **Upsert Operations**: Efficient create-or-update operations using unique identities
 
@@ -82,25 +85,81 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 ```mermaid
 classDiagram
     Geo.Geography
-    class Geo.Resources.Country.Country {
+    class Geo.Resources.Country {
         Domain: Geo.Geography
-        Source: lib/geo/country/country.ex
+        Source: lib/geo/resources/country.ex
 
-        UUIDv7 id
-        CiString name
-        CiString slug
-        UtcDatetimeUsec created_at
-        UtcDatetimeUsec updated_at
-        CiString iso_code
-        String flag
+        Ash.Type.UUIDv7 id
+        Ash.Type.CiString name
+        Ash.Type.CiString slug
+        Ash.Type.UtcDatetimeUsec created_at
+        Ash.Type.UtcDatetimeUsec updated_at
+        Ash.Type.CiString iso_code
+        Ash.Type.String flag
         destroy()
         read()
         create(name, iso_code, flag, slug)
         upsert(name, iso_code, flag, slug)
-        update(name, iso_code, flag, slug)
+        update(name, slug, iso_code, flag)
         get_by_iso_code_cached(iso_code)
         search(query)
     }
+    
+    class Geo.Resources.Attributes.Id {
+        <<mixin>>
+        +uuid_v7_primary_key id
+    }
+    
+    class Geo.Resources.Attributes.Name {
+        <<mixin>>
+        +ci_string name
+        +identity unique_name
+    }
+    
+    class Geo.Resources.Attributes.Slug {
+        <<mixin>>
+        +ci_string slug
+        +identity unique_slug
+        +validation match_pattern
+    }
+    
+    class Geo.Resources.Attributes.Timestamps {
+        <<mixin>>
+        +utc_datetime_usec created_at
+        +utc_datetime_usec updated_at
+    }
+    
+    class Geo.Resources.Changes.SlugifyName {
+        <<change>>
+        +change() : changeset
+        +maybe_generate_slug() : changeset
+        +slugify() : string
+    }
+    
+    class Geo.Resources.Country.Cache {
+        <<GenServer>>
+        +start_link() : {:ok, pid}
+        +search!(query) : {iso_results, name_results}
+        +get_by_iso_code!(iso_code) : country
+        +refresh_cache() : :ok
+        -load_countries() : {:ok, countries}
+        -do_search() : {iso_results, name_results}
+    }
+    
+    class Geo.Resources.Country.CacheSupervisor {
+        <<Supervisor>>
+        +start_link() : {:ok, pid}
+        +start_cache_worker() : {:ok, pid}
+        -retry_start_cache() : void
+    }
+    
+    Geo.Resources.Country --|> Geo.Resources.Attributes.Id : uses
+    Geo.Resources.Country --|> Geo.Resources.Attributes.Name : uses
+    Geo.Resources.Country --|> Geo.Resources.Attributes.Slug : uses
+    Geo.Resources.Country --|> Geo.Resources.Attributes.Timestamps : uses
+    Geo.Resources.Country --> Geo.Resources.Changes.SlugifyName : applies
+    Geo.Resources.Country --> Geo.Resources.Country.Cache : manual_read
+    Geo.Resources.Country.CacheSupervisor --> Geo.Resources.Country.Cache : supervises
 ```
 
 ### Country Search Sequence Diagram
@@ -265,6 +324,26 @@ C4Component
     Rel(country_cache, postgres, "Periodic refresh")
 ```
 
+## Modular Architecture
+
+### Reusable Attribute Modules
+
+The application uses a modular approach to define common resource attributes:
+
+- **`Geo.Resources.Attributes.Id`** - Provides UUIDv7 primary key
+- **`Geo.Resources.Attributes.Name`** - Provides case-insensitive name attribute with optional uniqueness
+- **`Geo.Resources.Attributes.Slug`** - Provides URL-friendly slug with validation and optional uniqueness  
+- **`Geo.Resources.Attributes.Timestamps`** - Provides created_at/updated_at timestamps
+
+These modules use `__using__` macros to inject attribute definitions, validations, and identities into resources, promoting DRY principles and consistent attribute behavior across the application.
+
+### Custom Change Modules
+
+- **`Geo.Resources.Changes.SlugifyName`** - Automatically generates URL-friendly slugs from names
+  - Handles Unicode normalization and diacritical mark removal
+  - Converts to lowercase with hyphens replacing spaces and special characters
+  - Only regenerates slug when name changes and no explicit slug is provided
+
 ## Domain Model
 
 ### Geo.Geography Domain
@@ -273,10 +352,10 @@ The main domain provides these key operations:
 
 - `list_countries/0` - Lists all countries
 - `search_countries/1` - Intelligent search for UI components
-- `get_country_iso_code_cached/1` - High-performance country lookup by ISO code
+- `get_country_iso_code_cached/1` - High-performance country search by ISO code
 - `create_country/1`, `update_country/1`, `upsert_country/1` - Country management
 
-### Geo.Resources.Country.Country Resource
+### Geo.Resources.Country Resource
 
 Core attributes:
 - `id` (UUIDv7) - Primary key
@@ -288,21 +367,24 @@ Core attributes:
 
 Key features:
 - Unique constraints on `iso_code` and `slug`
-- Automatic slug generation from name
+- Automatic slug generation from name via `Geo.Resources.Changes.SlugifyName`
 - Upsert capability using ISO code identity
-- Cached search operations for performance
+- Cached search operations for performance via manual read actions
+- Modular attribute composition using reusable attribute modules
+- Manual read action `get_by_iso_code_cached` that bypasses database for cached lookups
+- Map action `search` that returns structured search results from cache
 
 ## Performance Features
 
 ### Caching Strategy
-- `Geo.Resources.Country.Cache` provides sub-millisecond lookups
-- Automatic cache refresh every 10 minutes
-- Intelligent search with prioritized results:
-  1. Exact ISO code matches
-  2. Partial ISO code matches (≤3 chars)
-  3. Exact name matches
-  4. Names starting with query
-  5. Names containing query
+- `Geo.Resources.Country.Cache` GenServer provides fast searches
+- Supervised by `Geo.Resources.Country.CacheSupervisor` with retry logic for database dependencies
+- Automatic cache refresh every 10 minutes via scheduled messages
+- Intelligent search with prioritized results returned as separate lists:
+  1. **ISO Code Results**: Exact ISO code matches, then partial ISO code matches (≤3 chars)
+  2. **Name Results**: Exact name matches, names starting with query, then names containing query
+- Cache maintains two sorted collections: `countries_by_iso_code` and `countries_by_name`
+- Graceful startup with 1-minute retry delay if database is not available
 
 ### UI Optimizations
 - Real-time search with debouncing
