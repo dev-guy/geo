@@ -33,7 +33,6 @@ defmodule Geo.Resources.Country do
   end
 
   identities do
-    # Inherit unique_slug from base resource
     identity :unique_iso_code, [:iso_code]
   end
 
