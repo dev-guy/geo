@@ -107,50 +107,50 @@ classDiagram
     
     class Geo.Resources.Attributes.Id {
         <<mixin>>
-        +uuid_v7_primary_key id
+        uuid_v7_primary_key id
     }
     
     class Geo.Resources.Attributes.Name {
         <<mixin>>
-        +ci_string name
-        +identity unique_name
+        ci_string name
+        identity unique_name
     }
     
     class Geo.Resources.Attributes.Slug {
         <<mixin>>
-        +ci_string slug
-        +identity unique_slug
-        +validation match_pattern
+        ci_string slug
+        identity unique_slug
+        validation match_pattern
     }
     
     class Geo.Resources.Attributes.Timestamps {
         <<mixin>>
-        +utc_datetime_usec created_at
-        +utc_datetime_usec updated_at
+        utc_datetime_usec created_at
+        utc_datetime_usec updated_at
     }
     
     class Geo.Resources.Changes.SlugifyName {
         <<change>>
-        +change() : changeset
-        +maybe_generate_slug() : changeset
-        +slugify() : string
+        change() changeset
+        maybe_generate_slug() changeset
+        slugify() string
     }
     
     class Geo.Resources.Country.Cache {
         <<GenServer>>
-        +start_link() : {:ok, pid}
-        +search!(query) : {iso_results, name_results}
-        +get_by_iso_code!(iso_code) : country
-        +refresh_cache() : :ok
-        -load_countries() : {:ok, countries}
-        -do_search() : {iso_results, name_results}
+        start_link() ok_pid
+        search!(query) iso_name_results
+        get_by_iso_code!(iso_code) country
+        refresh_cache() ok
+        load_countries() ok_countries
+        do_search() iso_name_results
     }
     
     class Geo.Resources.Country.CacheSupervisor {
         <<Supervisor>>
-        +start_link() : {:ok, pid}
-        +start_cache_worker() : {:ok, pid}
-        -retry_start_cache() : void
+        start_link() ok_pid
+        start_cache_worker() ok_pid
+        retry_start_cache() void
     }
     
     Geo.Resources.Country --|> Geo.Resources.Attributes.Id : uses
@@ -203,44 +203,44 @@ sequenceDiagram
 ```mermaid
 classDiagram
     class GeoWeb.HomeLive {
-        +mount/3
-        +handle_info/2
-        +render/1
-        -selected_country: Country
+        mount/3
+        handle_info/2
+        render/1
+        selected_country Country
     }
     
     class GeoWeb.CountrySelector {
-        +update/2
-        +render/1
-        +handle_event/3
-        -original_countries: Map
-        -current_countries: Map
-        -selected_country: Country
-        -iso_code_group_collapsed: Boolean
-        -name_group_collapsed: Boolean
-        -group_order: Atom
-        +search_combobox_updated/2
-        +toggle_group_sort/2
-        +toggle_group_collapse/2
-        +country_selected/2
+        update/2
+        render/1
+        handle_event/3
+        original_countries Map
+        current_countries Map
+        selected_country Country
+        iso_code_group_collapsed Boolean
+        name_group_collapsed Boolean
+        group_order Atom
+        search_combobox_updated/2
+        toggle_group_sort/2
+        toggle_group_collapse/2
+        country_selected/2
     }
     
     class SearchCombobox {
         <<Component>>
-        +name: String
-        +value: String
-        +placeholder: String
-        +search_event: String
-        +variant: String
-        +color: String
-        +enable_group_sorting: Boolean
+        name String
+        value String
+        placeholder String
+        search_event String
+        variant String
+        color String
+        enable_group_sorting Boolean
     }
     
     class CountryOptionContent {
         <<Helper Component>>
-        +country: Country
-        +group_order: Atom
-        +group_name: String
+        country Country
+        group_order Atom
+        group_name String
     }
     
     GeoWeb.HomeLive --> GeoWeb.CountrySelector : uses
