@@ -2694,10 +2694,10 @@ const SearchCombobox = {
         newScrollTop = Math.max(0, optionTop - 15);
         console.log('SearchCombobox: Normal navigation, using standard padding');
       }
-    } else if (optionBottom > viewportBottom) {
+        } else if (optionBottom > viewportBottom) {
       // Option is below viewport - scroll down to show it at the bottom
       console.log('SearchCombobox: Option below viewport, scrolling down to show it');
-      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight + 15);
+      newScrollTop = Math.max(0, optionBottom - scrollAreaHeight);
     } else {
       // This shouldn't happen since we already checked isFullyVisible above
       console.log('SearchCombobox: Option is partially visible, no scroll needed');
