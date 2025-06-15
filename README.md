@@ -1,5 +1,9 @@
 # Geo - Geographic Data Management System
 
+## License
+
+MIT
+
 ## Project Overview
 
 Geo is the world's most overengineered country combobox. Countries are stored in a PostegreSQL table and loaded in a cache (implemented as an Elixir Genserver) for fast server-side searching.
@@ -24,11 +28,11 @@ Resources:
 
 LiveView:
 
-- Custom component from a Mishka Chelekom component
+- A custom component built from Mishka Chelekom's `<.combobox>`
   - The `<.search_combobox>` combobox invokes a nontrivial server-side search. Search results are presented in two groups that can be expanded/collapsed and sorted separately.
   - Fun fact: This component was 100% vibe coded using Sonnet 4.
   - Not fun fact: This component has very complex client-side state and took well over 90% of the development effort. Ash and Elixir were the easy parts.
-- Creating a LiveView component that can be used in multiple LiveViews
+- A reusable LiveView component
 
 ### Architecture
 
