@@ -22,7 +22,7 @@ Resources:
 
 - Using Ash with a custom supervised GenServer with retry logic
 - Defining custom resource actions including manual reads and map actions
-- DRY: Modular attribute definitions using `__using__` macros for reusable resource components
+- DRY: Reuable attribute definitions via macros
 - A NOT NULL column (slug) that is computed automatically (via a custom change) if not provided
 - Seeding data using bulk upsert
 - Custom supervision strategy with delayed restart for database-dependent services
