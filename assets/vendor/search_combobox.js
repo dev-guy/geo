@@ -759,9 +759,36 @@ const SearchCombobox = {
         // Move to next option
         newIndex = currentIndex + 1;
       } else {
-        // At last option, stay at last option (don't cycle or move to search input)
-        console.log('SearchCombobox: Already at last option, staying put');
-        return;
+        // At last option, go to first item in first expanded group
+        console.log('SearchCombobox: At last option, going to first item in first expanded group');
+
+        // Find all groups in order
+        const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+
+        // Look for the first group with visible options
+        let foundFirstGroup = false;
+        for (const group of allGroups) {
+          const groupOptions = Array.from(group.querySelectorAll('.combobox-option'));
+          const visibleOptions = groupOptions.filter(opt =>
+            !opt.hasAttribute('hidden') && opt.offsetParent !== null
+          );
+
+          if (visibleOptions.length > 0) {
+            // Go to the first visible option in this group
+            const firstOptionInGroup = visibleOptions[0];
+            const firstOptionGlobalIndex = options.indexOf(firstOptionInGroup);
+            newIndex = firstOptionGlobalIndex;
+            console.log('SearchCombobox: Down arrow from last option, going to first option in first group');
+            foundFirstGroup = true;
+            break;
+          }
+        }
+
+        // If no group found with visible options, stay at last option
+        if (!foundFirstGroup) {
+          console.log('SearchCombobox: No first group found, staying at last option');
+          return;
+        }
       }
     } else { // 'up'
       if (currentIndex === -1) {

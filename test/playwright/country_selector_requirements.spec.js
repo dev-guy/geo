@@ -273,4 +273,113 @@ test.describe('Country Selector Requirements', () => {
     // Additional check: the highlighted option should be visible and not cut off
     await expect(highlightedOption).toBeInViewport();
   });
+
+  test('Requirement 3: Down arrow from last item in last group should go to first item in first group', async ({ page }) => {
+    // Open the combobox
+    await page.click('.search-combobox-trigger');
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+
+    // Type "au" in the search box to get a predictable set of results with multiple groups
+    const searchInput = page.locator('.search-combobox-search-input');
+    await searchInput.fill('au');
+    await page.waitForTimeout(1000); // Wait for search results
+
+    // Log the structure to understand what we're working with
+    console.log('=== Options after searching for "au" ===');
+    const options = page.locator('.combobox-option');
+    const optionCount = await options.count();
+
+    for (let i = 0; i < optionCount; i++) {
+      const option = options.nth(i);
+      const value = await option.getAttribute('data-combobox-value');
+      const group = option.locator('xpath=ancestor::*[contains(@class, "option-group")]');
+      let groupName = '';
+      try {
+        groupName = await group.locator('.group-label').textContent();
+        groupName = groupName?.replace(/\s+/g, ' ').trim();
+        if (groupName?.includes('Sort')) {
+          groupName = groupName.split('Sort')[0].trim();
+        }
+      } catch (e) {
+        groupName = 'Unknown';
+      }
+      console.log(`Option ${i}: ${value} in group: "${groupName}"`);
+    }
+
+    // Navigate to the first option from search input
+    await page.keyboard.press('ArrowDown');
+
+    let highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    let optionValue = await highlightedOption.getAttribute('data-combobox-value');
+    console.log(`\nAfter first down arrow from search: ${optionValue} is highlighted`);
+
+        // Navigate to the last option by pressing down arrow until we reach it
+    console.log('\n=== Navigating to the last option ===');
+    const targetLastOption = options.last();
+    const targetLastOptionValue = await targetLastOption.getAttribute('data-combobox-value');
+    console.log(`Target last option: ${targetLastOptionValue}`);
+
+    let pressCount = 0;
+    while (optionValue !== targetLastOptionValue && pressCount < 20) { // Safety limit
+      await page.keyboard.press('ArrowDown');
+      pressCount++;
+      highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+      optionValue = await highlightedOption.getAttribute('data-combobox-value');
+      console.log(`After down arrow ${pressCount}: ${optionValue} is highlighted`);
+    }
+
+    // Find which group this option belongs to
+    let optionGroup = highlightedOption.locator('xpath=ancestor::*[contains(@class, "option-group")]');
+    let groupName = '';
+    try {
+      groupName = await optionGroup.locator('.group-label').textContent();
+      groupName = groupName?.replace(/\s+/g, ' ').trim();
+      if (groupName?.includes('Sort')) {
+        groupName = groupName.split('Sort')[0].trim();
+      }
+    } catch (e) {
+      groupName = 'Unknown';
+    }
+
+    console.log(`\nAfter navigating, highlighted option is: ${optionValue} in group: "${groupName}"`);
+
+    // Verify we're at the last option in the last group
+    // Based on the search for "au", we should be at the last option
+    console.log(`Last option in list: ${targetLastOptionValue}`);
+
+    // Now press down arrow one more time - this should wrap to the first option in the first group
+    console.log('\n=== Pressing Down Arrow from last item in last group ===');
+    await page.keyboard.press('ArrowDown');
+
+    // Check which option is highlighted now
+    highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+
+    const finalOptionValue = await highlightedOption.getAttribute('data-combobox-value');
+    console.log(`After final down arrow: ${finalOptionValue} is highlighted`);
+
+    // Find which group this option belongs to
+    optionGroup = highlightedOption.locator('xpath=ancestor::*[contains(@class, "option-group")]');
+    try {
+      groupName = await optionGroup.locator('.group-label').textContent();
+      groupName = groupName?.replace(/\s+/g, ' ').trim();
+      if (groupName?.includes('Sort')) {
+        groupName = groupName.split('Sort')[0].trim();
+      }
+    } catch (e) {
+      groupName = 'Unknown';
+    }
+
+    console.log(`Final highlighted option is in group: "${groupName}"`);
+
+    // According to the requirement: "down arrow in the last row of the last expanded group goes to the top of the first expanded group"
+    // We expect this to be the first option in the first group
+    const firstOption = options.first();
+    const firstOptionValue = await firstOption.getAttribute('data-combobox-value');
+
+    // Verify we wrapped around to the first option
+    expect(finalOptionValue).toBe(firstOptionValue);
+
+    console.log(`SUCCESS: Down arrow from last item correctly wrapped to first item (${finalOptionValue})`);
+  });
 });
