@@ -16,7 +16,7 @@ defmodule GeoWeb.CountrySelector do
     if socket.assigns[:original_countries] do
       {:ok, assign(socket, assigns)}
     else
-      %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!()
+      %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.search_countries!()
       original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
 
       socket =
@@ -139,7 +139,7 @@ defmodule GeoWeb.CountrySelector do
   @impl true
   def handle_event("search_combobox_updated", %{"value" => query}, socket) do
     # Check if trimmed query is empty, but keep original query for search
-    %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.selector_search_countries!(query)
+    %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} = Geo.Geography.search_countries!(query)
     original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
 
     # Recalculate sort orders based on the search results

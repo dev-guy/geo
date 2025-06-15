@@ -1,4 +1,4 @@
-defmodule Geo.Resources.TimestampsResource do
+defmodule Geo.Resources.Attributes.Timestamps do
   @moduledoc """
   """
 

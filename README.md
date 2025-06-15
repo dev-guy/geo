@@ -10,19 +10,30 @@ Or:
 
 Geo is a Elixir/Phoenix application built with the Ash Framework that provides efficient geographic data management and search capabilities. The application focuses on country data management with high-performance caching and intelligent search functionality designed for user interfaces.
 
-This project might be useful if you're curious about the Ash Framework (version 3.5+) or if you're looking for slightly more advanced usage like:
+## Showcase
 
-- Custom supervised Genserver
-- Custom actions
+This project might be useful if you're curious about the Ash Framework (version 3.5+) or if you're looking for slightly more advanced Ash usage like:
+
+Resources:
+
+- Using Ash with a custom supervised Genserver
+- Definint custom resource actions
 - DRY: Defining attributes for use across multiple resources
+- A NOT NULL column (slug) that is computed automatically (via a custom change) if not provided
 - Seeding data using bulk upsert
-- Creating a custom component from a Mishka Chelekom component
+
+LiveView:
+
+- Custom component from a Mishka Chelekom component
+  - The `<.search_combobox>` combobox invokes a nontrivial server-side search. Search results are presented in two groups that can be expanded/collapsed and sorted separately.
+  - Fun fact: This component was 100% vibe coded using Sonnet 4.
+  - Not fun fact: This component has very complex client-side state and took well over 90% of the development effort. Ash and Elixir were the easy parts.
 - Creating a LiveView component that can be used in multiple LiveViews
 
 ### Architecture
 
 - **Domain Layer**: `Geo.Geography` - Core business logic and operations
-- **Resource Layer**: `Geo.Country.Country` - Data models and validations  
+- **Resource Layer**: `Geo.Resources.Country.Country` - Data models and validations  
 - **Web Layer**: Phoenix LiveView components for interactive UI
 - **Caching Layer**: High-performance country lookup and search caching
 
@@ -30,7 +41,7 @@ This project might be useful if you're curious about the Ash Framework (version 
 
 - **Country Management**: Full CRUD operations for country data (ISO codes, names, flags, slugs)
 - **Intelligent Search**: Multi-criteria search with prioritized results (ISO codes, names)
-- **High-Performance Caching**: Sub-millisecond country lookups via `Geo.Country.Cache`
+- **High-Performance Caching**: Sub-millisecond country lookups via `Geo.Resources.Country.Cache`
 - **Interactive UI**: Real-time search with grouped, sortable results
 - **Upsert Operations**: Efficient create-or-update operations using unique identities
 
@@ -48,21 +59,26 @@ This project might be useful if you're curious about the Ash Framework (version 
 ## Usage
 
 1. Install PostgreSQL
-2. `mix setup` to install and setup dependencies
-3. `mix phx.server` or inside IEx with `iex -S mix phx.server`
+2. Install `nodejs`
+3. `mix setup` to install and setup dependencies
+4. `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
 
-## Architecture Diagrams
+## Running Tests
+
+1. UI: `npm test`
+
+## Architecture
 
 ### Ash Resources Overview
 
 ```mermaid
 classDiagram
     Geo.Geography
-    class Geo.Country.Country {
+    class Geo.Resources.Country.Country {
         Domain: Geo.Geography
         Source: lib/geo/country/country.ex
 
@@ -79,7 +95,7 @@ classDiagram
         upsert(name, iso_code, flag, slug)
         update(name, iso_code, flag, slug)
         get_by_iso_code_cached(iso_code)
-        selector_search(query)
+        search(query)
     }
 ```
 
@@ -91,12 +107,12 @@ sequenceDiagram
     participant LiveView as GeoWeb.HomeLive
     participant Component as GeoWeb.CountrySelector
     participant Domain as Geo.Geography
-    participant Cache as Geo.Country.Cache
+    participant Cache as Geo.Resources.Country.Cache
     participant DB as PostgreSQL
 
     User->>Component: Types search query
     Component->>Component: handle_event("search_combobox_updated")
-    Component->>Domain: selector_search_countries!(query)
+    Component->>Domain: search_countries!(query)
     Domain->>Cache: search!(query)
     
     alt Cache Hit
@@ -167,8 +183,8 @@ classDiagram
     GeoWeb.HomeLive --> GeoWeb.CountrySelector : uses
     GeoWeb.CountrySelector --> SearchCombobox : renders
     GeoWeb.CountrySelector --> CountryOptionContent : renders
-    GeoWeb.HomeLive ..> Geo.Country.Country : displays
-    GeoWeb.CountrySelector ..> Geo.Country.Country : manages
+    GeoWeb.HomeLive ..> Geo.Resources.Country.Country : displays
+    GeoWeb.CountrySelector ..> Geo.Resources.Country.Country : manages
 ```
 
 ### C4 Architecture Diagrams
@@ -236,7 +252,7 @@ C4Component
     ContainerDb(postgres, "PostgreSQL", "Database")
     
     Rel(home_live, country_selector, "Uses")
-    Rel(country_selector, geography, "Calls selector_search_countries")
+    Rel(country_selector, geography, "Calls search_countries")
     Rel(geography, country_resource, "Defines actions")
     Rel(country_resource, manual_read, "Uses for cached reads")
     Rel(manual_read, country_cache, "get_by_iso_code!")
@@ -252,11 +268,11 @@ C4Component
 The main domain provides these key operations:
 
 - `list_countries/0` - Lists all countries
-- `selector_search_countries/1` - Intelligent search for UI components
+- `search_countries/1` - Intelligent search for UI components
 - `get_country_iso_code_cached/1` - High-performance country lookup by ISO code
 - `create_country/1`, `update_country/1`, `upsert_country/1` - Country management
 
-### Geo.Country.Country Resource
+### Geo.Resources.Country.Country Resource
 
 Core attributes:
 - `id` (UUIDv7) - Primary key
@@ -275,7 +291,7 @@ Key features:
 ## Performance Features
 
 ### Caching Strategy
-- `Geo.Country.Cache` provides sub-millisecond lookups
+- `Geo.Resources.Country.Cache` provides sub-millisecond lookups
 - Automatic cache refresh every 10 minutes
 - Intelligent search with prioritized results:
   1. Exact ISO code matches

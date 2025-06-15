@@ -1,4 +1,4 @@
-defmodule Geo.Country.Cache do
+defmodule Geo.Resources.Country.Cache do
   @moduledoc """
   GenServer that caches country data in memory for fast lookup and search operations.
   Loads all countries once at startup and provides efficient search functions.
@@ -186,14 +186,11 @@ defmodule Geo.Country.Cache do
     # Convert the incoming query into an Ash.CiString for case-insensitive exact compares
     query_down = String.downcase(query)
 
-    # 1. Exact ISO‐Code matches (case‐insensitive)
     exact_iso_code =
       Enum.filter(state.countries_by_iso_code, fn country ->
         Comp.equal?(country.iso_code, query)
       end)
 
-    # 2. Partial ISO‐Code matches (case‐insensitive), excluding those already in exact_iso_code
-    # Only search for partial ISO matches if query length is 3 or less
     partial_iso_code =
       if String.length(query) > 3 do
         []
@@ -206,25 +203,28 @@ defmodule Geo.Country.Cache do
         end)
       end
 
-    # 3. Exact Name matches (case‐insensitive), excluding any that matched in ISO
     exact_name =
-      exact_iso_code ++
       Enum.filter(state.countries_by_name, fn country ->
-        Comp.equal?(country.name, query) and
-          !Comp.equal?(country.iso_code, query)
+        Comp.equal?(country.name, query)
       end)
 
-    # 4. Starts with
     starts_with_name =
       Enum.filter(state.countries_by_name, fn country ->
         name_str = Ash.CiString.to_comparable_string(country.name)
 
         String.starts_with?(name_str, query_down) and
-          !Comp.equal?(country.iso_code, query) and
           !Comp.equal?(country.name, query)
       end)
 
-    # 5. Partial Name matches (case‐insensitive), excluding any that matched earlier
+    exact_iso_code_name =
+      Enum.filter(state.countries_by_iso_code, fn country ->
+        name_str = Ash.CiString.to_comparable_string(country.name)
+
+        Comp.equal?(country.iso_code, query) and
+          !Comp.equal?(country.name, query) and
+          !String.starts_with?(name_str, query_down)
+      end)
+
     partial_name =
       Enum.filter(state.countries_by_name, fn country ->
         name_str = Ash.CiString.to_comparable_string(country.name)
@@ -236,7 +236,7 @@ defmodule Geo.Country.Cache do
       end)
 
     iso_code_results = exact_iso_code ++ partial_iso_code
-    name_results = exact_name ++ starts_with_name ++ partial_name
+    name_results = exact_name ++ starts_with_name ++ exact_iso_code_name ++ partial_name
 
     # 1. Add countries from name_results to iso_code_results if not already present (by iso_code)
     iso_codes_in_iso_code_results = MapSet.new(iso_code_results, fn country ->

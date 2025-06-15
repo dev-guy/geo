@@ -8,18 +8,18 @@ defmodule Geo.Geography do
 
   ## Resources
 
-  - `Geo.Country.Country` - Represents countries with ISO codes, names, flags, and slugs
+  - `Geo.Resources.Country` - Represents countries with ISO codes, names, flags, and slugs
 
   ## Key Functions
 
   - `list_countries/0` - Lists all countries
-  - `selector_search_countries/1` - Searches countries for use in UI selectors
+  - `search_countries/1` - Searches countries for use in UI selectors
   - `get_country_iso_code_cached/1` - Efficiently retrieves a country by ISO code using caching
   - `create_country/1`, `update_country/1`, `upsert_country/1` - Country management operations
 
   ## Caching
 
-  This domain leverages `Geo.Country.Cache` for high-performance country lookups
+  This domain leverages `Geo.Resources.Country.Cache` for high-performance country lookups
   and searches. The cache is automatically maintained and refreshed periodically.
 
   ## Function Details
@@ -43,9 +43,9 @@ defmodule Geo.Geography do
 
   ### list_countries/0
   Lists all countries in the system. Returns all countries sorted by ISO code (ascending) by default.
-  - Returns: List of `Geo.Country.Country` resources
+  - Returns: List of `Geo.Resources.Country` resources
 
-  ### selector_search_countries/1
+  ### search_countries/1
   Searches countries for use in UI selectors and comboboxes.
 
   This function provides optimized search functionality specifically designed for user interface
@@ -61,28 +61,28 @@ defmodule Geo.Geography do
   4. Names starting with the query
   5. Names containing the query
 
-  This function uses `Geo.Country.Cache` for high-performance lookups and is optimized for
+  This function uses `Geo.Resources.Country.Cache` for high-performance lookups and is optimized for
   real-time search in user interfaces.
 
   ### get_country_iso_code_cached/1
   Retrieves a country by its ISO code using high-performance caching.
 
   This function provides the fastest way to lookup a country by ISO code, utilizing the
-  `Geo.Country.Cache` for sub-millisecond response times. The cache is refreshed every 10 minutes.
+  `Geo.Resources.Country.Cache` for sub-millisecond response times. The cache is refreshed every 10 minutes.
   - Parameters: `iso_code` - The ISO country code (e.g., "AU", "US", "GB")
-  - Returns: `Geo.Country.Country` resource
+  - Returns: `Geo.Resources.Country` resource
   - Raises: `RuntimeError` if no country with the given ISO code is found
   """
   use Ash.Domain,
     otp_app: :geo
 
   resources do
-    resource Geo.Country.Country do
+    resource Geo.Resources.Country do
       define :create_country, action: :create
       define :upsert_country, action: :upsert
       define :update_country, action: :update
       define :list_countries, action: :read
-      define :selector_search_countries, action: :selector_search, args: [{:optional, :query}]
+      define :search_countries, action: :search, args: [{:optional, :query}]
       define :get_country_iso_code_cached, action: :read, get_by: [:iso_code]
     end
   end
