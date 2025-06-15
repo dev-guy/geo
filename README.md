@@ -6,7 +6,7 @@ MIT
 
 ## Project Overview
 
-Geo is the world's most overengineered country combobox. Countries are stored in a PostegreSQL table and loaded in a cache for fast searches.
+Geo is the world's most overengineered country combobox. Countries are stored in Postgres table and cached in memory for fast searches.
 
 ![CleanShot 2025-06-12 at 20 40 52@2x](https://github.com/user-attachments/assets/d477b01d-dece-4fff-ac26-d139cfc8a611)
 
