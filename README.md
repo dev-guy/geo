@@ -4,7 +4,7 @@
 
 MIT
 
-## Project Overview
+## Purpose
 
 Geo is the world's most overengineered country combobox. Countries are stored in Postgres table and cached in memory for fast searches.
 
