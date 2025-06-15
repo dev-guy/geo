@@ -20,7 +20,7 @@ This project might be useful if you're curious about the Ash Framework (version 
 
 Resources:
 
-- Using Ash with a custom supervised GenServer with retry logic
+- Using Ash with a custom supervised GenServer
 - Defining custom resource actions including manual reads and map actions
 - Reuable attribute definitions via macros
 - NOT NULL columns (slug) that are computed via a custom change if not provided
