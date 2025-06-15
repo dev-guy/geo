@@ -25,7 +25,6 @@ Resources:
 - Reuable attribute definitions via macros
 - NOT NULL columns (slug) that are computed via a custom change if not provided
 - Seeding data using bulk upsert
-- Custom supervision strategy with delayed restart for database-dependent services
 
 LiveView:
 
