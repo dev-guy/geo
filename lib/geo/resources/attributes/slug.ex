@@ -32,7 +32,7 @@ defmodule Geo.Resources.Attributes.Slug do
         end
       end
 
-      # inject the unique_slug identity block if requested
+      # only inject this block if `unique?: true`
       unquote(extra_identities)
     end
   end
