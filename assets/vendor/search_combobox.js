@@ -38,6 +38,8 @@ const SearchCombobox = {
     // Initialize keyboard navigation tracking
     this.isKeyboardNavigating = false;
     this.keyboardNavigationTimeout = null;
+    this.lastKeyboardNavigationTime = 0;
+    this.hoverTimeout = null;
 
     this.setupTriggerButton();
     this.setupSearchIntercept();
@@ -268,7 +270,7 @@ const SearchCombobox = {
   },
 
   setupOptionHandlers() {
-    // Clean up previous handlers to avoid duplicates
+    // Clean up previous individual handlers to avoid duplicates
     if (this.boundOptionClickHandlers) {
       this.boundOptionClickHandlers.forEach(({ option, handler }) => {
         option.removeEventListener('click', handler);
@@ -279,39 +281,81 @@ const SearchCombobox = {
         option.removeEventListener('keydown', handler);
       });
     }
-    if (this.boundOptionHoverHandlers) {
-      this.boundOptionHoverHandlers.forEach(({ option, enterHandler, leaveHandler }) => {
-        option.removeEventListener('mouseenter', enterHandler);
-        option.removeEventListener('mouseleave', leaveHandler);
-      });
-    }
 
     this.boundOptionClickHandlers = [];
     this.boundOptionKeydownHandlers = [];
-    this.boundOptionHoverHandlers = [];
 
-    // Set up click, keydown, and hover handlers for all options
+    // Set up click and keydown handlers for all options (individual handlers)
     const options = this.el.querySelectorAll('.combobox-option');
     options.forEach(option => {
       const clickHandler = this.handleOptionClick.bind(this, option);
       const keydownHandler = this.handleOptionKeydown.bind(this, option);
-      const mouseEnterHandler = this.handleOptionMouseEnter.bind(this, option);
-      const mouseLeaveHandler = this.handleOptionMouseLeave.bind(this, option);
 
       option.addEventListener('click', clickHandler);
       option.addEventListener('keydown', keydownHandler);
-      option.addEventListener('mouseenter', mouseEnterHandler);
-      option.addEventListener('mouseleave', mouseLeaveHandler);
 
       // Make options focusable
       option.setAttribute('tabindex', '-1');
 
       this.boundOptionClickHandlers.push({ option, handler: clickHandler });
       this.boundOptionKeydownHandlers.push({ option, handler: keydownHandler });
-      this.boundOptionHoverHandlers.push({ option, enterHandler: mouseEnterHandler, leaveHandler: mouseLeaveHandler });
     });
 
+    // Set up hover handlers using event delegation (more resilient to DOM updates)
+    this.setupHoverDelegation();
+
     console.log(`Set up handlers for ${options.length} search options`);
+  },
+
+  setupHoverDelegation() {
+    // Clean up previous delegation handlers
+    if (this.boundDelegatedHoverHandler) {
+      this.el.removeEventListener('mouseover', this.boundDelegatedHoverHandler);
+      this.el.removeEventListener('mouseout', this.boundDelegatedHoverHandler);
+    }
+    if (this.boundComboboxMouseLeaveHandler) {
+      this.el.removeEventListener('mouseleave', this.boundComboboxMouseLeaveHandler);
+    }
+
+    // Set up delegated hover handler
+    this.boundDelegatedHoverHandler = (event) => {
+      const option = event.target.closest('.combobox-option');
+      if (!option || !this.el.contains(option)) return;
+
+      if (event.type === 'mouseover') {
+        // Only trigger if we're entering this option (not a child element)
+        if (event.target === option || option.contains(event.target)) {
+          this.handleOptionMouseEnter(option, event);
+        }
+      } else if (event.type === 'mouseout') {
+        // Only trigger if we're leaving this option (not moving to a child element)
+        if (!option.contains(event.relatedTarget)) {
+          this.handleOptionMouseLeave(option, event);
+        }
+      }
+    };
+
+    this.el.addEventListener('mouseover', this.boundDelegatedHoverHandler);
+    this.el.addEventListener('mouseout', this.boundDelegatedHoverHandler);
+
+    // Set up mouse leave handler for the entire combobox to reset protection
+    this.boundComboboxMouseLeaveHandler = (event) => {
+      // Check if mouse is leaving the entire combobox area
+      if (!this.el.contains(event.relatedTarget)) {
+        console.log('SearchCombobox: Mouse left entire combobox area, resetting keyboard navigation protection');
+        this.lastKeyboardNavigationTime = 0;
+        this.isKeyboardNavigating = false;
+        this.currentlyHoveredOption = null;
+        if (this.keyboardNavigationTimeout) {
+          clearTimeout(this.keyboardNavigationTimeout);
+          this.keyboardNavigationTimeout = null;
+        }
+      }
+    };
+
+    this.el.addEventListener('mouseleave', this.boundComboboxMouseLeaveHandler);
+
+    console.log('Set up delegated hover handlers');
   },
 
   handleOptionClick(option, event) {
@@ -423,10 +467,29 @@ const SearchCombobox = {
     console.log('SearchCombobox: Mouse entered option:', option.getAttribute('data-combobox-value'));
     this.currentlyHoveredOption = option;
 
-    // Only set navigation state on mouse hover if we're not in keyboard navigation mode
-    // This prevents mouse hover from interfering with keyboard navigation
-    if (!this.isKeyboardNavigating) {
+    // Clear any existing hover timeout
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
+
+        // Only set navigation state if we're not in the middle of keyboard navigation
+    // This prevents hover from interfering with keyboard navigation sequences
+    // Use a shorter delay (100ms) to prevent hover interference after keyboard navigation
+    const timeSinceLastKeyboardNav = Date.now() - this.lastKeyboardNavigationTime;
+    const isRecentKeyboardNavigation = timeSinceLastKeyboardNav < 100;
+
+    // Get the currently navigated option to check if hover is on a different option
+    const currentNavigated = this.el.querySelector('.combobox-option[data-combobox-navigate]');
+    const isHoveringDifferentOption = currentNavigated && currentNavigated !== option;
+
+    // Only prevent hover if there was recent keyboard navigation AND we're hovering a different option
+    const shouldPreventHover = (this.isKeyboardNavigating || isRecentKeyboardNavigation) && isHoveringDifferentOption;
+
+    if (!shouldPreventHover) {
       this.setCurrentNavigationItem(option);
+    } else {
+      console.log('SearchCombobox: Skipping hover navigation due to active or recent keyboard navigation on different option');
     }
   },
 
@@ -435,6 +498,22 @@ const SearchCombobox = {
     // Only clear if this is the option that was being tracked
     if (this.currentlyHoveredOption === option) {
       this.currentlyHoveredOption = null;
+      // Clear any pending hover timeout for this option
+      if (this.hoverTimeout) {
+        clearTimeout(this.hoverTimeout);
+        this.hoverTimeout = null;
+      }
+    }
+
+    // If mouse is leaving the combobox area entirely, reset keyboard navigation protection
+    if (event.relatedTarget && !this.el.contains(event.relatedTarget)) {
+      console.log('SearchCombobox: Mouse left combobox area, resetting keyboard navigation protection');
+      this.lastKeyboardNavigationTime = 0;
+      this.isKeyboardNavigating = false;
+      if (this.keyboardNavigationTimeout) {
+        clearTimeout(this.keyboardNavigationTimeout);
+        this.keyboardNavigationTimeout = null;
+      }
     }
   },
 
@@ -719,12 +798,17 @@ const SearchCombobox = {
 
     // Set keyboard navigation flag to prevent mouse hover interference
     this.isKeyboardNavigating = true;
+    this.lastKeyboardNavigationTime = Date.now();
 
     // Clear the flag after a short delay to allow mouse interaction again
     clearTimeout(this.keyboardNavigationTimeout);
     this.keyboardNavigationTimeout = setTimeout(() => {
       this.isKeyboardNavigating = false;
-    }, 500);
+      console.log('SearchCombobox: Keyboard navigation flag cleared');
+    }, 30); // Very short delay to allow faster mouse interaction after keyboard navigation
+
+    // Clear any mouse hover state to prevent interference with keyboard navigation
+    this.currentlyHoveredOption = null;
 
     let currentIndex = -1;
     const currentNavigated = this.el.querySelector('.combobox-option[data-combobox-navigate]');
@@ -737,6 +821,9 @@ const SearchCombobox = {
     if (currentNavigated) {
       currentIndex = options.indexOf(currentNavigated);
     }
+
+    console.log(`SearchCombobox: navigateOptionsAdvanced(${direction}) - currentIndex: ${currentIndex}, totalOptions: ${options.length}, isButtonFocused: ${isButtonFocused}`);
+    console.log(`SearchCombobox: currentNavigated element:`, currentNavigated ? currentNavigated.getAttribute('data-combobox-value') : 'null');
 
     let newIndex;
     if (direction === 'down') {
@@ -755,9 +842,13 @@ const SearchCombobox = {
           }
         }
         newIndex = 0;
+        console.log('SearchCombobox: No current selection, going to first option (0)');
       } else if (currentIndex < options.length - 1) {
         // Move to next option
         newIndex = currentIndex + 1;
+        console.log(`SearchCombobox: Moving down from ${currentIndex} to ${newIndex}`);
+        console.log(`SearchCombobox: options.length = ${options.length}, currentIndex = ${currentIndex}, newIndex = ${newIndex}`);
+        console.log(`SearchCombobox: Condition check: currentIndex (${currentIndex}) < options.length - 1 (${options.length - 1}) = ${currentIndex < options.length - 1}`);
       } else {
         // At last option, go to first item in first expanded group
         console.log('SearchCombobox: At last option, going to first item in first expanded group');
@@ -805,8 +896,11 @@ const SearchCombobox = {
         }
         // Default behavior - go to last option
         newIndex = options.length - 1;
-      } else if (currentIndex > 0) {
-        // Check if we're at the first option of an expanded group
+            } else if (currentIndex > 0) {
+        // Normal previous option navigation
+        newIndex = currentIndex - 1;
+
+        // Check if we're at the first option of an expanded group for special group navigation
         const currentOption = options[currentIndex];
         const currentGroup = currentOption.closest('.option-group');
 
@@ -840,18 +934,11 @@ const SearchCombobox = {
               }
             }
 
-            // If no previous group found, use normal navigation (go to previous option)
+            // If no previous group found, the normal navigation (already set above) will be used
             if (!foundPreviousGroup) {
-              newIndex = currentIndex - 1;
               console.log('SearchCombobox: Up arrow from first in group, no previous group found, using normal navigation');
             }
-          } else {
-            // Normal previous option navigation within the same group
-            newIndex = currentIndex - 1;
           }
-        } else {
-          // No group found, normal navigation
-          newIndex = currentIndex - 1;
         }
       } else {
         // At first option, go to last item in last expanded group
@@ -887,7 +974,11 @@ const SearchCombobox = {
       }
     }
 
+    console.log(`SearchCombobox: About to navigate to newIndex: ${newIndex}`);
     const newOption = options[newIndex];
+    console.log(`SearchCombobox: newOption found:`, newOption ? newOption.getAttribute('data-combobox-value') : 'null');
+    console.log(`SearchCombobox: newOption visible:`, newOption ? (!newOption.hasAttribute('hidden') && newOption.offsetParent !== null) : 'N/A');
+
     if (newOption) {
       // Extra clearing before highlighting to prevent turquoise highlighting issues
       this.clearAllVisualStates();
@@ -895,8 +986,14 @@ const SearchCombobox = {
       // Clear any mouse hover state to prevent interference with keyboard navigation
       this.currentlyHoveredOption = null;
 
+      console.log(`SearchCombobox: About to call highlightOption for ${newOption.getAttribute('data-combobox-value')}`);
       this.highlightOption(newOption, false); // Allow scrolling for navigation
       console.log(`SearchCombobox: Navigated to option at index ${newIndex}: ${newOption.getAttribute('data-combobox-value')}`);
+
+      // Force a DOM reflow to ensure the navigation state is properly applied
+      newOption.offsetHeight;
+    } else {
+      console.log(`SearchCombobox: ERROR - newOption is null for index ${newIndex}`);
     }
   },
 
@@ -1050,7 +1147,7 @@ const SearchCombobox = {
       this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      this.selectHighlightedOption();
+      this.selectNavigatedOption();
     } else if (event.key === 'Escape') {
       event.preventDefault();
       this.closeDropdown();
@@ -1194,7 +1291,7 @@ const SearchCombobox = {
     return null;
   },
 
-  setCurrentNavigationItem(option) {
+    setCurrentNavigationItem(option) {
     // Clear all visual states first (includes navigation highlights)
     this.clearAllVisualStates();
 
@@ -1804,11 +1901,10 @@ const SearchCombobox = {
         option.removeEventListener('keydown', handler);
       });
     }
-    if (this.boundOptionHoverHandlers) {
-      this.boundOptionHoverHandlers.forEach(({ option, enterHandler, leaveHandler }) => {
-        option.removeEventListener('mouseenter', enterHandler);
-        option.removeEventListener('mouseleave', leaveHandler);
-      });
+    // Clean up delegated hover handlers
+    if (this.boundDelegatedHoverHandler) {
+      this.el.removeEventListener('mouseover', this.boundDelegatedHoverHandler);
+      this.el.removeEventListener('mouseout', this.boundDelegatedHoverHandler);
     }
     if (this.boundClearHandler && this.clearButton) {
       this.clearButton.removeEventListener('click', this.boundClearHandler);
@@ -2274,7 +2370,12 @@ const SearchCombobox = {
   },
 
   highlightOption(option, preventScroll = false) {
-    if (!option) return;
+    if (!option) {
+      console.log('SearchCombobox: highlightOption called with null option');
+      return;
+    }
+
+    console.log(`SearchCombobox: highlightOption called for ${option.getAttribute('data-combobox-value')}, preventScroll: ${preventScroll}`);
 
     // Clear all visual states first to ensure clean slate (includes navigation highlights)
     this.clearAllVisualStates();
@@ -2285,6 +2386,7 @@ const SearchCombobox = {
 
     // Highlight the new option for keyboard navigation (blue state)
     option.setAttribute('data-combobox-navigate', '');
+    console.log(`SearchCombobox: Set data-combobox-navigate attribute on ${option.getAttribute('data-combobox-value')}`);
 
     // Make sure the option is visible (unless prevented)
     // Ignore mouse hover position during keyboard navigation - always scroll consistently
@@ -2309,6 +2411,11 @@ const SearchCombobox = {
     if (isNavigatingFromButton) {
       option.focus();
       console.log('SearchCombobox: Highlighted and focused option from button navigation:', option.getAttribute('data-combobox-value'));
+    }
+    // Always focus the option during keyboard navigation to ensure keydown events are captured
+    else if (this.isKeyboardNavigating) {
+      option.focus();
+      console.log('SearchCombobox: Highlighted and focused option during keyboard navigation:', option.getAttribute('data-combobox-value'));
     }
     // Only focus the option if search input doesn't have content and isn't focused
     else if (!hasSearchContent && !isSearchFocused) {
@@ -2747,23 +2854,65 @@ const SearchCombobox = {
   },
 
   handleGlobalKeydown(event) {
-    // Only handle if no element has focus or the focused element is not an input/textarea
+    // Check if dropdown is open
+    const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
+
+    // Handle Enter, Escape, and Arrow keys regardless of focus state when dropdown is open
+    // Don't require mouse to be over combobox for these critical navigation keys
+    if (isDropdownOpen && (event.key === 'Enter' || event.key === 'Escape' || event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      // Check if the event target is within this combobox or if no other input is focused
+      const isEventFromThisCombobox = this.el.contains(event.target);
+      const activeElement = document.activeElement;
+      const isOtherInputFocused = activeElement &&
+        !this.el.contains(activeElement) &&
+        (activeElement.tagName === 'INPUT' ||
+         activeElement.tagName === 'TEXTAREA' ||
+         activeElement.isContentEditable);
+
+      // Only handle if the event is from this combobox or no other input is focused
+      if (isEventFromThisCombobox || !isOtherInputFocused) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          // Try to select the currently navigated option
+          this.selectNavigatedOption();
+          console.log('SearchCombobox: Global Enter key handled');
+          return;
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          // Close the dropdown
+          this.closeDropdown();
+          console.log('SearchCombobox: Global Escape key handled');
+          return;
+        } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          // For arrow keys, ensure the search input has focus and let the normal handler deal with it
+          const searchInput = this.el.querySelector('.search-combobox-search-input');
+          if (searchInput && document.activeElement !== searchInput) {
+            searchInput.focus();
+            console.log(`SearchCombobox: Focused search input for ${event.key} key`);
+          }
+          // Don't prevent default or return - let the normal keyboard handler process this
+        }
+      }
+    }
+
+    // Check if mouse is over this combobox for other keys
+    const isMouseOverCombobox = this.isMouseOverElement(this.el);
+
+    // Only proceed if mouse is over the combobox for non-critical keys
+    if (!isMouseOverCombobox) {
+      return;
+    }
+
+    // Only handle other keys if no element has focus or the focused element is not an input/textarea
     const activeElement = document.activeElement;
     const isInputFocused = activeElement &&
       (activeElement.tagName === 'INPUT' ||
        activeElement.tagName === 'TEXTAREA' ||
        activeElement.isContentEditable);
 
-    // If an input is already focused, don't interfere
+    // If an input is already focused, don't interfere with other keys
     if (isInputFocused) {
-      return;
-    }
-
-    // Check if mouse is over this combobox
-    const isMouseOverCombobox = this.isMouseOverElement(this.el);
-
-    // Only proceed if mouse is over the combobox
-    if (!isMouseOverCombobox) {
       return;
     }
 
@@ -2848,37 +2997,6 @@ const SearchCombobox = {
           this.openDropdownAndFocusSearch();
         }
       }
-    } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      // For arrow up/down, let the search input handle it but don't change any highlighting
-      const searchInput = this.el.querySelector('.search-combobox-search-input');
-      if (searchInput) {
-        // Prevent the default action
-        event.preventDefault();
-
-        // Focus the search input without changing highlight state
-        searchInput.focus();
-
-        // Open dropdown if it's not already open
-        const dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
-        const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
-
-        if (!isDropdownOpen) {
-          this.openDropdownAndFocusSearch();
-        } else {
-          // If dropdown is open, let the normal keyboard handler deal with it
-          // by simulating the keydown on the search input
-          const keyEvent = new KeyboardEvent('keydown', {
-            key: event.key,
-            code: event.code,
-            shiftKey: event.shiftKey,
-            ctrlKey: event.ctrlKey,
-            altKey: event.altKey,
-            metaKey: event.metaKey,
-            bubbles: true
-          });
-          searchInput.dispatchEvent(keyEvent);
-        }
-      }
     }
   },
 
@@ -2895,20 +3013,6 @@ const SearchCombobox = {
       window.mouseY >= rect.top &&
       window.mouseY <= rect.bottom
     );
-
-    if (isOver) {
-      // If mouse is over the element, check if it's directly over an option
-      // If it is, we'll let the normal option hover handlers take care of it
-      const elementAtPoint = document.elementFromPoint(window.mouseX, window.mouseY);
-      if (elementAtPoint) {
-        // Check if the element or any of its parents is a combobox option
-        const optionElement = elementAtPoint.closest('.combobox-option');
-        if (optionElement) {
-          // Mouse is directly over an option, let the normal hover handlers work
-          return false;
-        }
-      }
-    }
 
     return isOver;
   },
