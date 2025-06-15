@@ -10,13 +10,24 @@ Or:
 
 Geo is a Elixir/Phoenix application built with the Ash Framework that provides efficient geographic data management and search capabilities. The application focuses on country data management with high-performance caching and intelligent search functionality designed for user interfaces.
 
-This project might be useful if you're curious about the Ash Framework (version 3.5+) or if you're looking for slightly more advanced usage like:
+## Showcase
 
-- Custom supervised Genserver
-- Custom actions
+This project might be useful if you're curious about the Ash Framework (version 3.5+) or if you're looking for slightly more advanced Ash usage like:
+
+Resources:
+
+- Using Ash with a custom supervised Genserver
+- Definint custom resource actions
 - DRY: Defining attributes for use across multiple resources
+- A NOT NULL column (slug) that is computed automatically (via a custom change) if not provided
 - Seeding data using bulk upsert
-- Creating a custom component from a Mishka Chelekom component
+
+LiveView:
+
+- Custom component from a Mishka Chelekom component
+  - The `<.search_combobox>` combobox invokes a nontrivial server-side search. Search results are presented in two groups that can be expanded/collapsed and sorted separately.
+  - Fun fact: This component was 100% vibe coded using Sonnet 4.
+  - Not fun fact: This component has very complex client-side state and took well over 90% of the development effort. Ash and Elixir were the easy parts.
 - Creating a LiveView component that can be used in multiple LiveViews
 
 ### Architecture
