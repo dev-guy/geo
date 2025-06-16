@@ -20,10 +20,13 @@ This project might be useful if you're curious about the Ash Framework (version 
 
 Resources:
 
+- Implementing manual reads and generic actions
+- Defining reusable attributes via macros
+- Implementing `slug` attributes that are computed via a 'change' when not provided (a change is the primary mechanism for customizing what happens during create, update, and destroy actions)
+
+Other:
+
 - Using Ash with a custom supervised GenServer
-- Defining custom resource actions including manual reads and generic
-- Reuable attribute definitions via macros
-- NOT NULL columns (slug) that are computed via a custom change if not provided
 - Seeding data using bulk upsert
 
 LiveView:
