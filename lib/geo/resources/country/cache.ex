@@ -55,7 +55,7 @@ defmodule Geo.Resources.Country.Cache do
   @impl true
   def init(_opts) do
     case load_countries() do
-      {:ok, countries_by_iso_code, countries_by_name} ->
+      {:ok, countries_by_name, countries_by_iso_code} ->
         state = %{
           countries_by_iso_code: countries_by_iso_code,
           countries_by_name: countries_by_name,
@@ -155,7 +155,7 @@ defmodule Geo.Resources.Country.Cache do
 
       # Sort by name for countries_by_name
       countries_by_name = Enum.sort_by(countries, fn country ->
-        Ash.CiString.to_comparable_string(country.name)
+        country.name
       end)
 
       # Sort by ISO code for countries_by_iso_code
