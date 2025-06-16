@@ -54,8 +54,6 @@ defmodule Geo.Resources.Country.Cache do
 
   @impl true
   def init(_opts) do
-    Logger.info("Starting CountryCache, loading countries from database...")
-
     case load_countries() do
       {:ok, countries_by_iso_code, countries_by_name} ->
         state = %{
@@ -69,25 +67,20 @@ defmodule Geo.Resources.Country.Cache do
         {:ok, %{state | refresh_timer_ref: timer_ref}}
 
             {:error, reason} ->
-        Logger.error("Failed to load countries: #{inspect(reason)}")
         {:stop, reason}
     end
   end
 
   @impl true
   def handle_call({:search, query}, _from, state) do
-    Logger.info("CountryCache.search called with query: '#{query}'")
     {iso_code_results, name_results} = do_search(state, query)
-    Logger.info("CountryCache.search returning {#{length(iso_code_results)}, #{length(name_results)}} results")
     {:reply, {iso_code_results, name_results}, state}
   end
 
   @impl true
   def handle_call(:search_all, _from, state) do
-    Logger.info("CountryCache.search_all called")
     # Return all countries without sorting
     {iso_code_results, name_results} = do_search_all(state)
-    Logger.info("CountryCache.search_all returning {#{length(iso_code_results)}, #{length(name_results)}} results")
     {:reply, {iso_code_results, name_results}, state}
   end
 
@@ -101,8 +94,6 @@ defmodule Geo.Resources.Country.Cache do
 
   @impl true
   def handle_call(:refresh_cache, _from, state) do
-    Logger.info("Refreshing CountryCache...")
-
     case load_countries() do
       {:ok, countries_by_name, countries_by_iso_code} ->
         new_state = %{
@@ -110,8 +101,6 @@ defmodule Geo.Resources.Country.Cache do
           countries_by_iso_code: countries_by_iso_code,
           refresh_timer_ref: state.refresh_timer_ref
         }
-
-        Logger.info("CountryCache refreshed with #{length(countries_by_name)} countries")
 
         updated_state = reschedule_refresh(new_state)
         {:reply, :ok, updated_state}
@@ -124,7 +113,7 @@ defmodule Geo.Resources.Country.Cache do
 
   @impl true
   def handle_info(:refresh_cache, state) do
-    Logger.info("Automatic cache refresh triggered...")
+    Logger.info("Automatic cache refresh triggered")
 
     case load_countries() do
       {:ok, countries_by_name, countries_by_iso_code} ->
@@ -166,14 +155,13 @@ defmodule Geo.Resources.Country.Cache do
 
       # Sort by name for countries_by_name
       countries_by_name = Enum.sort_by(countries, fn country ->
-        Ash.CiString.value(country.name)
+        Ash.CiString.to_comparable_string(country.name)
       end)
 
       # Sort by ISO code for countries_by_iso_code
       # Default Ash sort
       countries_by_iso_code = countries
 
-      Logger.info("Loaded #{length(countries_by_name)} countries from database")
       {:ok, countries_by_name, countries_by_iso_code}
     rescue
       e ->
@@ -261,8 +249,6 @@ defmodule Geo.Resources.Country.Cache do
     end)
 
     updated_name_results = name_results ++ countries_to_add_to_name
-
-    Logger.info("CountryCache.search returning #{inspect(updated_name_results)}")
 
     # Return without any sorting - just the original order from filtering
     {updated_iso_code_results, updated_name_results}
