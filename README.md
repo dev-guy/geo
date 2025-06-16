@@ -88,8 +88,18 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 
 ```mermaid
 classDiagram
-    Geo.Geography
+    class Geo.Geography {
+        <<Domain>>
+        list_countries()
+        search_countries!(query)
+        get_country_iso_code_cached!(iso_code)
+        create_country(attrs)
+        update_country(country, attrs)
+        upsert_country(attrs)
+    }
+    
     class Geo.Resources.Country {
+        <<Resource>>
         Domain: Geo.Geography
         Source: lib/geo/resources/country.ex
 
@@ -157,12 +167,13 @@ classDiagram
         retry_start_cache() void
     }
     
+    Geo.Geography --> Geo.Resources.Country : uses
     Geo.Resources.Country --|> Geo.Resources.Attributes.Id : uses
     Geo.Resources.Country --|> Geo.Resources.Attributes.Name : uses
     Geo.Resources.Country --|> Geo.Resources.Attributes.Slug : uses
     Geo.Resources.Country --|> Geo.Resources.Attributes.Timestamps : uses
     Geo.Resources.Country --> Geo.Resources.Changes.SlugifyName : applies
-    Geo.Resources.Country --> Geo.Resources.Country.Cache : manual_read
+    Geo.Resources.Country.Cache --> Geo.Geography : calls for refresh
     Geo.Resources.Country.CacheSupervisor --> Geo.Resources.Country.Cache : supervises
 ```
 
@@ -174,21 +185,29 @@ sequenceDiagram
     participant LiveView as GeoWeb.HomeLive
     participant Component as GeoWeb.CountrySelector
     participant Domain as Geo.Geography
+    participant Resource as Geo.Resources.Country
     participant Cache as Geo.Resources.Country.Cache
     participant DB as PostgreSQL
 
     User->>Component: Types search query
     Component->>Component: handle_event("search_combobox_updated")
     Component->>Domain: search_countries!(query)
-    Domain->>Cache: search!(query)
+    Domain->>Resource: search action
+    Resource->>Cache: search!(query)
     
     alt Cache Hit
-        Cache-->>Domain: {iso_code_results, name_results}
-    else Cache Miss
-        Cache->>DB: Query countries
-        DB-->>Cache: Country records
+        Cache-->>Resource: {iso_code_results, name_results}
+        Resource-->>Domain: Search results
+    else Cache Miss/Refresh
+        Cache->>Domain: list_countries() for refresh
+        Domain->>Resource: read action
+        Resource->>DB: Query all countries
+        DB-->>Resource: Country records
+        Resource-->>Domain: Countries list
+        Domain-->>Cache: Countries for caching
         Cache->>Cache: Process and cache results
-        Cache-->>Domain: {iso_code_results, name_results}
+        Cache-->>Resource: {iso_code_results, name_results}
+        Resource-->>Domain: Search results
     end
     
     Domain-->>Component: %{by_iso_code: [...], by_name: [...]}
@@ -207,6 +226,7 @@ sequenceDiagram
 ```mermaid
 classDiagram
     class GeoWeb.HomeLive {
+        <<LiveView>>
         mount/3
         handle_info/2
         render/1
@@ -214,6 +234,7 @@ classDiagram
     }
     
     class GeoWeb.CountrySelector {
+        <<LiveComponent>>
         update/2
         render/1
         handle_event/3
@@ -229,7 +250,7 @@ classDiagram
         country_selected/2
     }
     
-    class SearchCombobox {
+    class MishkaChelekom.SearchCombobox {
         <<Component>>
         name String
         value String
@@ -242,16 +263,31 @@ classDiagram
     
     class CountryOptionContent {
         <<Helper Component>>
-        country Country
+        country Geo.Resources.Country
         group_order Atom
         group_name String
     }
     
+    class Geo.Geography {
+        <<Domain>>
+        search_countries!(query)
+    }
+    
+    class Geo.Resources.Country {
+        <<Resource>>
+        id UUIDv7
+        name CiString
+        iso_code CiString
+        flag String
+        slug CiString
+    }
+    
     GeoWeb.HomeLive --> GeoWeb.CountrySelector : uses
-    GeoWeb.CountrySelector --> SearchCombobox : renders
+    GeoWeb.CountrySelector --> MishkaChelekom.SearchCombobox : renders
     GeoWeb.CountrySelector --> CountryOptionContent : renders
-    GeoWeb.HomeLive ..> Geo.Resources.Country.Country : displays
-    GeoWeb.CountrySelector ..> Geo.Resources.Country.Country : manages
+    GeoWeb.CountrySelector --> Geo.Geography : calls
+    GeoWeb.HomeLive ..> Geo.Resources.Country : displays
+    GeoWeb.CountrySelector ..> Geo.Resources.Country : manages
 ```
 
 ### C4 Architecture Diagrams
@@ -291,8 +327,8 @@ C4Container
     Rel(web, liveview, "Renders")
     Rel(liveview, domain, "Calls")
     Rel(domain, cache, "Uses")
-    Rel(domain, postgres, "Reads/writes", "SQL")
-    Rel(cache, postgres, "Refreshes from", "SQL")
+    Rel(cache, domain, "Refreshes via", "Domain calls")
+    Rel(domain, postgres, "Reads/writes", "SQL via Ash")
 ```
 
 #### Level 3: Component Diagram
@@ -320,12 +356,12 @@ C4Component
     
     Rel(home_live, country_selector, "Uses")
     Rel(country_selector, geography, "Calls search_countries")
-    Rel(geography, country_resource, "Defines actions")
+    Rel(geography, country_resource, "Uses for actions")
     Rel(country_resource, manual_read, "Uses for cached reads")
     Rel(manual_read, country_cache, "get_by_iso_code!")
     Rel(geography, country_cache, "search!")
+    Rel(country_cache, geography, "Periodic refresh via")
     Rel(country_resource, postgres, "CRUD operations")
-    Rel(country_cache, postgres, "Periodic refresh")
 ```
 
 ## Modular Architecture
