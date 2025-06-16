@@ -34,9 +34,9 @@ LiveView:
 - A Phoenix component built from Mishka Chelekom's `<.combobox>`
   ![CleanShot 2025-06-16 at 11 03 53@2x](https://github.com/user-attachments/assets/0d672734-855c-49dc-828e-a539d29f078b)
   - `<.search_combobox>` invokes a remote search. Results are presented in two groups that can be expanded/collapsed and sorted separately.
-  - Fun fact: This component was 100% vibe coded using Sonnet 4.
-  - Not fun fact: This component has very complex client-side state and took well over 90% of the development effort. Ash and Elixir were the easy parts.
-- A LiveView component
+  - Fun fact: The component was 100% vibe coded using Sonnet 4
+  - Not very fun fact: It has complex state and took well over 90% of the development effort. Ash was the easy part, by far!
+- A LiveView component that orchestrates Phoenix components and Ash resources
 
 ### Architecture
 
