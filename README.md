@@ -1,4 +1,4 @@
-# Geo - A Country Chooser Built With Elixir, Phoenix LiveView, and Ash
+# Geo: A Country Chooser Built With Elixir, Phoenix LiveView, and Ash
 
 ## License
 
