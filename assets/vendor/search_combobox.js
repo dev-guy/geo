@@ -1,8 +1,11 @@
 /**
- * search Combobox
+ * Search Combobox
  *
  * Intercepts the search input and sends it to the backend for prioritized search.
  * Lets LiveView handle the dropdown options rendering.
+ *
+ * This work was derived from Mishka Chelekom Combobox version 0.0.5 in 2025.
+ * https://mishka.tools/
  */
 const SearchCombobox = {
   mounted() {

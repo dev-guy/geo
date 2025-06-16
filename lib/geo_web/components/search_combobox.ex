@@ -14,6 +14,9 @@ defmodule GeoWeb.Components.SearchCombobox do
   - Keyboard navigation
   - Accessibility support
   - Dynamic group collapsing and sorting
+
+  This work was derived from Mishka Chelekom Combobox version 0.0.5 in 2025.
+  https://mishka.tools/
   """
 
   use Phoenix.Component
