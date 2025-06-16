@@ -3,20 +3,9 @@ description: Elixir and Ash Coding
 globs:
 alwaysApply: false
 ---
-## Ash.CiString
-
-When using :ci_string, which is an alias for the Ash.CiString struct, follow these instructions.
-
-- Compare two CiString structs using, ==, !=, CiString.compare/2, but prefer Comp.equal?/2
-- Compare a string and a CiString with Comp.equal?/2
-- CiString.to_comparable_string/1 returns a lowercased string
-- Use CiString.value/1 to returns the CiString's potentially mixed-case string value. Use it to retrieve the CiString's display value and for other purposes.
-- For non-comparison operations involving CiStrings and strings, either use CiString.to_comparable_string/1 and String.downcase/1 or call CiString.to_comparable_string/1 twice, the second time with the regular string.
-
 ## Logging
 
 - Use dbg instead of IO.puts("DEBUG: ...")
-- Logging in LiveViews: render/1 is executed a lot (every assign change, every diff-push to the client). If you sprinkle Logger.* calls or IO.inspect/1 inside render/1 or your .heex template, you’ll flood the log, slow the process, and potentially create race-conditions with the diff engine.
 
 ## Development
 

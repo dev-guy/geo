@@ -9,7 +9,8 @@ defmodule Geo.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -39,10 +40,10 @@ defmodule Geo.MixProject do
       {:mishka_chelekom, "~> 0.0", only: [:dev]},
       {:live_debugger, "~> 0.2", only: [:dev]},
       {:ash_postgres, "~> 2.0"},
-      {:ash_phoenix, "~> 2.0"},
+      {:phoenix, "~> 1.8.0-rc.3"},
       {:ash, "~> 3.0"},
+      {:ash_phoenix, "~> 2.3"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
-      {:phoenix, "~> 1.7.21"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},
@@ -66,7 +67,7 @@ defmodule Geo.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1.1"},
+      {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"}
     ]
   end
