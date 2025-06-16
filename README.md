@@ -31,12 +31,12 @@ Other:
 
 LiveView:
 
-- A Phoenix component built from Mishka Chelekom's `<.combobox>`
+- A Phoenix component `<.search_combobox>` built from Mishka Chelekom's `<.combobox>`
   ![CleanShot 2025-06-16 at 11 03 53@2x](https://github.com/user-attachments/assets/0d672734-855c-49dc-828e-a539d29f078b)
-  - `<.search_combobox>` invokes a remote search. Results are presented in two groups that can be expanded/collapsed and sorted separately.
+  - `<.search_combobox>` invokes server-side search. Results are presented in two groups that can be expanded/collapsed and sorted separately.
   - Fun fact: This component was 100% vibe coded using Sonnet 4.
   - Not fun fact: This component has very complex client-side state and took well over 90% of the development effort. Ash and Elixir were the easy parts.
-- A LiveView component
+- A Live Component for selecting countries that orchestrates the `<.search_combobox>` component with an Ash domain
 
 ### Architecture
 
