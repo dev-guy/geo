@@ -79,7 +79,7 @@ defmodule Geo.MixProject do
   #
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
-    [
+    base_aliases = [
       setup: ["deps.get", "ash.setup", "assets.setup", "assets.build", "run priv/repo/seeds.exs"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
@@ -90,9 +90,14 @@ defmodule Geo.MixProject do
         "tailwind geo --minify",
         "esbuild geo --minify",
         "phx.digest"
-      ],
-      "deps.get": [&deps_get_with_sync/1],
+      ]
     ]
+
+    if Mix.env() == :dev do
+      base_aliases ++ ["deps.get": [&deps_get_with_sync/1]]
+    else
+      base_aliases
+    end
   end
 
   defp deps_get_with_sync(_args) do
