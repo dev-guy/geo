@@ -1,7 +1,7 @@
 ---
-description: Elixir and Ash Development
+description: All rules from `mix usage_rules.sync`
 globs:
-alwaysApply: false
+alwaysApply: true
 ---
 <-- usage-rules-start -->
 <-- igniter-start -->
