@@ -2,16 +2,21 @@ defmodule Geo.MixProject do
   use Mix.Project
 
   def project do
-    [
+    base_config = [
       app: :geo,
       version: "0.1.0",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      deps: deps()
     ]
+
+    if Mix.env() == :dev do
+      base_config ++ [listeners: [Phoenix.CodeReloader]]
+    else
+      base_config
+    end
   end
 
   # Configuration for the OTP application.
@@ -39,7 +44,7 @@ defmodule Geo.MixProject do
       {:tidewave, "~> 0.1", only: [:dev]},
       {:mishka_chelekom, "~> 0.0", only: [:dev]},
       {:live_debugger, "~> 0.2", only: [:dev]},
-      {:ash_postgres, "~> 2.0"},
+      {:ash_postgres, "~> 2.6.0"},
       {:phoenix, "~> 1.8.0-rc.3"},
       {:ash, "~> 3.0"},
       {:ash_phoenix, "~> 2.3"},
