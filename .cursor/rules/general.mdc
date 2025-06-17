@@ -1,7 +1,7 @@
 ---
-description: Elixir and Ash Coding
+description: Coding
 globs:
-alwaysApply: false
+alwaysApply: true
 ---
 ## Logging
 
