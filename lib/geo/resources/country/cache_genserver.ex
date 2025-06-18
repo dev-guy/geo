@@ -67,7 +67,7 @@ defmodule Geo.Resources.Country.CacheGenServer do
   end
 
   @impl true
-  def handle_call(:refresh_cache, _from, state) do
+  def handle_call(:refresh, _from, state) do
     case load_countries() do
       {:ok, countries_by_name, countries_by_iso_code} ->
         new_state = %{
@@ -89,7 +89,7 @@ defmodule Geo.Resources.Country.CacheGenServer do
   end
 
   @impl true
-  def handle_info(:refresh_cache, state) do
+  def handle_info(:refresh, state) do
     Logger.info("Automatic cache refresh triggered")
 
     case load_countries() do
@@ -137,7 +137,7 @@ defmodule Geo.Resources.Country.CacheGenServer do
   # Private functions
 
   defp schedule_refresh do
-    Process.send_after(self(), :refresh_cache, @refresh_interval)
+    Process.send_after(self(), :refresh, @refresh_interval)
   end
 
   defp schedule_inactivity_stop do
