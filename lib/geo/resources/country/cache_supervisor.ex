@@ -70,7 +70,7 @@ defmodule Geo.Resources.Country.CacheSupervisor do
   @doc """
   Stops a cache worker by PID.
   """
-  def stop_cache_worker(pid) when is_pid(pid) do
+  def stop_worker(pid) when is_pid(pid) do
     DynamicSupervisor.terminate_child(@name, pid)
   end
 
@@ -102,7 +102,7 @@ defmodule Geo.Resources.Country.CacheSupervisor do
 
         # Stop all existing workers
         Enum.each(workers, fn {_, pid, _, _} ->
-          stop_cache_worker(pid)
+          stop_worker(pid)
         end)
 
         # Start a new worker
