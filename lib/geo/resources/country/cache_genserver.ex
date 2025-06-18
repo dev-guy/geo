@@ -2,7 +2,7 @@ defmodule Geo.Resources.Country.CacheGenServer do
   @moduledoc """
   GenServer that caches country data in memory for fast lookup and search operations.
   Loads all countries once at startup and provides efficient search functions.
-  Automatically refreshes the cache every 10 minutes and stops itself after 5 minutes of inactivity.
+  Automatically refreshes the cache every 30 minutes and stops itself after 3 minutes of inactivity.
   """
 
   use GenServer
@@ -11,8 +11,6 @@ defmodule Geo.Resources.Country.CacheGenServer do
   @name __MODULE__
   @refresh_interval :timer.minutes(30)
   @inactivity_timeout :timer.minutes(3)
-
-  # Client API
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: @name)
