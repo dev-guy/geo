@@ -18,39 +18,6 @@ defmodule Geo.Resources.Country.CacheGenServer do
     GenServer.start_link(__MODULE__, [], name: @name)
   end
 
-  def search!(query \\ nil)
-  def search!(query) when query == nil do
-    GenServer.call(@name, :search_all)
-  end
-
-  def search!(query) do
-    trimmed_query = String.trim(query)
-    if trimmed_query == "" do
-      GenServer.call(@name, :search_all)
-    else
-      GenServer.call(@name, {:search, trimmed_query})
-    end
-  end
-
-  @doc """
-  Get a country by its ISO code. Returns the Country resource or raises an error if not found.
-  """
-  def get_by_iso_code!(iso_code) do
-    country = GenServer.call(@name, {:get_by_iso_code, iso_code})
-    if country do
-      country
-    else
-      raise "Country with ISO code #{iso_code} not found"
-    end
-  end
-
-  @doc """
-  Refresh the cache by reloading all countries from the database.
-  """
-  def refresh_cache do
-    GenServer.call(@name, :refresh_cache)
-  end
-
   # Server callbacks
 
   @impl true
