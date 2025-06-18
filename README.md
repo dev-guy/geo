@@ -376,7 +376,7 @@ C4Component
     }
     
     Container_Boundary(cache, "Caching Layer") {
-        Component(cache_starter, "Country.Cache", "Module", "Lazy-loading cache entry point")
+        Component(cache, "Country.Cache", "Module", "Lazy-loading cache entry point")
         Component(cache_genserver, "Country.CacheGenServer", "GenServer", "High-performance country caching with auto-stop")
         Component(cache_supervisor, "Country.CacheSupervisor", "DynamicSupervisor", "Dynamic cache worker management")
     }
@@ -387,10 +387,10 @@ C4Component
     Rel(country_selector, geography, "Calls search_countries")
     Rel(geography, country_resource, "Uses for actions")
     Rel(country_resource, manual_read, "Uses for cached reads")
-    Rel(manual_read, cache_starter, "get_by_iso_code!")
-    Rel(geography, cache_starter, "search!")
-    Rel(cache_starter, cache_supervisor, "Starts workers via")
-    Rel(cache_starter, cache_genserver, "Calls when running")
+    Rel(manual_read, cache, "get_by_iso_code!")
+    Rel(geography, cache, "search!")
+    Rel(cache, cache_supervisor, "Starts workers via")
+    Rel(cache, cache_genserver, "Calls when running")
     Rel(cache_genserver, geography, "Periodic refresh via")
     Rel(country_resource, postgres, "CRUD operations")
 ```

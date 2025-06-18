@@ -16,7 +16,18 @@ defmodule Geo.Resources.Country.Cache do
   """
   def search!(query \\ nil) do
     ensure_cache_running()
-    @cache_genserver.search!(query)
+
+    cond do
+      query == nil ->
+        GenServer.call(@cache_genserver, :search_all)
+
+      String.trim(query) == "" ->
+        GenServer.call(@cache_genserver, :search_all)
+
+      true ->
+        trimmed_query = String.trim(query)
+        GenServer.call(@cache_genserver, {:search, trimmed_query})
+    end
   end
 
   @doc """
@@ -25,7 +36,13 @@ defmodule Geo.Resources.Country.Cache do
   """
   def get_by_iso_code!(iso_code) do
     ensure_cache_running()
-    @cache_genserver.get_by_iso_code!(iso_code)
+
+    country = GenServer.call(@cache_genserver, {:get_by_iso_code, iso_code})
+    if country do
+      country
+    else
+      raise "Country with ISO code #{iso_code} not found"
+    end
   end
 
   @doc """
@@ -33,7 +50,7 @@ defmodule Geo.Resources.Country.Cache do
   """
   def refresh_cache do
     if cache_running?() do
-      @cache_genserver.refresh_cache()
+      GenServer.call(@cache_genserver, :refresh_cache)
     else
       Logger.info("Cache not running, skipping refresh")
       :ok
