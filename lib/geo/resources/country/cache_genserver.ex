@@ -1,8 +1,8 @@
-defmodule Geo.Resources.Country.Cache do
+defmodule Geo.Resources.Country.CacheGenServer do
   @moduledoc """
   GenServer that caches country data in memory for fast lookup and search operations.
   Loads all countries once at startup and provides efficient search functions.
-  Automatically refreshes the cache every 30 minutes.
+  Automatically refreshes the cache every 10 minutes and stops itself after 5 minutes of inactivity.
   """
 
   use GenServer
@@ -10,6 +10,7 @@ defmodule Geo.Resources.Country.Cache do
 
   @name __MODULE__
   @refresh_interval :timer.minutes(10)
+  @inactivity_timeout :timer.minutes(3)
 
   # Client API
 
@@ -59,14 +60,17 @@ defmodule Geo.Resources.Country.Cache do
         state = %{
           countries_by_iso_code: countries_by_iso_code,
           countries_by_name: countries_by_name,
-          # Track the timer reference
-          refresh_timer_ref: nil
+          # Track the timer references
+          refresh_timer_ref: nil,
+          inactivity_timer_ref: nil
         }
 
-        timer_ref = schedule_refresh()
-        {:ok, %{state | refresh_timer_ref: timer_ref}}
+        refresh_timer = schedule_refresh()
+        inactivity_timer = schedule_inactivity_stop()
 
-            {:error, reason} ->
+        {:ok, %{state | refresh_timer_ref: refresh_timer, inactivity_timer_ref: inactivity_timer}}
+
+      {:error, reason} ->
         {:stop, reason}
     end
   end
@@ -74,14 +78,16 @@ defmodule Geo.Resources.Country.Cache do
   @impl true
   def handle_call({:search, query}, _from, state) do
     {iso_code_results, name_results} = do_search(state, query)
-    {:reply, {iso_code_results, name_results}, state}
+    new_state = reset_inactivity_timer(state)
+    {:reply, {iso_code_results, name_results}, new_state}
   end
 
   @impl true
   def handle_call(:search_all, _from, state) do
     # Return all countries without sorting
     {iso_code_results, name_results} = do_search_all(state)
-    {:reply, {iso_code_results, name_results}, state}
+    new_state = reset_inactivity_timer(state)
+    {:reply, {iso_code_results, name_results}, new_state}
   end
 
   @impl true
@@ -89,7 +95,8 @@ defmodule Geo.Resources.Country.Cache do
     country = Enum.find(state.countries_by_iso_code, fn country ->
       Comp.equal?(country.iso_code, iso_code)
     end)
-    {:reply, country, state}
+    new_state = reset_inactivity_timer(state)
+    {:reply, country, new_state}
   end
 
   @impl true
@@ -99,15 +106,18 @@ defmodule Geo.Resources.Country.Cache do
         new_state = %{
           countries_by_name: countries_by_name,
           countries_by_iso_code: countries_by_iso_code,
-          refresh_timer_ref: state.refresh_timer_ref
+          refresh_timer_ref: state.refresh_timer_ref,
+          inactivity_timer_ref: state.inactivity_timer_ref
         }
 
         updated_state = reschedule_refresh(new_state)
-        {:reply, :ok, updated_state}
+        final_state = reset_inactivity_timer(updated_state)
+        {:reply, :ok, final_state}
 
       {:error, reason} ->
         Logger.error("Failed to refresh countries: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
+        new_state = reset_inactivity_timer(state)
+        {:reply, {:error, reason}, new_state}
     end
   end
 
@@ -120,7 +130,8 @@ defmodule Geo.Resources.Country.Cache do
         new_state = %{
           countries_by_name: countries_by_name,
           countries_by_iso_code: countries_by_iso_code,
-          refresh_timer_ref: state.refresh_timer_ref
+          refresh_timer_ref: state.refresh_timer_ref,
+          inactivity_timer_ref: state.inactivity_timer_ref
         }
 
         updated_state = reschedule_refresh(new_state)
@@ -134,10 +145,47 @@ defmodule Geo.Resources.Country.Cache do
     end
   end
 
+  @impl true
+  def handle_info(:inactivity_stop, state) do
+    Logger.info("Country cache stopping due to inactivity")
+    {:stop, :normal, state}
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    Logger.info("Country cache terminating: #{inspect(reason)}")
+
+    # Clean up timers
+    if state.refresh_timer_ref do
+      Process.cancel_timer(state.refresh_timer_ref)
+    end
+
+    if state.inactivity_timer_ref do
+      Process.cancel_timer(state.inactivity_timer_ref)
+    end
+
+    :ok
+  end
+
   # Private functions
 
   defp schedule_refresh do
     Process.send_after(self(), :refresh_cache, @refresh_interval)
+  end
+
+  defp schedule_inactivity_stop do
+    Process.send_after(self(), :inactivity_stop, @inactivity_timeout)
+  end
+
+  defp reset_inactivity_timer(state) do
+    # Cancel existing timer
+    if state.inactivity_timer_ref do
+      Process.cancel_timer(state.inactivity_timer_ref)
+    end
+
+    # Start new timer
+    new_timer = schedule_inactivity_stop()
+    %{state | inactivity_timer_ref: new_timer}
   end
 
   defp reschedule_refresh(state) do
@@ -171,7 +219,6 @@ defmodule Geo.Resources.Country.Cache do
   end
 
   defp do_search(state, query) do
-    # Convert the incoming query into an Ash.CiString for case-insensitive exact compares
     query_down = String.downcase(query)
 
     exact_iso_code =
