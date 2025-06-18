@@ -9,7 +9,7 @@ defmodule Geo.Resources.Country.CacheGenServer do
   require Logger
 
   @name __MODULE__
-  @refresh_interval :timer.minutes(10)
+  @refresh_interval :timer.minutes(30)
   @inactivity_timeout :timer.minutes(3)
 
   # Client API
