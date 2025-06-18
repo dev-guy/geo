@@ -1,9 +1,8 @@
 defmodule Geo.Resources.Country.Cache do
   @moduledoc """
-  API for country cache operations which is only used by Ash actions on the Country resource.
-  Provides lazy-loading functionality that starts the cache GenServer when needed (for example,
-  it is not started when seeding data etc.). The GenServer is created via
-  the dynamic supervisor Geo.Resources.Country.CacheSupervisor.
+  API for country cache operations. Only used by the Country resource.
+  Starts the cache GenServer when needed via the dynamic
+  supervisor Geo.Resources.Country.CacheSupervisor.
   """
 
   require Logger
