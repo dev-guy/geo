@@ -1,4 +1,4 @@
-defmodule Geo.Resources.Country.CacheStarter do
+defmodule Geo.Resources.Country.Cache do
   @moduledoc """
   Main entry point for country cache operations. Provides lazy-loading functionality
   that starts the cache GenServer only when needed and manages its lifecycle through
