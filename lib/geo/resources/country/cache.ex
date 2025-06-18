@@ -15,7 +15,7 @@ defmodule Geo.Resources.Country.Cache do
   Starts the cache if it's not running, then performs the search.
   """
   def search!(query \\ nil) do
-    ensure_cache_running()
+    ensure_running()
 
     cond do
       query == nil ->
@@ -35,7 +35,7 @@ defmodule Geo.Resources.Country.Cache do
   Starts the cache if it's not running, then performs the lookup.
   """
   def get_by_iso_code!(iso_code) do
-    ensure_cache_running()
+    ensure_running()
 
     country = GenServer.call(@cache_genserver, {:get_by_iso_code, iso_code})
     if country do
@@ -48,11 +48,11 @@ defmodule Geo.Resources.Country.Cache do
   @doc """
   Refresh the cache if it's running. If not running, does nothing.
   """
-  def refresh_cache do
-    if cache_running?() do
-      GenServer.call(@cache_genserver, :refresh_cache)
+  def refresh do
+    if running?() do
+      GenServer.call(@cache_genserver, :refresh)
     else
-      Logger.info("Cache not running, skipping refresh")
+      Logger.info("Cache worker not running, skipping refresh")
       :ok
     end
   end
@@ -60,7 +60,7 @@ defmodule Geo.Resources.Country.Cache do
   @doc """
   Check if the cache GenServer is currently running.
   """
-  def cache_running? do
+  def running? do
     case Process.whereis(@cache_genserver) do
       nil -> false
       pid when is_pid(pid) -> Process.alive?(pid)
@@ -71,24 +71,24 @@ defmodule Geo.Resources.Country.Cache do
   Ensure the cache is running. If not, start it via the dynamic supervisor.
   Returns :ok if cache is running or successfully started.
   """
-  def ensure_cache_running do
-    if cache_running?() do
+  def ensure_running do
+    if running?() do
       :ok
     else
-      Logger.info("Cache not running, starting it now...")
+      Logger.info("Starting cache worker")
 
       case @cache_supervisor.start_cache_worker() do
         {:ok, _pid} ->
-          Logger.info("Cache started successfully")
+          Logger.info("Cache worker started successfully")
           :ok
 
         {:error, {:already_started, _pid}} ->
           # Race condition - another process started it
-          Logger.info("Cache was already started by another process")
+          Logger.info("Cache worker was started by another process")
           :ok
 
         {:error, reason} ->
-          Logger.error("Failed to start cache: #{inspect(reason)}")
+          Logger.error("Failed to start cache worker: #{inspect(reason)}")
           {:error, reason}
       end
     end
@@ -97,23 +97,23 @@ defmodule Geo.Resources.Country.Cache do
   @doc """
   Stop the cache if it's running.
   """
-  def stop_cache do
+  def stop do
     case Process.whereis(@cache_genserver) do
       nil ->
-        Logger.info("Cache not running, nothing to stop")
+        Logger.info("Cache worker not running, nothing to stop")
         :ok
 
       pid when is_pid(pid) ->
-        Logger.info("Stopping cache...")
-        @cache_supervisor.stop_cache_worker(pid)
+        Logger.info("Stopping cache worker")
+        @cache_supervisor.stop_worker(pid)
     end
   end
 
   @doc """
   Get cache statistics and status.
   """
-  def cache_status do
-    running = cache_running?()
+  def status do
+    running = running?()
     worker_count = @cache_supervisor.count_cache_workers()
 
     %{

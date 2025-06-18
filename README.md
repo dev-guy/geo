@@ -155,7 +155,7 @@ classDiagram
         start_link() ok_pid
         search!(query) iso_name_results
         get_by_iso_code!(iso_code) country
-        refresh_cache() ok
+        refresh() ok
         load_countries() ok_countries
         do_search() iso_name_results
     }
@@ -165,7 +165,7 @@ classDiagram
         start_link() ok_pid
         start_cache_worker() ok_pid
         start_cache_with_retry() ok_pid
-        stop_cache_worker(pid) ok
+        stop_worker(pid) ok
         list_cache_workers() list
         count_cache_workers() map
         restart_cache() ok_pid
@@ -175,11 +175,11 @@ classDiagram
         <<Module>>
         search!(query) tuple
         get_by_iso_code!(iso_code) country
-        refresh_cache() ok
-        cache_running?() boolean
-        ensure_cache_running() ok
-        stop_cache() ok
-        cache_status() map
+        refresh() ok
+        running?() boolean
+        ensure_running() ok
+        stop() ok
+        status() map
     }
     
     class Geo.Resources.Country.CacheGenServer {
@@ -187,9 +187,9 @@ classDiagram
         start_link() ok_pid
         search!(query) tuple
         get_by_iso_code!(iso_code) country
-        refresh_cache() ok
+        refresh() ok
         handle_info(:inactivity_stop) stop
-        handle_info(:refresh_cache) noreply
+        handle_info(:refresh) noreply
     }
     
     Geo.Geography --> Geo.Resources.Country : uses
