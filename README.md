@@ -171,7 +171,7 @@ classDiagram
         restart_cache() ok_pid
     }
     
-    class Geo.Resources.Country.CacheStarter {
+    class Geo.Resources.Country.Cache {
         <<Module>>
         search!(query) tuple
         get_by_iso_code!(iso_code) country
@@ -200,8 +200,8 @@ classDiagram
     Geo.Resources.Country --> Geo.Resources.Changes.SlugifyName : applies
     Geo.Resources.Country.CacheGenServer --> Geo.Geography : calls for refresh
     Geo.Resources.Country.CacheSupervisor --> Geo.Resources.Country.CacheGenServer : supervises dynamically
-    Geo.Resources.Country.CacheStarter --> Geo.Resources.Country.CacheSupervisor : starts workers lazily
-    Geo.Resources.Country.CacheStarter --> Geo.Resources.Country.CacheGenServer : calls when running
+    Geo.Resources.Country.Cache --> Geo.Resources.Country.CacheSupervisor : starts workers lazily
+    Geo.Resources.Country.Cache --> Geo.Resources.Country.CacheGenServer : calls when running
 ```
 
 ### Country Search Sequence Diagram
@@ -376,7 +376,7 @@ C4Component
     }
     
     Container_Boundary(cache, "Caching Layer") {
-        Component(cache_starter, "Country.CacheStarter", "Module", "Lazy-loading cache entry point")
+        Component(cache_starter, "Country.Cache", "Module", "Lazy-loading cache entry point")
         Component(cache_genserver, "Country.CacheGenServer", "GenServer", "High-performance country caching with auto-stop")
         Component(cache_supervisor, "Country.CacheSupervisor", "DynamicSupervisor", "Dynamic cache worker management")
     }
@@ -448,7 +448,7 @@ Key features:
 ## Performance Features
 
 ### Caching Strategy
-- `Geo.Resources.Country.CacheStarter` provides lazy-loading cache entry point
+- `Geo.Resources.Country.Cache` provides lazy-loading cache entry point
 - `Geo.Resources.Country.CacheGenServer` provides fast searches and stops after 5 minutes of inactivity
 - Dynamically supervised by `Geo.Resources.Country.CacheSupervisor` with exponential backoff retry logic
 - Cache only starts when first accessed (lazy loading) - no startup overhead
