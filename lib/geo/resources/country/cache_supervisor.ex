@@ -11,7 +11,7 @@ defmodule Geo.Resources.Country.CacheSupervisor do
   @name __MODULE__
   @initial_retry_delay :timer.seconds(5)
   @max_retry_delay :timer.minutes(5)
-  @max_retries 100
+  @max_retries 10
 
   def start_link(init_arg) do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: @name)
