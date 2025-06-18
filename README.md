@@ -161,10 +161,35 @@ classDiagram
     }
     
     class Geo.Resources.Country.CacheSupervisor {
-        <<Supervisor>>
+        <<DynamicSupervisor>>
         start_link() ok_pid
         start_cache_worker() ok_pid
-        retry_start_cache() void
+        start_cache_with_retry() ok_pid
+        stop_cache_worker(pid) ok
+        list_cache_workers() list
+        count_cache_workers() map
+        restart_cache() ok_pid
+    }
+    
+    class Geo.Resources.Country.CacheStarter {
+        <<Module>>
+        search!(query) tuple
+        get_by_iso_code!(iso_code) country
+        refresh_cache() ok
+        cache_running?() boolean
+        ensure_cache_running() ok
+        stop_cache() ok
+        cache_status() map
+    }
+    
+    class Geo.Resources.Country.CacheGenServer {
+        <<GenServer>>
+        start_link() ok_pid
+        search!(query) tuple
+        get_by_iso_code!(iso_code) country
+        refresh_cache() ok
+        handle_info(:inactivity_stop) stop
+        handle_info(:refresh_cache) noreply
     }
     
     Geo.Geography --> Geo.Resources.Country : uses
@@ -173,8 +198,10 @@ classDiagram
     Geo.Resources.Country --|> Geo.Resources.Attributes.Slug : uses
     Geo.Resources.Country --|> Geo.Resources.Attributes.Timestamps : uses
     Geo.Resources.Country --> Geo.Resources.Changes.SlugifyName : applies
-    Geo.Resources.Country.Cache --> Geo.Geography : calls for refresh
-    Geo.Resources.Country.CacheSupervisor --> Geo.Resources.Country.Cache : supervises
+    Geo.Resources.Country.CacheGenServer --> Geo.Geography : calls for refresh
+    Geo.Resources.Country.CacheSupervisor --> Geo.Resources.Country.CacheGenServer : supervises dynamically
+    Geo.Resources.Country.CacheStarter --> Geo.Resources.Country.CacheSupervisor : starts workers lazily
+    Geo.Resources.Country.CacheStarter --> Geo.Resources.Country.CacheGenServer : calls when running
 ```
 
 ### Country Search Sequence Diagram
@@ -349,7 +376,9 @@ C4Component
     }
     
     Container_Boundary(cache, "Caching Layer") {
-        Component(country_cache, "Country.Cache", "GenServer", "High-performance country caching")
+        Component(cache_starter, "Country.CacheStarter", "Module", "Lazy-loading cache entry point")
+        Component(cache_genserver, "Country.CacheGenServer", "GenServer", "High-performance country caching with auto-stop")
+        Component(cache_supervisor, "Country.CacheSupervisor", "DynamicSupervisor", "Dynamic cache worker management")
     }
     
     ContainerDb(postgres, "PostgreSQL", "Database")
@@ -358,9 +387,11 @@ C4Component
     Rel(country_selector, geography, "Calls search_countries")
     Rel(geography, country_resource, "Uses for actions")
     Rel(country_resource, manual_read, "Uses for cached reads")
-    Rel(manual_read, country_cache, "get_by_iso_code!")
-    Rel(geography, country_cache, "search!")
-    Rel(country_cache, geography, "Periodic refresh via")
+    Rel(manual_read, cache_starter, "get_by_iso_code!")
+    Rel(geography, cache_starter, "search!")
+    Rel(cache_starter, cache_supervisor, "Starts workers via")
+    Rel(cache_starter, cache_genserver, "Calls when running")
+    Rel(cache_genserver, geography, "Periodic refresh via")
     Rel(country_resource, postgres, "CRUD operations")
 ```
 
@@ -417,9 +448,11 @@ Key features:
 ## Performance Features
 
 ### Caching Strategy
-- `Geo.Resources.Country.Cache` GenServer provides fast searches
-- Supervised by `Geo.Resources.Country.CacheSupervisor` with retry logic for database dependencies
-- Automatic cache refresh every 10 minutes via scheduled messages
+- `Geo.Resources.Country.CacheStarter` provides lazy-loading cache entry point
+- `Geo.Resources.Country.CacheGenServer` provides fast searches and stops after 5 minutes of inactivity
+- Dynamically supervised by `Geo.Resources.Country.CacheSupervisor` with exponential backoff retry logic
+- Cache only starts when first accessed (lazy loading) - no startup overhead
+- Automatic cache refresh every 10 minutes via scheduled messages when running
 - Intelligent search with prioritized results returned as separate lists:
   1. **ISO Code Results**: Exact ISO code matches, then partial ISO code matches (≤3 chars)
   2. **Name Results**: Exact name matches, names starting with query, then names containing query
