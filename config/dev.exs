@@ -1,11 +1,30 @@
 import Config
 
 # Configure your database
-        config :geo, Geo.Repo,
-          url: System.get_env("DATABASE_URL"),
-          stacktrace: true,
-          show_sensitive_data_on_connection_error: true,
-          pool_size: 10
+database_url = System.get_env("DATABASE_URL")
+
+if database_url do
+  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
+  ssl_config = if String.contains?(database_url, "sslmode=disable"), do: [ssl: false], else: []
+
+  config :geo, Geo.Repo,
+    [
+      url: database_url,
+      stacktrace: true,
+      show_sensitive_data_on_connection_error: true,
+      pool_size: 10,
+      socket_options: maybe_ipv6
+    ] ++ ssl_config
+else
+  config :geo, Geo.Repo,
+    username: "postgres",
+    password: "postgres",
+    hostname: "localhost",
+    database: "geo_dev",
+    stacktrace: true,
+    show_sensitive_data_on_connection_error: true,
+    pool_size: 10
+end
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

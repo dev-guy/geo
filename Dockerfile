@@ -18,6 +18,7 @@ RUN mix local.hex --force && mix local.rebar --force
 # Set env vars
 ENV MIX_ENV=prod
 ENV PHX_SERVER=true
+ENV ECTO_IPV6=true
 
 # Copy application files
 COPY mix.exs mix.lock ./
@@ -30,6 +31,11 @@ COPY assets assets
 RUN mix deps.get --only prod
 RUN mix assets.setup
 RUN mix assets.build
+RUN mix phx.digest
+
+# This is a dummy start-up script for troubleshooting
+# RUN echo '#!/bin/sh\n\
+# while true; do sleep 1; done' > /app/start.sh && chmod +x /app/start.sh
 
 # Create a startup script
 RUN echo '#!/bin/sh\n\
@@ -37,3 +43,4 @@ mix phx.server' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application
 CMD ["/app/start.sh"]
+

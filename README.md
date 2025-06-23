@@ -38,7 +38,49 @@ LiveView:
   - Not very fun fact: It has complex state and took well over 90% of the development effort. Ash was the easy part, by far!
 - A LiveView component that orchestrates Phoenix components and Ash resources
 
-### Architecture
+## Fly.io deployment
+
+### Environment variables (secrets)
+
+- `DATABASE_URL`
+- `SECRET_KEY_BASE`
+- `ECTO_IPV6` set to `true`
+
+#### Initial Deployment
+
+A) Create the Postgres server `geo-demo-db`
+
+- `fly postgres create -r sjc`
+  - App name: `geo-demo-db`
+  - Select configuration: `Development - Single node, 1x shared CPU, 256MB RAM, 1GB disk`
+
+B) Create the database and add seed records **locally**
+
+1. `fly proxy 5432 -a geo-demo-db`
+2. `export DB_PASSWORD=...`
+3. `export DATABASE_URL="postgresql://geo_demo:${DB_PASSWORD}@localhost:5432/postgres?sslmode=disable"`
+4. `mix setup`
+
+C) Create the `geo-demo` app
+
+- `fly launch`
+  - App name: `geo-demo`
+  - Configuration: 1 CPU, 512 MB
+- `fly deploy --strategy immediate --skip-release-command`
+
+D) Add/modify secrets to the `geo-demo` app via the fly.io app
+
+- Set `DATABASE_URL` to `postgresql://geo_demo:<db password >@geo-demo-db.internal:5432/geo_demo?sslmode=disable`
+
+### After updating secrets or code
+
+`fly deploy --strategy immediate --skip-release-command`
+
+### ssh into the application server
+
+`fly ssh console -a geo-demo`
+
+## Architecture
 
 - **Domain Layer**: `Geo.Geography` - Core business logic and operations
 - **Resource Layer**: `Geo.Resources.Country` - Data models and validations with modular attributes
