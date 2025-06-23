@@ -4,6 +4,10 @@
 
 Apache 2.0
 
+## Demo
+
+https://geo-demo.fly.dev/
+
 ## Purpose
 
 Geo is the world's most overengineered country combobox. Countries are stored in a Postgres table and cached in memory for fast searches.
