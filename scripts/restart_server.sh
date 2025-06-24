@@ -2,8 +2,8 @@
 
 # Function to find Phoenix server PID
 find_phoenix_pid() {
-    # Look for the beam.smp process running mix phx.server
-    ps aux | grep -E "[b]eam.smp.*mix phx.server" | awk '{print $2}' | head -1
+    # Look for the beam.smp process running mix geo.start or mix phx.server
+    ps aux | grep -E "[b]eam.smp.*(mix geo.start|mix phx.server)" | awk '{print $2}' | head -1
 }
 
 # Find the current Phoenix server PID
@@ -11,7 +11,7 @@ PID=$(find_phoenix_pid)
 
 if [ -z "$PID" ]; then
     echo "Phoenix server is not running. Starting it now..."
-    mix phx.server
+    mix geo.start
 else
     echo "Found Phoenix server running with PID: $PID"
     echo "Stopping Phoenix server..."
@@ -30,5 +30,5 @@ else
     fi
     
     echo "Starting Phoenix server..."
-    mix phx.server
+    mix geo.start
 fi 

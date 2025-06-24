@@ -55,6 +55,7 @@ const SearchCombobox = {
     this.setupWindowResizeHandler();
     this.setupClearButton();
     this.setupDragPrevention();
+    this.addMobileScrollSupport();
     this.setupGlobalKeyboardListener();
 
     // Initialize the selection based on the current value
@@ -96,6 +97,7 @@ const SearchCombobox = {
       this.setupWindowResizeHandler();
       this.setupClearButton();
       this.setupDragPrevention();
+      this.addMobileScrollSupport();
       this.setupGlobalKeyboardListener();
 
       // Restore dropdown state if it was open
@@ -125,6 +127,7 @@ const SearchCombobox = {
       this.setupWindowResizeHandler();
       this.setupClearButton();
       this.setupDragPrevention();
+      this.addMobileScrollSupport();
       this.setupGlobalKeyboardListener();
 
       // Restore dropdown state if it was open
@@ -284,7 +287,10 @@ const SearchCombobox = {
       option.setAttribute('tabindex', '-1');
 
       this.boundOptionClickHandlers.push({ option, handler: clickHandler });
-      this.boundOptionKeydownHandlers.push({ option, handler: keydownHandler });
+      this.boundOptionKeydownHandlers.push({
+        option,
+        handler: keydownHandler,
+      });
     });
 
     // Set up hover handlers using event delegation (more resilient to DOM updates)
@@ -340,7 +346,10 @@ const SearchCombobox = {
       }
     };
 
-    this.el.addEventListener('mouseleave', this.boundComboboxMouseLeaveHandler);
+    this.el.addEventListener(
+      'mouseleave',
+      this.boundComboboxMouseLeaveHandler,
+    );
   },
 
   handleOptionClick(option, event) {
@@ -349,7 +358,9 @@ const SearchCombobox = {
     const isMultiple = this.el.getAttribute('data-multiple') === 'true';
 
     // Check if search input has content before making changes
-    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const searchInput = this.el.querySelector(
+      '.search-combobox-search-input',
+    );
     const hasSearchContent =
       searchInput && searchInput.value && searchInput.value.trim() !== '';
 
@@ -365,7 +376,7 @@ const SearchCombobox = {
         if (dropdown) {
           dropdown.setAttribute('hidden', 'true');
           this.triggerButton.setAttribute('aria-expanded', 'false');
-          this.dropdownWasOpen = false; // Update state tracking
+          this.dropdownWasOpen = false;
         }
       }
     }
@@ -380,13 +391,17 @@ const SearchCombobox = {
     if (!isDropdownOpen) return;
 
     // Check if the event originated from the search input
-    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const searchInput = this.el.querySelector(
+      '.search-combobox-search-input',
+    );
     const isFromSearchInput = event.target === searchInput;
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       // Use advanced navigation for all search comboboxes
       event.preventDefault();
-      this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
+      this.navigateOptionsAdvanced(
+        event.key === 'ArrowDown' ? 'down' : 'up',
+      );
     } else if (event.key === 'Enter') {
       event.preventDefault();
       option.click();
@@ -413,7 +428,9 @@ const SearchCombobox = {
       // Handle Tab from option - find the next group's expand/collapse button
       const currentGroup = option.closest('.option-group');
       if (currentGroup) {
-        const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+        const allGroups = Array.from(
+          this.el.querySelectorAll('.option-group'),
+        );
         const currentGroupIndex = allGroups.indexOf(currentGroup);
 
         // Look for the next group
@@ -459,47 +476,53 @@ const SearchCombobox = {
     if (this.isScrollingForNavigation) {
       return;
     }
-    
+
     // Check if we're in active keyboard navigation mode
     if (this.isKeyboardNavigating) {
       // Completely ignore hover during keyboard navigation
       return;
     }
-    
+
     // Check if we're in wrap-around navigation
     if (this.isWrappingAround) {
       return;
     }
-    
+
     // Only allow hover to take effect if the mouse has actually moved since last keyboard navigation
     // This prevents phantom hover events during keyboard scrolling and wrap-around navigation
     const currentMouseX = window.mouseX || 0;
     const currentMouseY = window.mouseY || 0;
-    
+
     // Check if mouse has actually moved since the last keyboard navigation
-    if (this.lastKeyboardNavigationTime > 0 && this.lastMouseX !== undefined && this.lastMouseY !== undefined) {
-      const mouseMoved = Math.abs(currentMouseX - this.lastMouseX) > 2 || 
-                        Math.abs(currentMouseY - this.lastMouseY) > 2;
-      
+    if (
+      this.lastKeyboardNavigationTime > 0 &&
+      this.lastMouseX !== undefined &&
+      this.lastMouseY !== undefined
+    ) {
+      const mouseMoved =
+        Math.abs(currentMouseX - this.lastMouseX) > 2 ||
+        Math.abs(currentMouseY - this.lastMouseY) > 2;
+
       // If there was recent keyboard navigation and mouse hasn't moved, ignore this hover completely
       if (!mouseMoved) {
         return;
       }
-      
+
       // Also check if we're still within the keyboard navigation protection window
-      const timeSinceKeyboardNav = Date.now() - this.lastKeyboardNavigationTime;
-      if (timeSinceKeyboardNav < 800) { // Match the wrap-around timeout
-        // Still in protection window and mouse hasn't moved - ignore hover
+      const timeSinceKeyboardNav =
+        Date.now() - this.lastKeyboardNavigationTime;
+      if (timeSinceKeyboardNav < 800) {
+        // Match the wrap-around timeout
         if (!mouseMoved) {
           return;
         }
       }
     }
-    
+
     // Update mouse position tracking
     this.lastMouseX = currentMouseX;
     this.lastMouseY = currentMouseY;
-    
+
     this.currentlyHoveredOption = option;
 
     // Clear any existing hover timeout
@@ -521,7 +544,8 @@ const SearchCombobox = {
 
     // Only prevent hover if we're actively keyboard navigating AND hovering a different option
     // This ensures keyboard navigation always takes precedence over hover
-    const shouldPreventHover = this.isKeyboardNavigating && isHoveringDifferentOption;
+    const shouldPreventHover =
+      this.isKeyboardNavigating && isHoveringDifferentOption;
 
     if (!shouldPreventHover) {
       // For hover, actually highlight the option by setting the navigation state
@@ -699,7 +723,9 @@ const SearchCombobox = {
             'search-combobox-pill inline-flex items-center gap-1 rounded text-sm';
           pill.innerHTML = `
             <span>${option.textContent.trim()}</span>
-            <button type="button" class="remove-pill" data-value="${option.getAttribute('data-combobox-value')}">
+            <button type="button" class="remove-pill" data-value="${option.getAttribute(
+    'data-combobox-value',
+  )}">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>
               </svg>
@@ -851,9 +877,14 @@ const SearchCombobox = {
         this.openDropdownAndFocusSearch();
       } else {
         // Use advanced navigation for all search comboboxes
-        this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
+        this.navigateOptionsAdvanced(
+          event.key === 'ArrowDown' ? 'down' : 'up',
+        );
       }
-    } else if (this.isPrintableCharacter(event.key, event) && !isDropdownOpen) {
+    } else if (
+      this.isPrintableCharacter(event.key, event) &&
+      !isDropdownOpen
+    ) {
       // If a printable character is typed and dropdown is closed, open it and start typing
       event.preventDefault();
       this.openDropdownAndStartTyping(event.key);
@@ -861,7 +892,9 @@ const SearchCombobox = {
   },
 
   navigateOptionsAdvanced(direction) {
-    const options = Array.from(this.el.querySelectorAll('.combobox-option'));
+    const options = Array.from(
+      this.el.querySelectorAll('.combobox-option'),
+    );
     if (options.length === 0) return;
 
     // Set keyboard navigation flag to prevent mouse hover interference
@@ -876,7 +909,7 @@ const SearchCombobox = {
 
     // Clear the flag after a delay to allow mouse interaction again
     clearTimeout(this.keyboardNavigationTimeout);
-    
+
     // For non-wrap-around navigation, use shorter timeout
     this.keyboardNavigationTimeout = setTimeout(() => {
       this.isKeyboardNavigating = false;
@@ -893,7 +926,9 @@ const SearchCombobox = {
 
     // Force mouse leave events to clear CSS hover states
     this.el.querySelectorAll('.combobox-option:hover').forEach((opt) => {
-      opt.dispatchEvent(new window.MouseEvent('mouseleave', { bubbles: true }));
+      opt.dispatchEvent(
+        new window.MouseEvent('mouseleave', { bubbles: true }),
+      );
     });
 
     let currentIndex = -1;
@@ -914,7 +949,7 @@ const SearchCombobox = {
 
     let newIndex;
     let isWrappingAround = false; // Track if we're wrapping around
-    
+
     if (direction === 'down') {
       if (currentIndex === -1) {
         // No current selection, select first option
@@ -940,7 +975,9 @@ const SearchCombobox = {
         isWrappingAround = true; // Mark that we're wrapping around
 
         // Find all groups in order
-        const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+        const allGroups = Array.from(
+          this.el.querySelectorAll('.option-group'),
+        );
 
         // Look for the first group with visible options
         let foundFirstGroup = false;
@@ -949,13 +986,16 @@ const SearchCombobox = {
             group.querySelectorAll('.combobox-option'),
           );
           const visibleOptions = groupOptions.filter(
-            (opt) => !opt.hasAttribute('hidden') && opt.offsetParent !== null,
+            (opt) =>
+              !opt.hasAttribute('hidden') && opt.offsetParent !== null,
           );
 
           if (visibleOptions.length > 0) {
             // Go to the first visible option in this group
             const firstOptionInGroup = visibleOptions[0];
-            const firstOptionGlobalIndex = options.indexOf(firstOptionInGroup);
+            const firstOptionGlobalIndex = options.indexOf(
+              firstOptionInGroup,
+            );
             newIndex = firstOptionGlobalIndex;
             foundFirstGroup = true;
             break;
@@ -1053,12 +1093,14 @@ const SearchCombobox = {
             group.querySelectorAll('.combobox-option'),
           );
           const visibleOptions = groupOptions.filter(
-            (opt) => !opt.hasAttribute('hidden') && opt.offsetParent !== null,
+            (opt) =>
+              !opt.hasAttribute('hidden') && opt.offsetParent !== null,
           );
 
           if (visibleOptions.length > 0) {
             // Go to the last visible option in this group
-            const lastOptionInGroup = visibleOptions[visibleOptions.length - 1];
+            const lastOptionInGroup =
+              visibleOptions[visibleOptions.length - 1];
             const lastOptionGlobalIndex = options.indexOf(lastOptionInGroup);
             newIndex = lastOptionGlobalIndex;
             foundLastGroup = true;
@@ -1077,7 +1119,7 @@ const SearchCombobox = {
     if (isWrappingAround) {
       // Set wrap-around flag
       this.isWrappingAround = true;
-      
+
       // Clear any existing timeout and set a longer one for wrap-around
       clearTimeout(this.keyboardNavigationTimeout);
       this.keyboardNavigationTimeout = setTimeout(() => {
@@ -1159,7 +1201,10 @@ const SearchCombobox = {
           'pointerdown',
           this.boundDocumentClickHandler,
         );
-        document.addEventListener('mouseup', this.boundDocumentClickHandler);
+        document.addEventListener(
+          'mouseup',
+          this.boundDocumentClickHandler,
+        );
         document.addEventListener('click', this.boundDocumentClickHandler);
       }
     }
@@ -1209,7 +1254,10 @@ const SearchCombobox = {
           'pointerdown',
           this.boundDocumentClickHandler,
         );
-        document.addEventListener('mouseup', this.boundDocumentClickHandler);
+        document.addEventListener(
+          'mouseup',
+          this.boundDocumentClickHandler,
+        );
         document.addEventListener('click', this.boundDocumentClickHandler);
       }
     }
@@ -1272,7 +1320,9 @@ const SearchCombobox = {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       // Use advanced navigation for all search comboboxes
       event.preventDefault();
-      this.navigateOptionsAdvanced(event.key === 'ArrowDown' ? 'down' : 'up');
+      this.navigateOptionsAdvanced(
+        event.key === 'ArrowDown' ? 'down' : 'up',
+      );
     } else if (event.key === 'Enter') {
       event.preventDefault();
       this.selectNavigatedOption();
@@ -1367,7 +1417,7 @@ const SearchCombobox = {
     if (this.isKeyboardNavigating) {
       return null;
     }
-    
+
     // Try to find an option that's currently being hovered
     // We need to check for actual hover state since :hover doesn't always work reliably in all browsers
     const options = this.el.querySelectorAll('.combobox-option');
@@ -1522,7 +1572,9 @@ const SearchCombobox = {
     const scrollArea = this.el.querySelector('.scroll-viewport');
     if (!scrollArea) return;
 
-    const options = Array.from(this.el.querySelectorAll('.combobox-option'));
+    const options = Array.from(
+      this.el.querySelectorAll('.combobox-option'),
+    );
     if (options.length === 0) return;
 
     // Get the currently highlighted option (before the scroll)
@@ -1796,7 +1848,9 @@ const SearchCombobox = {
     }
 
     // Clear search input
-    const searchInput = this.el.querySelector('.search-combobox-search-input');
+    const searchInput = this.el.querySelector(
+      '.search-combobox-search-input',
+    );
     if (searchInput) {
       searchInput.value = '';
       this.searchTerm = '';
@@ -1960,7 +2014,10 @@ const SearchCombobox = {
 
       // Clean up the listener after a short time or on mouse up
       const cleanup = () => {
-        document.removeEventListener('mousemove', this.boundDetectDragAttempt);
+        document.removeEventListener(
+          'mousemove',
+          this.boundDetectDragAttempt,
+        );
         document.removeEventListener('mouseup', cleanup);
       };
       document.addEventListener('mouseup', cleanup);
@@ -1983,7 +2040,10 @@ const SearchCombobox = {
       event.stopPropagation();
 
       // Clean up
-      document.removeEventListener('mousemove', this.boundDetectDragAttempt);
+      document.removeEventListener(
+        'mousemove',
+        this.boundDetectDragAttempt,
+      );
       this.mouseDownX = null;
       this.mouseDownY = null;
       this.mouseDownTime = null;
@@ -2032,7 +2092,10 @@ const SearchCombobox = {
       );
     }
     if (this.boundTriggerHandler && this.triggerButton) {
-      this.triggerButton.removeEventListener('click', this.boundTriggerHandler);
+      this.triggerButton.removeEventListener(
+        'click',
+        this.boundTriggerHandler,
+      );
     }
     if (this.boundTriggerKeyHandler && this.triggerButton) {
       this.triggerButton.removeEventListener(
@@ -2060,14 +2123,23 @@ const SearchCombobox = {
     }
     // Clean up delegated hover handlers
     if (this.boundDelegatedHoverHandler) {
-      this.el.removeEventListener('mouseover', this.boundDelegatedHoverHandler);
-      this.el.removeEventListener('mouseout', this.boundDelegatedHoverHandler);
+      this.el.removeEventListener(
+        'mouseover',
+        this.boundDelegatedHoverHandler,
+      );
+      this.el.removeEventListener(
+        'mouseout',
+        this.boundDelegatedHoverHandler,
+      );
     }
     if (this.boundClearHandler && this.clearButton) {
       this.clearButton.removeEventListener('click', this.boundClearHandler);
     }
     if (this.boundChangeHandler && this.selectElement) {
-      this.selectElement.removeEventListener('change', this.boundChangeHandler);
+      this.selectElement.removeEventListener(
+        'change',
+        this.boundChangeHandler,
+      );
     }
     if (this.boundWindowResizeHandler) {
       window.removeEventListener('resize', this.boundWindowResizeHandler);
@@ -2079,7 +2151,10 @@ const SearchCombobox = {
       this.el.removeEventListener('dragstart', this.boundPreventDragStart);
     }
     if (this.boundPreventSelectStart) {
-      this.el.removeEventListener('selectstart', this.boundPreventSelectStart);
+      this.el.removeEventListener(
+        'selectstart',
+        this.boundPreventSelectStart,
+      );
     }
     if (this.boundPreventMouseDown) {
       this.el.removeEventListener('mousedown', this.boundPreventMouseDown);
@@ -2089,12 +2164,18 @@ const SearchCombobox = {
         'button[title*="Toggle group"], button[title*="sort order"]',
       );
       buttons.forEach((button) => {
-        button.removeEventListener('keydown', this.boundButtonKeyboardHandler);
+        button.removeEventListener(
+          'keydown',
+          this.boundButtonKeyboardHandler,
+        );
         button.removeEventListener('click', this.boundButtonClickHandler);
       });
     }
-    if (this.boundGlobalKeydownHandler) {
-      document.removeEventListener('keydown', this.boundGlobalKeydownHandler);
+    if (this.boundGlobalKeyboardHandler) {
+      document.removeEventListener(
+        'keydown',
+        this.boundGlobalKeyboardHandler,
+      );
     }
 
     // Clean up observer
@@ -2117,11 +2198,17 @@ const SearchCombobox = {
         'pointerdown',
         this.boundDocumentClickHandler,
       );
-      document.removeEventListener('mouseup', this.boundDocumentClickHandler);
+      document.removeEventListener(
+        'mouseup',
+        this.boundDocumentClickHandler,
+      );
       document.removeEventListener('click', this.boundDocumentClickHandler);
     }
     if (this.boundTrackMousePosition) {
-      document.removeEventListener('mousemove', this.boundTrackMousePosition);
+      document.removeEventListener(
+        'mousemove',
+        this.boundTrackMousePosition,
+      );
     }
     if (this.scrollingTimeout) {
       clearTimeout(this.scrollingTimeout);
@@ -2156,8 +2243,14 @@ const SearchCombobox = {
         'button[title*="Toggle group"], button[title*="sort order"]',
       );
       buttons.forEach((button) => {
-        button.removeEventListener('keydown', this.boundButtonKeyboardHandler);
-        button.removeEventListener('click', this.boundButtonClickHandler);
+        button.removeEventListener(
+          'keydown',
+          this.boundButtonKeyboardHandler,
+        );
+        button.removeEventListener(
+          'click',
+          this.boundButtonClickHandler,
+        );
       });
     }
 
@@ -2213,7 +2306,10 @@ const SearchCombobox = {
     );
     buttons.forEach((button) => {
       button.addEventListener('click', this.boundButtonClickHandler);
-      button.addEventListener('keydown', this.boundButtonKeyboardHandler);
+      button.addEventListener(
+        'keydown',
+        this.boundButtonKeyboardHandler,
+      );
     });
   },
 
@@ -2238,7 +2334,8 @@ const SearchCombobox = {
 
       // Keep focus on the button after the action, with multiple attempts to handle LiveView updates
       setTimeout(() => {
-        const button = this.el.querySelector(buttonSelector) || currentButton;
+        const button =
+          this.el.querySelector(buttonSelector) || currentButton;
         if (button) {
           button.focus();
         }
@@ -2246,7 +2343,8 @@ const SearchCombobox = {
 
       // Second attempt after a longer delay to handle LiveView updates
       setTimeout(() => {
-        const button = this.el.querySelector(buttonSelector) || currentButton;
+        const button =
+          this.el.querySelector(buttonSelector) || currentButton;
         if (button && document.activeElement !== button) {
           button.focus();
         }
@@ -2254,12 +2352,16 @@ const SearchCombobox = {
 
       // Third attempt after an even longer delay
       setTimeout(() => {
-        const button = this.el.querySelector(buttonSelector) || currentButton;
+        const button =
+          this.el.querySelector(buttonSelector) || currentButton;
         if (button && document.activeElement !== button) {
           button.focus();
         }
       }, 300);
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    } else if (
+      event.key === 'ArrowDown' ||
+      event.key === 'ArrowUp'
+    ) {
       // Handle vertical arrow keys
       event.preventDefault();
 
@@ -2293,9 +2395,13 @@ const SearchCombobox = {
           for (let i = currentGroupIndex - 1; i >= 0; i--) {
             const prevGroup = allGroups[i];
             // Check if this group is expanded (has visible options)
-            const options = prevGroup.querySelectorAll('.combobox-option');
+            const options = prevGroup.querySelectorAll(
+              '.combobox-option',
+            );
             const visibleOptions = Array.from(options).filter(
-              (opt) => !opt.hasAttribute('hidden') && opt.offsetParent !== null,
+              (opt) =>
+                !opt.hasAttribute('hidden') &&
+                opt.offsetParent !== null,
             );
 
             if (visibleOptions.length > 0) {
@@ -2328,10 +2434,15 @@ const SearchCombobox = {
           this.clearAllVisualStates();
         }
       }
-    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    } else if (
+      event.key === 'ArrowLeft' ||
+      event.key === 'ArrowRight'
+    ) {
       // Handle left and right arrow navigation between group buttons
       event.preventDefault();
-      this.navigateGroupButtons(event.key === 'ArrowRight' ? 'right' : 'left');
+      this.navigateGroupButtons(
+        event.key === 'ArrowRight' ? 'right' : 'left',
+      );
     } else if (event.key === 'Tab' && !event.shiftKey) {
       event.preventDefault(); // Always prevent default for Tab
       // Find the current button and determine next focus target
@@ -2340,7 +2451,9 @@ const SearchCombobox = {
 
       if (buttonGroup) {
         // Check if this is a sort button (last button in group)
-        const groupButtons = Array.from(buttonGroup.querySelectorAll('button'));
+        const groupButtons = Array.from(
+          buttonGroup.querySelectorAll('button'),
+        );
         const isSortButton =
           groupButtons.indexOf(currentButton) === groupButtons.length - 1;
 
@@ -2358,7 +2471,9 @@ const SearchCombobox = {
       // For other buttons (expand/collapse), move to next button in sequence
       // Get all buttons in order: [group1_collapse, group1_sort, group2_collapse, group2_sort, ...]
       const allButtons = [];
-      const groups = Array.from(this.el.querySelectorAll('.option-group'));
+      const groups = Array.from(
+        this.el.querySelectorAll('.option-group'),
+      );
 
       groups.forEach((group) => {
         const groupButtons = Array.from(group.querySelectorAll('button'));
@@ -2394,7 +2509,9 @@ const SearchCombobox = {
 
       if (buttonGroup) {
         // Check if this is the first group
-        const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+        const allGroups = Array.from(
+          this.el.querySelectorAll('.option-group'),
+        );
         const isFirstGroup = allGroups.indexOf(buttonGroup) === 0;
 
         if (isFirstGroup) {
@@ -2501,56 +2618,61 @@ const SearchCombobox = {
       event.preventDefault();
       this.closeDropdown();
       break;
-    case ' ': {
-      // Handle space key based on mouse hover over scroll area (mouse position takes precedence)
-      const searchInput = this.el.querySelector(
-        '.search-combobox-search-input',
-      );
-      const isFromSearchInput = event.target === searchInput;
-      const isMouseOverScrollArea = this.isMouseOverScrollArea();
+    case ' ':
+      {
+        // Handle space key based on mouse hover over scroll area (mouse position takes precedence)
+        const searchInput = this.el.querySelector(
+          '.search-combobox-search-input',
+        );
+        const isFromSearchInput = event.target === searchInput;
+        const isMouseOverScrollArea = this.isMouseOverScrollArea();
 
-      // If mouse is hovering over scroll area, handle scrolling (takes precedence over focus)
-      if (isMouseOverScrollArea) {
-        event.preventDefault();
-        if (event.shiftKey) {
-          this.scrollPageAndUpdateHighlight('up');
+        // If mouse is hovering over scroll area, handle scrolling (takes precedence over focus)
+        if (isMouseOverScrollArea) {
+          event.preventDefault();
+          if (event.shiftKey) {
+            this.scrollPageAndUpdateHighlight('up');
+          } else {
+            this.scrollPageAndUpdateHighlight('down');
+          }
+        } else if (isFromSearchInput) {
+          // Mouse not over scroll area AND focus is on search input - let space be typed normally
+          // Don't prevent default here
         } else {
-          this.scrollPageAndUpdateHighlight('down');
-        }
-      } else if (isFromSearchInput) {
-        // Mouse not over scroll area AND focus is on search input - let space be typed normally
-        // Don't prevent default here
-      } else {
-        // Mouse not over scroll area and focus not on search input - send space to search input
-        event.preventDefault();
-        if (searchInput) {
-          searchInput.focus();
-          // Add space to the search input
-          const currentValue = searchInput.value || '';
-          const newValue = currentValue + ' ';
-          searchInput.value = newValue;
-          this.searchTerm = newValue;
+          // Mouse not over scroll area and focus not on search input - send space to search input
+          event.preventDefault();
+          if (searchInput) {
+            searchInput.focus();
+            // Add space to the search input
+            const currentValue = searchInput.value || '';
+            const newValue = currentValue + ' ';
+            searchInput.value = newValue;
+            this.searchTerm = newValue;
 
-          // Position cursor at the end
-          searchInput.setSelectionRange(newValue.length, newValue.length);
+            // Position cursor at the end
+            searchInput.setSelectionRange(
+              newValue.length,
+              newValue.length,
+            );
 
-          // Trigger the search input handler
-          this.handleSearchInput({ target: searchInput });
+            // Trigger the search input handler
+            this.handleSearchInput({ target: searchInput });
+          }
         }
       }
       break;
-    }
-    case 'Tab': {
-      // Handle Tab navigation - move to first group button if available
-      const firstGroupButton = this.el.querySelector(
-        'button[title*="Toggle group"]',
-      );
-      if (firstGroupButton && !event.shiftKey) {
-        event.preventDefault();
-        firstGroupButton.focus();
+    case 'Tab':
+      {
+        // Handle Tab navigation - move to first group button if available
+        const firstGroupButton = this.el.querySelector(
+          'button[title*="Toggle group"]',
+        );
+        if (firstGroupButton && !event.shiftKey) {
+          event.preventDefault();
+          firstGroupButton.focus();
+        }
       }
       break;
-    }
     }
   },
 
@@ -2774,27 +2896,27 @@ const SearchCombobox = {
     // Scroll area dimensions
     const scrollAreaHeight = scrollArea.clientHeight;
     const currentScrollTop = scrollArea.scrollTop;
-    
+
     // Calculate scroll distance to detect wrap-around scenarios
     const scrollDistance = Math.abs(optionTop - currentScrollTop);
     const isLargeScroll = scrollDistance > scrollAreaHeight * 2; // Scrolling more than 2 viewports
-    
+
     // Set a flag to prevent hover events during scrolling
     this.isScrollingForNavigation = true;
-    
+
     // For large scrolls, also set wrap-around flag for extra protection
     if (isLargeScroll && this.isKeyboardNavigating) {
       this.isWrappingAround = true;
     }
-    
+
     // Clear the flag after scrolling is likely complete
     if (this.scrollingTimeout) {
       clearTimeout(this.scrollingTimeout);
     }
-    
+
     // Use longer timeout for large scrolls (wrap-around scenarios)
     const scrollTimeout = isLargeScroll ? 1500 : 500;
-    
+
     this.scrollingTimeout = setTimeout(() => {
       this.isScrollingForNavigation = false;
       // Only clear wrap-around if not still in keyboard navigation
@@ -2934,7 +3056,8 @@ const SearchCombobox = {
     }
 
     // Check if we're in the middle of keyboard navigation - if so, don't interfere
-    const timeSinceLastKeyboardNav = Date.now() - this.lastKeyboardNavigationTime;
+    const timeSinceLastKeyboardNav =
+      Date.now() - this.lastKeyboardNavigationTime;
     const isRecentKeyboardNavigation = timeSinceLastKeyboardNav < 1000; // Give more time
     if (this.isKeyboardNavigating || isRecentKeyboardNavigation) {
       // Don't change the highlight during keyboard navigation
@@ -3103,14 +3226,18 @@ const SearchCombobox = {
     const buttonGroup = button.closest('.option-group');
     if (!buttonGroup) return null;
 
-    const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
+    const allGroups = Array.from(
+      this.el.querySelectorAll('.option-group'),
+    );
     const groupIndex = allGroups.indexOf(buttonGroup);
 
     const groupButtons = Array.from(buttonGroup.querySelectorAll('button'));
     const buttonIndex = groupButtons.indexOf(button);
 
     // Return a selector that can find the button by its position
-    return `.option-group:nth-child(${groupIndex + 1}) button:nth-child(${buttonIndex + 1})`;
+    return `.option-group:nth-child(${groupIndex + 1}) button:nth-child(${
+      buttonIndex + 1
+    })`;
   },
 
   // Track mouse position for improved hover detection
@@ -3145,188 +3272,56 @@ const SearchCombobox = {
     return isOverScrollArea;
   },
 
-  setupGlobalKeyboardListener() {
-    // Remove existing listener if any
-    if (this.boundGlobalKeydownHandler) {
-      document.removeEventListener('keydown', this.boundGlobalKeydownHandler);
-    }
+  /**
+   * Thicken and enable momentum‐scroll on mobile
+   */
+  addMobileScrollSupport() {
+    const scrollArea = this.el.querySelector('.scroll-viewport');
+    if (!scrollArea) return;
 
-    // Create bound handler
-    this.boundGlobalKeydownHandler = this.handleGlobalKeydown.bind(this);
+    scrollArea.style.webkitOverflowScrolling = 'touch';
+    scrollArea.style.touchAction = 'pan-y';
 
-    // Add event listener
-    document.addEventListener('keydown', this.boundGlobalKeydownHandler);
-  },
-
-  handleGlobalKeydown(event) {
-    // Check if dropdown is open
-    const dropdown = this.el.querySelector(
-      '[data-part="search-combobox-listbox"]',
+    scrollArea.classList.add(
+      'scrollbar-thin',
+      'scrollbar-thumb-gray-500',
+      'scrollbar-track-transparent',
+      'scrollbar-thumb-rounded',
     );
-    const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
-
-    // Handle Enter, Escape, and Arrow keys regardless of focus state when dropdown is open
-    // Don't require mouse to be over combobox for these critical navigation keys
-    if (
-      isDropdownOpen &&
-      (event.key === 'Enter' ||
-        event.key === 'Escape' ||
-        event.key === 'ArrowUp' ||
-        event.key === 'ArrowDown')
-    ) {
-      // Check if the event target is within this combobox or if no other input is focused
-      const isEventFromThisCombobox = this.el.contains(event.target);
-      const activeElement = document.activeElement;
-      const isOtherInputFocused =
-        activeElement &&
-        !this.el.contains(activeElement) &&
-        (activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.isContentEditable);
-
-      // Only handle if the event is from this combobox or no other input is focused
-      if (isEventFromThisCombobox || !isOtherInputFocused) {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          // Try to select the currently navigated option
-          this.selectNavigatedOption();
-          return;
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          // Close the dropdown
-          this.closeDropdown();
-          return;
-        } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-          // For arrow keys, ensure the search input has focus and let the normal handler deal with it
-          const searchInput = this.el.querySelector(
-            '.search-combobox-search-input',
-          );
-          if (searchInput && document.activeElement !== searchInput) {
-            searchInput.focus();
-          }
-          // Don't prevent default or return - let the normal keyboard handler process this
-        }
-      }
-    }
-
-    // Check if mouse is over this combobox for other keys
-    const isMouseOverCombobox = this.isMouseOverElement(this.el);
-
-    // Only proceed if mouse is over the combobox for non-critical keys
-    if (!isMouseOverCombobox) {
-      return;
-    }
-
-    // Only handle other keys if no element has focus or the focused element is not an input/textarea
-    const activeElement = document.activeElement;
-    const isInputFocused =
-      activeElement &&
-      (activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.isContentEditable);
-
-    // If an input is already focused, don't interfere with other keys
-    if (isInputFocused) {
-      return;
-    }
-
-    // Don't handle space key, let it be handled by the normal combobox behavior
-    if (event.key === ' ') {
-      return;
-    }
-
-    // Handle all printable characters, Backspace, Delete, and arrow keys
-    if (
-      this.isPrintableCharacter(event.key, event) ||
-      event.key === 'Backspace' ||
-      event.key === 'Delete' ||
-      event.key === 'ArrowLeft' ||
-      event.key === 'ArrowRight'
-    ) {
-      const searchInput = this.el.querySelector(
-        '.search-combobox-search-input',
-      );
-      if (searchInput) {
-        // Prevent the default action (like scrolling for arrow keys)
-        event.preventDefault();
-
-        // Focus the search input
-        searchInput.focus();
-
-        // For printable characters, add them to the search input
-        if (this.isPrintableCharacter(event.key, event)) {
-          const currentValue = searchInput.value || '';
-          const newValue = currentValue + event.key;
-          searchInput.value = newValue;
-          this.searchTerm = newValue;
-
-          // Position cursor at the end
-          searchInput.setSelectionRange(newValue.length, newValue.length);
-
-          // Trigger the search input handler
-          this.handleSearchInput({ target: searchInput });
-        }
-
-        // For Backspace, remove the last character
-        if (event.key === 'Backspace') {
-          const currentValue = searchInput.value || '';
-          if (currentValue.length > 0) {
-            const newValue = currentValue.slice(0, -1);
-            searchInput.value = newValue;
-            this.searchTerm = newValue;
-
-            // Position cursor at the end
-            searchInput.setSelectionRange(newValue.length, newValue.length);
-
-            // Trigger the search input handler
-            this.handleSearchInput({ target: searchInput });
-          }
-        }
-
-        // For Delete key, handle similar to Backspace but delete at cursor position
-        // Since we're always positioning cursor at the end, it behaves like Backspace
-        if (event.key === 'Delete') {
-          const currentValue = searchInput.value || '';
-          if (currentValue.length > 0) {
-            const newValue = currentValue.slice(0, -1);
-            searchInput.value = newValue;
-            this.searchTerm = newValue;
-
-            // Position cursor at the end
-            searchInput.setSelectionRange(newValue.length, newValue.length);
-
-            // Trigger the search input handler
-            this.handleSearchInput({ target: searchInput });
-          }
-        }
-
-        // Open dropdown if it's not already open
-        const dropdown = this.el.querySelector(
-          '[data-part="search-combobox-listbox"]',
-        );
-        const isDropdownOpen = dropdown && !dropdown.hasAttribute('hidden');
-
-        if (!isDropdownOpen) {
-          this.openDropdownAndFocusSearch();
-        }
-      }
-    }
   },
 
-  isMouseOverElement(element) {
-    if (!element) return false;
+  /**
+   * Bind a single global keydown listener (e.g. to close on Escape anywhere)
+   */
+  setupGlobalKeyboardListener() {
+    if (this.boundGlobalKeyboardHandler) {
+      document.removeEventListener(
+        'keydown',
+        this.boundGlobalKeyboardHandler,
+      );
+    }
+    this.boundGlobalKeyboardHandler = this.handleGlobalKeydown.bind(this);
+    document.addEventListener(
+      'keydown',
+      this.boundGlobalKeyboardHandler,
+    );
+  },
 
-    // Get element's position and dimensions
-    const rect = element.getBoundingClientRect();
-
-    // Check if mouse coordinates are within the element
-    const isOver =
-      window.mouseX >= rect.left &&
-      window.mouseX <= rect.right &&
-      window.mouseY >= rect.top &&
-      window.mouseY <= rect.bottom;
-
-    return isOver;
+  /**
+   * Global keydown handler: close the dropdown on Escape
+   */
+  handleGlobalKeydown(event) {
+    if (event.key === 'Escape') {
+      const dropdown = this.el.querySelector(
+        '[data-part="search-combobox-listbox"]',
+      );
+      if (dropdown && !dropdown.hasAttribute('hidden')) {
+        dropdown.setAttribute('hidden', 'true');
+        this.triggerButton.setAttribute('aria-expanded', 'false');
+        this.dropdownWasOpen = false;
+        this.triggerButton.focus();
+      }
+    }
   },
 };
 

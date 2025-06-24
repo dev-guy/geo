@@ -109,7 +109,7 @@ defmodule GeoWeb.CountrySelector do
       |> assign(:second_group_name, second_group_name)
 
     ~H"""
-    <div id={@id} class="country-selector" phx-hook="CountrySelector">
+    <div id={@id} class="country-selector">
       <form phx-change="country_selected" phx-target={@myself}>
         <.search_combobox
           name="country"
