@@ -43,4 +43,3 @@ mix phx.server' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application
 CMD ["/app/start.sh"]
-

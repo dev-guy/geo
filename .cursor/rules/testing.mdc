@@ -3,7 +3,9 @@ description:
 globs:
 alwaysApply: true
 ---
-Always run playwright tests in the background
+Always run playwright tests in the background using the command like
+`country_combobox_mobile.spec.js --reporter=line --workers=1`
+
 The Phoenix server (`mix phx.server`) is always running. Do not try to start it.
 
 Do not run playwright with the --headed option
