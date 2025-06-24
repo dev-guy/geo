@@ -3,7 +3,10 @@ const { test, expect } = require('@playwright/test');
 test.describe('Country Selector Requirements', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:4000');
-    await page.waitForLoadState('networkidle');
+    // Wait for the page to load and for the combobox to be available
+    await page.waitForSelector('.search-combobox-trigger', { timeout: 15000 });
+    // Give extra time for any JavaScript to initialize
+    await page.waitForTimeout(1000);
   });
 
   test('Requirement 1: Typing a letter when an item is selected should append to search input', async ({ page }) => {

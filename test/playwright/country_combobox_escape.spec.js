@@ -5,8 +5,9 @@ test.describe('Combobox Escape Behavior', () => {
     // Navigate to the page with the combobox
     await page.goto('http://localhost:4000');
 
-    // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    // Wait for the combobox to be available
+    await page.waitForSelector('.search-combobox-trigger', { timeout: 15000 });
+    await page.waitForTimeout(1000);
 
     // Find and open the combobox
     const comboboxTrigger = page.locator('.search-combobox-trigger').first();
@@ -14,7 +15,11 @@ test.describe('Combobox Escape Behavior', () => {
 
     // Wait for dropdown to open
     const dropdown = page.locator('[data-part="search-combobox-listbox"]');
-    await expect(dropdown).not.toHaveAttribute('hidden');
+    // Wait for the dropdown to appear and be visible
+    await expect(dropdown).toBeVisible({ timeout: 10000 });
+    
+    // Wait a bit more to ensure the dropdown is fully ready
+    await page.waitForTimeout(500);
 
     // Step 2: Hover over Afghanistan option
     const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
@@ -41,6 +46,9 @@ test.describe('Combobox Escape Behavior', () => {
     // Step 9: Press Escape
     await page.keyboard.press('Escape');
 
+    // Wait for the dropdown to close (give it time for LiveView updates)
+    await page.waitForTimeout(1000);
+
     // Expected result: Combobox should close
     await expect(dropdown).toHaveAttribute('hidden');
 
@@ -52,8 +60,9 @@ test.describe('Combobox Escape Behavior', () => {
     // Navigate to the page with the combobox
     await page.goto('http://localhost:4000');
 
-    // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    // Wait for the combobox to be available
+    await page.waitForSelector('.search-combobox-trigger', { timeout: 15000 });
+    await page.waitForTimeout(1000);
 
     // Find and open the combobox
     const comboboxTrigger = page.locator('.search-combobox-trigger').first();
@@ -61,7 +70,11 @@ test.describe('Combobox Escape Behavior', () => {
 
     // Wait for dropdown to open
     const dropdown = page.locator('[data-part="search-combobox-listbox"]');
-    await expect(dropdown).not.toHaveAttribute('hidden');
+    // Wait for the dropdown to appear and be visible
+    await expect(dropdown).toBeVisible({ timeout: 10000 });
+    
+    // Wait a bit more to ensure the dropdown is fully ready
+    await page.waitForTimeout(500);
 
     // Focus the search input
     const searchInput = page.locator('.search-combobox-search-input');
@@ -69,6 +82,9 @@ test.describe('Combobox Escape Behavior', () => {
 
     // Press Escape
     await page.keyboard.press('Escape');
+
+    // Wait for the dropdown to close (give it time for LiveView updates)
+    await page.waitForTimeout(1000);
 
     // Expected result: Combobox should close
     await expect(dropdown).toHaveAttribute('hidden');

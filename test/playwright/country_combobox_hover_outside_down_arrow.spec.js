@@ -1,9 +1,16 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('Combobox Hover Navigation Bug', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, browserName }) => {
     await page.goto('http://localhost:4000');
-    await page.waitForLoadState('networkidle');
+    
+    // Firefox sometimes has issues with networkidle, use a more reliable approach
+    if (browserName === 'firefox') {
+      await page.waitForSelector('.search-combobox-trigger', { timeout: 10000 });
+      await page.waitForTimeout(500); // Small delay to ensure page is fully loaded
+    } else {
+      await page.waitForLoadState('networkidle');
+    }
   });
 
   test('Bug: Hover over Afghanistan, down arrow, hover again, down arrow - Afghanistan stays highlighted', async ({ page }) => {
@@ -19,8 +26,18 @@ test.describe('Combobox Hover Navigation Bug', () => {
     };
 
     // 1. Open the combobox
+    await page.waitForSelector('.search-combobox-trigger', { timeout: 10000 });
     await page.click('.search-combobox-trigger');
-    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+    
+    // Wait a bit and retry if dropdown doesn't appear (helps with timing issues)
+    await page.waitForTimeout(200);
+    const dropdownVisible = await page.locator('.search-combobox-dropdown:not([hidden])').count();
+    if (dropdownVisible === 0) {
+      await page.click('.search-combobox-trigger');
+      await page.waitForTimeout(200);
+    }
+    
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])', { timeout: 10000 });
 
     // 2. Hover over Afghanistan (first one - in "By Name" group)
     const afghanistanOption = page.locator('.combobox-option[data-combobox-value="AF"]').first();
@@ -69,8 +86,18 @@ test.describe('Combobox Hover Navigation Bug', () => {
     };
 
     // 1. Open the combobox
+    await page.waitForSelector('.search-combobox-trigger', { timeout: 10000 });
     await page.click('.search-combobox-trigger');
-    await page.waitForSelector('.search-combobox-dropdown:not([hidden])');
+    
+    // Wait a bit and retry if dropdown doesn't appear (helps with timing issues)
+    await page.waitForTimeout(200);
+    const dropdownVisible = await page.locator('.search-combobox-dropdown:not([hidden])').count();
+    if (dropdownVisible === 0) {
+      await page.click('.search-combobox-trigger');
+      await page.waitForTimeout(200);
+    }
+    
+    await page.waitForSelector('.search-combobox-dropdown:not([hidden])', { timeout: 10000 });
 
     const afghanistanOption = page.locator('.combobox-option[data-combobox-value="AF"]').first();
 

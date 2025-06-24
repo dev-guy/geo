@@ -14,6 +14,12 @@ const SearchCombobox = {
 
     // Store instance reference for debugging
     this.el.searchComboboxInstance = this;
+
+    // Also store reference on parent country-selector element if it exists
+    const countrySelector = this.el.closest('.country-selector');
+    if (countrySelector) {
+      countrySelector.searchComboboxInstance = this;
+    }
     this.searchTerm = '';
     this.debounceTimer = null;
     this.dropdownWasOpen = false; // Track dropdown state across updates
@@ -40,6 +46,16 @@ const SearchCombobox = {
     this.hoverTimeout = null;
     this.isHoverNavigation = false; // Track if current navigation was set by hover
 
+    // Initialize touch tracking for mobile scroll detection
+    this.touchStartX = null;
+    this.touchStartY = null;
+    this.touchStartTime = null;
+    this.isScrolling = false;
+    this.touchMoveThreshold = 5; // pixels - reduced for better scroll detection
+    this.touchTimeThreshold = 300; // milliseconds
+    this.touchStartTarget = null;
+    this.touchedOption = null;
+
     this.setupTriggerButton();
     this.setupSearchIntercept();
     this.setupDropdownObserver();
@@ -50,6 +66,7 @@ const SearchCombobox = {
     this.setupClearButton();
     this.setupDragPrevention();
     this.setupGlobalKeyboardListener();
+    this.setupTouchHandling();
 
     // Initialize the selection based on the current value
     this.initializeSelection();
@@ -89,6 +106,7 @@ const SearchCombobox = {
       this.setupClearButton();
       this.setupDragPrevention();
       this.setupGlobalKeyboardListener();
+      this.setupTouchHandling();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -118,6 +136,7 @@ const SearchCombobox = {
       this.setupClearButton();
       this.setupDragPrevention();
       this.setupGlobalKeyboardListener();
+      this.setupTouchHandling();
 
       // Restore dropdown state if it was open
       if (this.dropdownWasOpen) {
@@ -328,6 +347,35 @@ const SearchCombobox = {
   },
 
   handleOptionClick(option, event) {
+    // Check if this was a touch event that resulted from scrolling
+    if (this.isScrolling) {
+      // Prevent selection if user was scrolling
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+
+    // Additional check for touch devices - if event is from a touch, verify it wasn't a scroll
+    if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) {
+      // This click came from a touch event
+      const timeSinceTouch = Date.now() - (this.touchStartTime || 0);
+      // If very recent touch and was scrolling, prevent the click
+      if (timeSinceTouch < 500 && this.touchStartX !== null) {
+        const currentX = event.clientX;
+        const currentY = event.clientY;
+        const deltaX = Math.abs(currentX - this.touchStartX);
+        const deltaY = Math.abs(currentY - this.touchStartY);
+
+        if (deltaY > this.touchMoveThreshold || deltaX > this.touchMoveThreshold) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          return;
+        }
+      }
+    }
+
     event.preventDefault();
     const value = option.getAttribute('data-combobox-value');
     const isMultiple = this.el.getAttribute('data-multiple') === 'true';
@@ -1860,6 +1908,17 @@ const SearchCombobox = {
       document.removeEventListener('keydown', this.boundGlobalKeydownHandler);
     }
 
+    // Clean up touch event listeners
+    if (this.boundTouchStartHandler) {
+      this.el.removeEventListener('touchstart', this.boundTouchStartHandler);
+    }
+    if (this.boundTouchMoveHandler) {
+      this.el.removeEventListener('touchmove', this.boundTouchMoveHandler);
+    }
+    if (this.boundTouchEndHandler) {
+      this.el.removeEventListener('touchend', this.boundTouchEndHandler);
+    }
+
     // Clean up observer
     if (this.dropdownObserver) {
       this.dropdownObserver.disconnect();
@@ -1884,6 +1943,12 @@ const SearchCombobox = {
     this.selectElement = null;
     this.clearButton = null;
     this.el.searchComboboxInstance = null;
+
+    // Also clean up reference on parent country-selector element if it exists
+    const countrySelector = this.el.closest('.country-selector');
+    if (countrySelector && countrySelector.searchComboboxInstance === this) {
+      countrySelector.searchComboboxInstance = null;
+    }
   },
 
   setupKeyboardNavigation() {
@@ -2916,6 +2981,97 @@ const SearchCombobox = {
     );
 
     return isOver;
+  },
+
+  setupTouchHandling() {
+    // Remove existing touch listeners if any
+    if (this.boundTouchStartHandler) {
+      this.el.removeEventListener('touchstart', this.boundTouchStartHandler);
+    }
+    if (this.boundTouchMoveHandler) {
+      this.el.removeEventListener('touchmove', this.boundTouchMoveHandler);
+    }
+    if (this.boundTouchEndHandler) {
+      this.el.removeEventListener('touchend', this.boundTouchEndHandler);
+    }
+
+    // Create bound handlers
+    this.boundTouchStartHandler = this.handleTouchStart.bind(this);
+    this.boundTouchMoveHandler = this.handleTouchMove.bind(this);
+    this.boundTouchEndHandler = this.handleTouchEnd.bind(this);
+
+    // Add touch event listeners to the entire combobox element to catch all touch interactions
+    // Use passive: false so we can prevent default when needed
+    this.el.addEventListener('touchstart', this.boundTouchStartHandler, { passive: false });
+    this.el.addEventListener('touchmove', this.boundTouchMoveHandler, { passive: false });
+    this.el.addEventListener('touchend', this.boundTouchEndHandler, { passive: false });
+  },
+
+  handleTouchStart(event) {
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.touchStartTime = Date.now();
+      this.isScrolling = false;
+      this.touchStartTarget = event.target;
+
+      // Track if touch started on an option
+      this.touchedOption = event.target.closest('.combobox-option');
+    }
+  },
+
+  handleTouchMove(event) {
+    if (event.touches.length === 1 && this.touchStartX !== null && this.touchStartY !== null) {
+      const touch = event.touches[0];
+      const deltaX = Math.abs(touch.clientX - this.touchStartX);
+      const deltaY = Math.abs(touch.clientY - this.touchStartY);
+
+      // If the touch has moved beyond the threshold, consider it scrolling
+      // Prioritize vertical movement for scroll detection
+      if (deltaY > this.touchMoveThreshold || deltaX > this.touchMoveThreshold) {
+        this.isScrolling = true;
+
+        // If scrolling was detected and touch started on an option, prevent default
+        if (this.touchedOption) {
+          event.preventDefault();
+        }
+      }
+    }
+  },
+
+  handleTouchEnd(event) {
+    const wasScrolling = this.isScrolling;
+    const touchedOption = this.touchedOption;
+
+    // If this was a scroll gesture on an option, prevent the click
+    if (wasScrolling && touchedOption) {
+      event.preventDefault();
+
+      // Temporarily prevent clicks on this option
+      const preventClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      };
+
+      touchedOption.addEventListener('click', preventClick, true);
+
+      // Remove the click prevention after a short delay
+      setTimeout(() => {
+        touchedOption.removeEventListener('click', preventClick, true);
+      }, 300);
+    }
+
+    // Reset touch tracking state
+    setTimeout(() => {
+      this.touchStartX = null;
+      this.touchStartY = null;
+      this.touchStartTime = null;
+      this.isScrolling = false;
+      this.touchStartTarget = null;
+      this.touchedOption = null;
+    }, 50);
   },
 };
 
