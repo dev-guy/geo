@@ -108,8 +108,8 @@ defmodule GeoWeb.CountrySelector do
         <:selection :if={@selected_country}>
           <div class="flex items-center">
             <span class="text-lg mr-2">{to_string(@selected_country.flag)}</span>
-            <span class="text-base font-semibold text-gray-800">{to_string(@selected_country.name)}</span>
-            <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded ml-2">
+            <span class="text-base font-semibold text-gray-800 dark:text-gray-100">{to_string(@selected_country.name)}</span>
+            <span class="text-sm font-mono text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded ml-2">
               {to_string(@selected_country.iso_code)}
             </span>
           </div>
@@ -254,13 +254,13 @@ defmodule GeoWeb.CountrySelector do
     <div class="flex items-center">
       <span class="text-lg mr-2">{to_string(@country.flag)}</span>
       <%= if should_show_iso_first?(@group_order, @group_name) do %>
-        <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded mr-2">
+        <span class="text-sm font-mono text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded mr-2">
           {to_string(@country.iso_code)}
         </span>
-        <span class="text-base font-semibold text-gray-800">{to_string(@country.name)}</span>
+        <span class="text-base font-semibold text-gray-800 dark:text-gray-100">{to_string(@country.name)}</span>
       <% else %>
-        <span class="text-base font-semibold text-gray-800">{to_string(@country.name)}</span>
-        <span class="text-sm font-mono text-gray-600 bg-gray-100 px-1 py-0.5 rounded ml-2">
+        <span class="text-base font-semibold text-gray-800 dark:text-gray-100">{to_string(@country.name)}</span>
+        <span class="text-sm font-mono text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded ml-2">
           {to_string(@country.iso_code)}
         </span>
       <% end %>
