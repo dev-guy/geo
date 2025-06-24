@@ -259,7 +259,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
           <div
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
@@ -282,7 +282,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@selection)}
               </div>
 
-              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none">
+              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400">
                 {@placeholder}
               </div>
 
@@ -336,7 +336,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             role="listbox"
             data-part="search-combobox-listbox"
             aria-multiselectable={@multiple}
-            class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2"
+            class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
             hidden
           >
             <div class="mt-1 mb-2 mx-1.5">
@@ -347,7 +347,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 aria-autocomplete="list"
                 aria-activedescendant=""
                 aria-label={@search_placeholder}
-                class="search-combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md"
+                class="search-combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 data-part="search"
                 placeholder={@search_placeholder}
               />
@@ -422,7 +422,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
-                    <div class="group-label font-semibold my-2">{group_label}</div>
+                    <div class="group-label font-semibold my-2 text-gray-700 dark:text-gray-300">{group_label}</div>
 
                     <div>
                       <.option
@@ -446,7 +446,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
                 <% end %>
 
-                <div class="no-results text-center hidden">
+                <div class="no-results text-center hidden text-gray-500 dark:text-gray-400">
                   {gettext("Nothing found!")}
                 </div>
               </div>
@@ -514,7 +514,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
           <div
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
@@ -537,7 +537,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@selection)}
               </div>
 
-              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none">
+              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400">
                 {@placeholder}
               </div>
 
@@ -584,7 +584,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             role="listbox"
             data-part="search-combobox-listbox"
             aria-multiselectable={@multiple}
-            class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2"
+            class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
             hidden
           >
             <div class="mt-1 mb-2 mx-1.5">
@@ -595,7 +595,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 aria-autocomplete="list"
                 aria-activedescendant=""
                 aria-label={@search_placeholder}
-                class="search-combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md"
+                class="search-combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 data-part="search"
                 placeholder={@search_placeholder}
               />
@@ -670,7 +670,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
-                    <div class="group-label font-semibold my-2">{group_label}</div>
+                    <div class="group-label font-semibold my-2 text-gray-700 dark:text-gray-300">{group_label}</div>
 
                     <div>
                       <.option
@@ -694,7 +694,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
                 <% end %>
 
-                <div class="no-results text-center hidden">
+                <div class="no-results text-center hidden text-gray-500 dark:text-gray-400">
                   {gettext("Nothing found!")}
                 </div>
               </div>
@@ -721,8 +721,8 @@ defmodule GeoWeb.Components.SearchCombobox do
     <div
       role="option"
       class={[
-        "combobox-option cursor-pointer rounded flex justify-between items-center",
-        "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white",
+        "combobox-option cursor-pointer rounded flex justify-between items-center text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700",
+        "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white dark:[&[data-combobox-navigate]]:bg-gray-700 dark:[&[data-combobox-navigate]]:text-gray-100",
         @class
       ]}
       data-combobox-value={@encoded_value}

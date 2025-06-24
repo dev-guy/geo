@@ -1,18 +1,19 @@
-<header class="px-4 sm:px-6 lg:px-8">
-  <div class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm">
+<header class="px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 transition-colors duration-200">
+  <div class="flex items-center justify-between border-b border-zinc-100 dark:border-gray-700 py-3 text-sm">
     <div class="flex items-center gap-4">
       <a href="/">
         <img src={~p"/images/logo.svg"} width="36" />
       </a>
-      <p class="bg-brand/5 text-brand rounded-full px-2 font-medium leading-6">
+      <p class="bg-brand/5 dark:bg-brand/10 text-brand rounded-full px-2 font-medium leading-6">
         v{Application.spec(:phoenix, :vsn)} | v{Application.spec(:geo, :vsn)}
       </p>
     </div>
-    <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
+    <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900 dark:text-gray-100">
+      <GeoWeb.Components.ThemeToggle.theme_toggle theme={assigns[:theme] || "system"} />
     </div>
   </div>
 </header>
-<main class="px-4 py-20 sm:px-6 lg:px-8">
+<main class="px-4 py-20 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
   <div class="mx-auto max-w-2xl">
     <.flash_group flash={@flash} />
     {@inner_content}

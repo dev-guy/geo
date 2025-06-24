@@ -11,6 +11,7 @@ module.exports = {
     "../lib/geo_web.ex",
     "../lib/geo_web/**/*.*ex"
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
