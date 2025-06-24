@@ -27,7 +27,7 @@ defmodule Geo.Geography.Country.CacheSupervisor do
   """
   def start_cache_worker do
     child_spec = %{
-      id: Geo.Geography.Country.CacheWorker,
+      id: Geo.Geography.Country.CacheGenServer,
       start: {__MODULE__, :start_cache_with_retry, []},
       restart: :temporary,
       shutdown: 5000,
@@ -50,11 +50,18 @@ defmodule Geo.Geography.Country.CacheSupervisor do
         Logger.info("Country.Cache started successfully on attempt #{attempt}")
         {:ok, pid}
 
+      {:error, {:already_started, pid}} ->
+        Logger.info("Country.Cache already started on attempt #{attempt}")
+        {:ok, pid}
+
       {:error, reason} ->
         Logger.warning("Country.Cache failed to start on attempt #{attempt}: #{inspect(reason)}")
 
         if attempt < @max_retries do
-          Logger.info("Will retry starting Country.Cache in #{delay}ms... (attempt #{attempt + 1}/#{@max_retries})")
+          Logger.info(
+            "Will retry starting Country.Cache in #{delay}ms... (attempt #{attempt + 1}/#{@max_retries})"
+          )
+
           Process.sleep(delay)
 
           # Exponential backoff with jitter

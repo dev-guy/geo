@@ -42,6 +42,13 @@ LiveView:
   - Not very fun fact: It has complex state and took well over 90% of the development effort. Ash was the easy part, by far!
 - A LiveView component that orchestrates Phoenix components and Ash resources
 
+## Custom Mix Aliases
+
+- `geo.seed` : Add seed data
+- `geo.start` : Alias for `phx.server`
+- `geo.stop`
+- `geo.restart`
+
 ## Fly.io deployment
 
 ### Environment variables (secrets)
