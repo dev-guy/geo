@@ -1,4 +1,4 @@
-defmodule Geo.Resources.Country.CacheSupervisor do
+defmodule Geo.Geography.Country.CacheSupervisor do
   @moduledoc """
   Dynamic supervisor for the Country.Cache GenServer that can start cache workers
   dynamically and implements a retry strategy with exponential backoff when
@@ -27,7 +27,7 @@ defmodule Geo.Resources.Country.CacheSupervisor do
   """
   def start_cache_worker do
     child_spec = %{
-      id: Geo.Resources.Country.CacheWorker,
+      id: Geo.Geography.Country.CacheWorker,
       start: {__MODULE__, :start_cache_with_retry, []},
       restart: :temporary,
       shutdown: 5000,
@@ -45,7 +45,7 @@ defmodule Geo.Resources.Country.CacheSupervisor do
   end
 
   defp start_cache_with_retry(attempt, delay) when attempt <= @max_retries do
-    case Geo.Resources.Country.CacheGenServer.start_link([]) do
+    case Geo.Geography.Country.CacheGenServer.start_link([]) do
       {:ok, pid} ->
         Logger.info("Country.Cache started successfully on attempt #{attempt}")
         {:ok, pid}

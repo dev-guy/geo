@@ -8,7 +8,7 @@ defmodule Geo.Geography do
 
   ## Resources
 
-  - `Geo.Resources.Country` - Represents countries with ISO codes, names, flags, and slugs
+  - `Geo.Geography.Country` - Represents countries with ISO codes, names, flags, and slugs
 
   ## Key Functions
 
@@ -19,7 +19,7 @@ defmodule Geo.Geography do
 
   ## Caching
 
-  This domain leverages `Geo.Resources.Country.Cache` for high-performance country lookups
+  This domain leverages `Geo.Geography.Country.Cache` for high-performance country lookups
   and searches. The cache is started lazily when needed and automatically maintained and refreshed periodically.
 
   ## Function Details
@@ -43,7 +43,7 @@ defmodule Geo.Geography do
 
   ### list_countries/0
   Lists all countries in the system. Returns all countries sorted by ISO code (ascending) by default.
-  - Returns: List of `Geo.Resources.Country` resources
+  - Returns: List of `Geo.Geography.Country` resources
 
   ### search_countries/1
   Searches countries for use in UI selectors and comboboxes.
@@ -61,23 +61,23 @@ defmodule Geo.Geography do
   4. Names starting with the query
   5. Names containing the query
 
-  This function uses `Geo.Resources.Country.Cache` for high-performance lookups and is optimized for
+  This function uses `Geo.Geography.Country.Cache` for high-performance lookups and is optimized for
   real-time search in user interfaces.
 
   ### get_country_iso_code_cached/1
   Retrieves a country by its ISO code using high-performance caching.
 
   This function provides the fastest way to lookup a country by ISO code, utilizing the
-  `Geo.Resources.Country.Cache` for sub-millisecond response times. The cache is refreshed every 10 minutes.
+  `Geo.Geography.Country.Cache` for sub-millisecond response times. The cache is refreshed every 10 minutes.
   - Parameters: `iso_code` - The ISO country code (e.g., "AU", "US", "GB")
-  - Returns: `Geo.Resources.Country` resource
+  - Returns: `Geo.Geography.Country` resource
   - Raises: `RuntimeError` if no country with the given ISO code is found
   """
   use Ash.Domain,
     otp_app: :geo
 
   resources do
-    resource Geo.Resources.Country do
+    resource Geo.Geography.Country do
       define :create_country, action: :create
       define :upsert_country, action: :upsert
       define :update_country, action: :update

@@ -10,4 +10,4 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-Geo.Resources.Country.Seed.seed_countries!()
+Geo.Geography.Country.Seed.seed_countries!()
