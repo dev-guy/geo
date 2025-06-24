@@ -1,0 +1,423 @@
+
+> geo-playwright-tests@1.0.0 test
+> playwright test test/playwright/country_combobox_navigation.spec.js --reporter=line --workers=1
+
+
+Running 12 tests using 1 worker
+
+[1A[2K[1/12] [chromium] › test/playwright/country_combobox_navigation.spec.js:4:3 › Country Selector Navigation › Requirement 2: Up arrow from first item in first group should go to last item in last group
+[1A[2K[chromium] › test/playwright/country_combobox_navigation.spec.js:4:3 › Country Selector Navigation › Requirement 2: Up arrow from first item in first group should go to last item in last group
+=== Options after searching for "by" ===
+
+[1A[2KOption 0: BY in group: "By Name"
+
+[1A[2KOption 1: LY in group: "By Name"
+
+[1A[2KOption 2: BY in group: "By Country Code"
+
+[1A[2KOption 3: LY in group: "By Country Code"
+
+[1A[2K
+After first down arrow from search: LY is highlighted
+
+[1A[2KNot at first option, navigating to BY (first option)
+
+[1A[2KAfter up arrow: BY is highlighted
+
+[1A[2K
+Confirmed: Starting from first option: BY
+
+[1A[2K
+=== Pressing Up Arrow from first item in first group ===
+
+[1A[2KAfter up arrow: LY is highlighted
+
+[1A[2KHighlighted option is in group: "By Country Code"
+
+[1A[2KSUCCESS: Up arrow from first item correctly navigated to last item (LY) in last group (By Country Code)
+
+[1A[2K[2/12] [chromium] › test/playwright/country_combobox_navigation.spec.js:147:3 › Country Selector Navigation › Requirement 2b: Up arrow navigation works with different search terms
+[1A[2K[chromium] › test/playwright/country_combobox_navigation.spec.js:147:3 › Country Selector Navigation › Requirement 2b: Up arrow navigation works with different search terms
+=== Options after searching for "an" ===
+
+[1A[2KOption 0: AD in group: "By Name"
+
+[1A[2KOption 1: AO in group: "By Name"
+
+[1A[2KOption 2: AG in group: "By Name"
+
+[1A[2KOption 3: AF in group: "By Name"
+
+[1A[2KOption 4: AL in group: "By Name"
+
+[1A[2KOption 5: AZ in group: "By Name"
+
+[1A[2KOption 6: BD in group: "By Name"
+
+[1A[2KOption 7: BT in group: "By Name"
+
+[1A[2K
+After first down arrow from search: AO is highlighted
+
+[1A[2KNot at first option (AD), navigating to it
+
+[1A[2KAfter up arrow: AD is highlighted
+
+[1A[2K
+Confirmed: Starting from first option: AD
+
+[1A[2K
+=== Pressing Up Arrow from first item in first group ===
+
+[1A[2KAfter up arrow: VA is highlighted
+
+[1A[2KFinal highlighted option is in group: "By Country Code"
+
+[1A[2KSUCCESS: Up arrow from first item correctly navigated to last group (By Country Code)
+
+[1A[2K[3/12] [chromium] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference
+[1A[2K[chromium] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference
+=== Testing wrap-around bug with hover interference ===
+
+[1A[2KAfter hovering over Albania: AF is highlighted
+
+[1A[2KAfter first up arrow: ZW is highlighted
+
+[1A[2KAfter second up arrow: ZM is highlighted (should be at/near last country)
+
+[1A[2KNow at last country: UY
+
+[1A[2K=== THE CRITICAL STEP: Down arrow with hover interference ===
+
+[1A[2KAfter down arrow: UZ is highlighted
+
+[1A[2K=== BUG REPRODUCTION COMPLETE ===
+
+[1A[2KEXPECTED: AF (Afghanistan - first country after wrap-around)
+
+[1A[2KACTUAL: UZ (jumps to hovered Albania instead of proper wrap-around)
+
+[1A[2K  1) [chromium] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"AF"[39m
+    Received: [31m"UZ"[39m
+
+      385 |       
+      386 |       // This test will fail until the bug is fixed - it should be Afghanistan
+    > 387 |       expect(optionValue).toBe('AF');
+          |                           ^
+      388 |
+      389 |     } finally {
+      390 |       // Clean up the browser context
+        at /Users/terrislinenbach/dev-guy/geo/test/playwright/country_combobox_navigation.spec.js:387:27
+
+    Error Context: test-results/country_combobox_navigatio-0e6a3-und-with-hover-interference-chromium/error-context.md
+
+
+[1A[2K[4/12] [chromium] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan
+[1A[2K[chromium] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan
+=== Testing Albania hover with Afghanistan wrap-around ===
+
+[1A[2KAfter hovering Albania: AF is highlighted
+
+[1A[2K  2) [chromium] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"A[7mL[27m"[39m
+    Received: [31m"A[7mF[27m"[39m
+
+      440 |       let optionValue = await highlightedOption.getAttribute('data-combobox-value');
+      441 |       console.log(`After hovering Albania: ${optionValue} is highlighted`);
+    > 442 |       expect(optionValue).toBe('AL');
+          |                           ^
+      443 |
+      444 |       // Step 4: Press Up Arrow (should go from Albania backwards)
+      445 |       await page.keyboard.press('ArrowUp');
+        at /Users/terrislinenbach/dev-guy/geo/test/playwright/country_combobox_navigation.spec.js:442:27
+
+    Error Context: test-results/country_combobox_navigatio-95a13-revents-wrap-to-Afghanistan-chromium/error-context.md
+
+
+[1A[2K[5/12] [firefox] › test/playwright/country_combobox_navigation.spec.js:4:3 › Country Selector Navigation › Requirement 2: Up arrow from first item in first group should go to last item in last group
+[1A[2K[firefox] › test/playwright/country_combobox_navigation.spec.js:4:3 › Country Selector Navigation › Requirement 2: Up arrow from first item in first group should go to last item in last group
+=== Options after searching for "by" ===
+
+[1A[2KOption 0: BY in group: "By Name"
+
+[1A[2KOption 1: LY in group: "By Name"
+
+[1A[2KOption 2: BY in group: "By Country Code"
+
+[1A[2KOption 3: LY in group: "By Country Code"
+
+[1A[2K
+After first down arrow from search: LY is highlighted
+
+[1A[2KNot at first option, navigating to BY (first option)
+
+[1A[2KAfter up arrow: BY is highlighted
+
+[1A[2K
+Confirmed: Starting from first option: BY
+
+[1A[2K
+=== Pressing Up Arrow from first item in first group ===
+
+[1A[2KAfter up arrow: LY is highlighted
+
+[1A[2KHighlighted option is in group: "By Country Code"
+
+[1A[2KSUCCESS: Up arrow from first item correctly navigated to last item (LY) in last group (By Country Code)
+
+[1A[2K[6/12] [firefox] › test/playwright/country_combobox_navigation.spec.js:147:3 › Country Selector Navigation › Requirement 2b: Up arrow navigation works with different search terms
+[1A[2K[firefox] › test/playwright/country_combobox_navigation.spec.js:147:3 › Country Selector Navigation › Requirement 2b: Up arrow navigation works with different search terms
+=== Options after searching for "an" ===
+
+[1A[2KOption 0: AD in group: "By Name"
+
+[1A[2KOption 1: AO in group: "By Name"
+
+[1A[2KOption 2: AG in group: "By Name"
+
+[1A[2KOption 3: AF in group: "By Name"
+
+[1A[2KOption 4: AL in group: "By Name"
+
+[1A[2KOption 5: AZ in group: "By Name"
+
+[1A[2KOption 6: BD in group: "By Name"
+
+[1A[2KOption 7: BT in group: "By Name"
+
+[1A[2K
+After first down arrow from search: AO is highlighted
+
+[1A[2KNot at first option (AD), navigating to it
+
+[1A[2KAfter up arrow: AD is highlighted
+
+[1A[2K
+Confirmed: Starting from first option: AD
+
+[1A[2K
+=== Pressing Up Arrow from first item in first group ===
+
+[1A[2KAfter up arrow: VA is highlighted
+
+[1A[2KFinal highlighted option is in group: "By Country Code"
+
+[1A[2KSUCCESS: Up arrow from first item correctly navigated to last group (By Country Code)
+
+[1A[2K[7/12] [firefox] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference
+[1A[2K[firefox] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference
+=== Testing wrap-around bug with hover interference ===
+
+[1A[2KAfter hovering over Albania: AF is highlighted
+
+[1A[2KAfter first up arrow: ZW is highlighted
+
+[1A[2KAfter second up arrow: ZM is highlighted (should be at/near last country)
+
+[1A[2KNow at last country: UY
+
+[1A[2K=== THE CRITICAL STEP: Down arrow with hover interference ===
+
+[1A[2KAfter down arrow: UZ is highlighted
+
+[1A[2K=== BUG REPRODUCTION COMPLETE ===
+
+[1A[2KEXPECTED: AF (Afghanistan - first country after wrap-around)
+
+[1A[2KACTUAL: UZ (jumps to hovered Albania instead of proper wrap-around)
+
+[1A[2K  3) [firefox] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"AF"[39m
+    Received: [31m"UZ"[39m
+
+      385 |       
+      386 |       // This test will fail until the bug is fixed - it should be Afghanistan
+    > 387 |       expect(optionValue).toBe('AF');
+          |                           ^
+      388 |
+      389 |     } finally {
+      390 |       // Clean up the browser context
+        at /Users/terrislinenbach/dev-guy/geo/test/playwright/country_combobox_navigation.spec.js:387:27
+
+    Error Context: test-results/country_combobox_navigatio-0e6a3-und-with-hover-interference-firefox/error-context.md
+
+
+[1A[2K[8/12] [firefox] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan
+[1A[2K[firefox] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan
+=== Testing Albania hover with Afghanistan wrap-around ===
+
+[1A[2KAfter hovering Albania: AF is highlighted
+
+[1A[2K  4) [firefox] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"A[7mL[27m"[39m
+    Received: [31m"A[7mF[27m"[39m
+
+      440 |       let optionValue = await highlightedOption.getAttribute('data-combobox-value');
+      441 |       console.log(`After hovering Albania: ${optionValue} is highlighted`);
+    > 442 |       expect(optionValue).toBe('AL');
+          |                           ^
+      443 |
+      444 |       // Step 4: Press Up Arrow (should go from Albania backwards)
+      445 |       await page.keyboard.press('ArrowUp');
+        at /Users/terrislinenbach/dev-guy/geo/test/playwright/country_combobox_navigation.spec.js:442:27
+
+    Error Context: test-results/country_combobox_navigatio-95a13-revents-wrap-to-Afghanistan-firefox/error-context.md
+
+
+[1A[2K[9/12] [webkit] › test/playwright/country_combobox_navigation.spec.js:4:3 › Country Selector Navigation › Requirement 2: Up arrow from first item in first group should go to last item in last group
+[1A[2K[webkit] › test/playwright/country_combobox_navigation.spec.js:4:3 › Country Selector Navigation › Requirement 2: Up arrow from first item in first group should go to last item in last group
+=== Options after searching for "by" ===
+
+[1A[2KOption 0: BY in group: "By Name"
+
+[1A[2KOption 1: LY in group: "By Name"
+
+[1A[2KOption 2: BY in group: "By Country Code"
+
+[1A[2KOption 3: LY in group: "By Country Code"
+
+[1A[2K
+After first down arrow from search: LY is highlighted
+
+[1A[2KNot at first option, navigating to BY (first option)
+
+[1A[2KAfter up arrow: BY is highlighted
+
+[1A[2K
+Confirmed: Starting from first option: BY
+
+[1A[2K
+=== Pressing Up Arrow from first item in first group ===
+
+[1A[2KAfter up arrow: LY is highlighted
+
+[1A[2KHighlighted option is in group: "By Country Code"
+
+[1A[2KSUCCESS: Up arrow from first item correctly navigated to last item (LY) in last group (By Country Code)
+
+[1A[2K[10/12] [webkit] › test/playwright/country_combobox_navigation.spec.js:147:3 › Country Selector Navigation › Requirement 2b: Up arrow navigation works with different search terms
+[1A[2K[webkit] › test/playwright/country_combobox_navigation.spec.js:147:3 › Country Selector Navigation › Requirement 2b: Up arrow navigation works with different search terms
+=== Options after searching for "an" ===
+
+[1A[2KOption 0: AD in group: "By Name"
+
+[1A[2KOption 1: AO in group: "By Name"
+
+[1A[2KOption 2: AG in group: "By Name"
+
+[1A[2KOption 3: AF in group: "By Name"
+
+[1A[2KOption 4: AL in group: "By Name"
+
+[1A[2KOption 5: AZ in group: "By Name"
+
+[1A[2KOption 6: BD in group: "By Name"
+
+[1A[2KOption 7: BT in group: "By Name"
+
+[1A[2K
+After first down arrow from search: AO is highlighted
+
+[1A[2KNot at first option (AD), navigating to it
+
+[1A[2KAfter up arrow: AD is highlighted
+
+[1A[2K
+Confirmed: Starting from first option: AD
+
+[1A[2K
+=== Pressing Up Arrow from first item in first group ===
+
+[1A[2KAfter up arrow: VA is highlighted
+
+[1A[2KFinal highlighted option is in group: "By Country Code"
+
+[1A[2KSUCCESS: Up arrow from first item correctly navigated to last group (By Country Code)
+
+[1A[2K[11/12] [webkit] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference
+[1A[2K[webkit] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference
+=== Testing wrap-around bug with hover interference ===
+
+[1A[2KAfter hovering over Albania: AF is highlighted
+
+[1A[2KAfter first up arrow: ZW is highlighted
+
+[1A[2KAfter second up arrow: ZM is highlighted (should be at/near last country)
+
+[1A[2KNow at last country: UY
+
+[1A[2K=== THE CRITICAL STEP: Down arrow with hover interference ===
+
+[1A[2KAfter down arrow: UZ is highlighted
+
+[1A[2K=== BUG REPRODUCTION COMPLETE ===
+
+[1A[2KEXPECTED: AF (Afghanistan - first country after wrap-around)
+
+[1A[2KACTUAL: UZ (jumps to hovered Albania instead of proper wrap-around)
+
+[1A[2K  5) [webkit] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"AF"[39m
+    Received: [31m"UZ"[39m
+
+      385 |       
+      386 |       // This test will fail until the bug is fixed - it should be Afghanistan
+    > 387 |       expect(optionValue).toBe('AF');
+          |                           ^
+      388 |
+      389 |     } finally {
+      390 |       // Clean up the browser context
+        at /Users/terrislinenbach/dev-guy/geo/test/playwright/country_combobox_navigation.spec.js:387:27
+
+    Error Context: test-results/country_combobox_navigatio-0e6a3-und-with-hover-interference-webkit/error-context.md
+
+
+[1A[2K[12/12] [webkit] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan
+[1A[2K[webkit] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan
+=== Testing Albania hover with Afghanistan wrap-around ===
+
+[1A[2KAfter hovering Albania: AF is highlighted
+
+[1A[2K  6) [webkit] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"A[7mL[27m"[39m
+    Received: [31m"A[7mF[27m"[39m
+
+      440 |       let optionValue = await highlightedOption.getAttribute('data-combobox-value');
+      441 |       console.log(`After hovering Albania: ${optionValue} is highlighted`);
+    > 442 |       expect(optionValue).toBe('AL');
+          |                           ^
+      443 |
+      444 |       // Step 4: Press Up Arrow (should go from Albania backwards)
+      445 |       await page.keyboard.press('ArrowUp');
+        at /Users/terrislinenbach/dev-guy/geo/test/playwright/country_combobox_navigation.spec.js:442:27
+
+    Error Context: test-results/country_combobox_navigatio-95a13-revents-wrap-to-Afghanistan-webkit/error-context.md
+
+
+[1A[2K  6 failed
+    [chromium] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference 
+    [chromium] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan 
+    [firefox] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference 
+    [firefox] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan 
+    [webkit] › test/playwright/country_combobox_navigation.spec.js:288:3 › Country Selector Navigation › Hover then keyboard navigation bug: wrap-around with hover interference 
+    [webkit] › test/playwright/country_combobox_navigation.spec.js:395:3 › Country Selector Navigation › Hover interference bug: Albania hover prevents wrap to Afghanistan 
+  6 passed (47.9s)

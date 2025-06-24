@@ -23,6 +23,10 @@ const SearchCombobox = {
     // Track mouse position for hover detection
     window.mouseX = 0;
     window.mouseY = 0;
+    this.lastMouseX = 0;
+    this.lastMouseY = 0;
+    this.isScrollingForNavigation = false;
+    this.scrollingTimeout = null;
     this.boundTrackMousePosition = this.trackMousePosition.bind(this);
     document.addEventListener('mousemove', this.boundTrackMousePosition);
 
@@ -40,6 +44,7 @@ const SearchCombobox = {
     this.lastKeyboardNavigationTime = 0;
     this.hoverTimeout = null;
     this.isHoverNavigation = false; // Track if current navigation was set by hover
+    this.isWrappingAround = false; // Track wrap-around navigation state
 
     this.setupTriggerButton();
     this.setupSearchIntercept();
@@ -326,6 +331,7 @@ const SearchCombobox = {
       if (!this.el.contains(event.relatedTarget)) {
         this.lastKeyboardNavigationTime = 0;
         this.isKeyboardNavigating = false;
+        this.isWrappingAround = false;
         this.currentlyHoveredOption = null;
         if (this.keyboardNavigationTimeout) {
           clearTimeout(this.keyboardNavigationTimeout);
@@ -449,6 +455,51 @@ const SearchCombobox = {
   },
 
   handleOptionMouseEnter(option, _event) {
+    // Check if we're currently scrolling due to navigation
+    if (this.isScrollingForNavigation) {
+      return;
+    }
+    
+    // Check if we're in active keyboard navigation mode
+    if (this.isKeyboardNavigating) {
+      // Completely ignore hover during keyboard navigation
+      return;
+    }
+    
+    // Check if we're in wrap-around navigation
+    if (this.isWrappingAround) {
+      return;
+    }
+    
+    // Only allow hover to take effect if the mouse has actually moved since last keyboard navigation
+    // This prevents phantom hover events during keyboard scrolling and wrap-around navigation
+    const currentMouseX = window.mouseX || 0;
+    const currentMouseY = window.mouseY || 0;
+    
+    // Check if mouse has actually moved since the last keyboard navigation
+    if (this.lastKeyboardNavigationTime > 0 && this.lastMouseX !== undefined && this.lastMouseY !== undefined) {
+      const mouseMoved = Math.abs(currentMouseX - this.lastMouseX) > 2 || 
+                        Math.abs(currentMouseY - this.lastMouseY) > 2;
+      
+      // If there was recent keyboard navigation and mouse hasn't moved, ignore this hover completely
+      if (!mouseMoved) {
+        return;
+      }
+      
+      // Also check if we're still within the keyboard navigation protection window
+      const timeSinceKeyboardNav = Date.now() - this.lastKeyboardNavigationTime;
+      if (timeSinceKeyboardNav < 800) { // Match the wrap-around timeout
+        // Still in protection window and mouse hasn't moved - ignore hover
+        if (!mouseMoved) {
+          return;
+        }
+      }
+    }
+    
+    // Update mouse position tracking
+    this.lastMouseX = currentMouseX;
+    this.lastMouseY = currentMouseY;
+    
     this.currentlyHoveredOption = option;
 
     // Clear any existing hover timeout
@@ -461,13 +512,6 @@ const SearchCombobox = {
     // This re-enables hover styling after keyboard navigation
     option.classList.remove('no-hover');
 
-    // Only set navigation state if we're not in the middle of keyboard navigation
-    // This prevents hover from interfering with keyboard navigation sequences
-    // Use a longer delay (300ms) to prevent hover interference after keyboard navigation
-    const timeSinceLastKeyboardNav =
-      Date.now() - this.lastKeyboardNavigationTime;
-    const isRecentKeyboardNavigation = timeSinceLastKeyboardNav < 300;
-
     // Get the currently navigated option to check if hover is on a different option
     const currentNavigated = this.el.querySelector(
       '.combobox-option[data-combobox-navigate]',
@@ -475,13 +519,9 @@ const SearchCombobox = {
     const isHoveringDifferentOption =
       currentNavigated && currentNavigated !== option;
 
-    // Only prevent hover if there was recent keyboard navigation AND we're hovering a different option
-    // But if enough time has passed (500ms+), always allow hover regardless
-    const hasEnoughTimePassed = timeSinceLastKeyboardNav >= 500;
-    const shouldPreventHover =
-      !hasEnoughTimePassed &&
-      (this.isKeyboardNavigating || isRecentKeyboardNavigation) &&
-      isHoveringDifferentOption;
+    // Only prevent hover if we're actively keyboard navigating AND hovering a different option
+    // This ensures keyboard navigation always takes precedence over hover
+    const shouldPreventHover = this.isKeyboardNavigating && isHoveringDifferentOption;
 
     if (!shouldPreventHover) {
       // For hover, actually highlight the option by setting the navigation state
@@ -829,13 +869,19 @@ const SearchCombobox = {
     this.lastKeyboardNavigationTime = Date.now();
     this.isHoverNavigation = false; // Clear hover navigation flag for keyboard navigation
 
+    // Store current mouse position when keyboard navigation starts
+    // This ensures hover events are ignored until the mouse actually moves
+    this.lastMouseX = window.mouseX || 0;
+    this.lastMouseY = window.mouseY || 0;
+
     // Clear the flag after a delay to allow mouse interaction again
     clearTimeout(this.keyboardNavigationTimeout);
+    
+    // For non-wrap-around navigation, use shorter timeout
     this.keyboardNavigationTimeout = setTimeout(() => {
       this.isKeyboardNavigating = false;
-      // Note: We don't automatically re-enable hover here
-      // Hover will be re-enabled only when actual hover events occur
-    }, 200); // Longer delay to prevent mouse interference during rapid keyboard navigation
+      this.isWrappingAround = false; // Also clear wrap-around flag
+    }, 200); // Reset to shorter delay since we now rely on mouse movement detection
 
     // Clear any mouse hover state to prevent interference with keyboard navigation
     this.currentlyHoveredOption = null;
@@ -867,6 +913,8 @@ const SearchCombobox = {
     }
 
     let newIndex;
+    let isWrappingAround = false; // Track if we're wrapping around
+    
     if (direction === 'down') {
       if (currentIndex === -1) {
         // No current selection, select first option
@@ -889,6 +937,7 @@ const SearchCombobox = {
         newIndex = currentIndex + 1;
       } else {
         // At last option, go to first item in first expanded group
+        isWrappingAround = true; // Mark that we're wrapping around
 
         // Find all groups in order
         const allGroups = Array.from(this.el.querySelectorAll('.option-group'));
@@ -990,6 +1039,7 @@ const SearchCombobox = {
         }
       } else {
         // At first option, go to last item in last expanded group
+        isWrappingAround = true; // Mark that we're wrapping around
 
         // Find all groups in reverse order
         const allGroups = Array.from(
@@ -1021,6 +1071,19 @@ const SearchCombobox = {
           return;
         }
       }
+    }
+
+    // Extend keyboard navigation protection for wrap-around scenarios
+    if (isWrappingAround) {
+      // Set wrap-around flag
+      this.isWrappingAround = true;
+      
+      // Clear any existing timeout and set a longer one for wrap-around
+      clearTimeout(this.keyboardNavigationTimeout);
+      this.keyboardNavigationTimeout = setTimeout(() => {
+        this.isKeyboardNavigating = false;
+        this.isWrappingAround = false;
+      }, 1200); // Even longer timeout for wrap-around to handle all animations and reflows
     }
 
     const newOption = options[newIndex];
@@ -1300,6 +1363,11 @@ const SearchCombobox = {
   },
 
   findHoveredOption() {
+    // Don't return any hovered option during keyboard navigation to prevent interference
+    if (this.isKeyboardNavigating) {
+      return null;
+    }
+    
     // Try to find an option that's currently being hovered
     // We need to check for actual hover state since :hover doesn't always work reliably in all browsers
     const options = this.el.querySelectorAll('.combobox-option');
@@ -2044,6 +2112,20 @@ const SearchCombobox = {
   },
 
   destroyed() {
+    if (this.boundDocumentClickHandler) {
+      document.removeEventListener(
+        'pointerdown',
+        this.boundDocumentClickHandler,
+      );
+      document.removeEventListener('mouseup', this.boundDocumentClickHandler);
+      document.removeEventListener('click', this.boundDocumentClickHandler);
+    }
+    if (this.boundTrackMousePosition) {
+      document.removeEventListener('mousemove', this.boundTrackMousePosition);
+    }
+    if (this.scrollingTimeout) {
+      clearTimeout(this.scrollingTimeout);
+    }
     this.cleanupHandlers();
 
     // Clean up any other resources or references
@@ -2680,42 +2762,68 @@ const SearchCombobox = {
 
   scrollToOption(option, forceGroupLabelVisible = false) {
     const scrollArea = this.el.querySelector('.scroll-viewport');
-    if (!option || !scrollArea) return;
-
-    const optionTop = option.offsetTop;
-    const optionHeight = option.offsetHeight;
-    const scrollAreaHeight = scrollArea.clientHeight;
-    const currentScrollTop = scrollArea.scrollTop;
-
-    // Check if this is the first option in its group
-    const optionGroup = option.closest('.option-group');
-    let groupLabel = null;
-    let shouldShowGroupLabel = forceGroupLabelVisible;
-
-    if (optionGroup) {
-      groupLabel = optionGroup.querySelector('.group-label');
-      if (groupLabel) {
-        // Check if this is the first option in the group
-        const groupOptions = Array.from(
-          optionGroup.querySelectorAll('.combobox-option'),
-        );
-        const isFirstInGroup = groupOptions.indexOf(option) === 0;
-
-        // Only show group label automatically if it's forced or if the group label is already visible
-        if (isFirstInGroup && forceGroupLabelVisible) {
-          shouldShowGroupLabel = true;
-        }
-      }
+    if (!scrollArea || !option) {
+      return;
     }
 
-    // Current viewport boundaries
+    // Option dimensions
+    const optionTop = option.offsetTop;
+    const optionHeight = option.offsetHeight;
+    const optionBottom = optionTop + optionHeight;
+
+    // Scroll area dimensions
+    const scrollAreaHeight = scrollArea.clientHeight;
+    const currentScrollTop = scrollArea.scrollTop;
+    
+    // Calculate scroll distance to detect wrap-around scenarios
+    const scrollDistance = Math.abs(optionTop - currentScrollTop);
+    const isLargeScroll = scrollDistance > scrollAreaHeight * 2; // Scrolling more than 2 viewports
+    
+    // Set a flag to prevent hover events during scrolling
+    this.isScrollingForNavigation = true;
+    
+    // For large scrolls, also set wrap-around flag for extra protection
+    if (isLargeScroll && this.isKeyboardNavigating) {
+      this.isWrappingAround = true;
+    }
+    
+    // Clear the flag after scrolling is likely complete
+    if (this.scrollingTimeout) {
+      clearTimeout(this.scrollingTimeout);
+    }
+    
+    // Use longer timeout for large scrolls (wrap-around scenarios)
+    const scrollTimeout = isLargeScroll ? 1500 : 500;
+    
+    this.scrollingTimeout = setTimeout(() => {
+      this.isScrollingForNavigation = false;
+      // Only clear wrap-around if not still in keyboard navigation
+      if (!this.isKeyboardNavigating) {
+        this.isWrappingAround = false;
+      }
+    }, scrollTimeout);
+
+    // Get the option's group for label visibility check
+    const optionGroup = option.closest('.option-group');
+    const groupLabel =
+      optionGroup && optionGroup.querySelector('.group-label');
+
+    // Determine if we should show the group label
+    let shouldShowGroupLabel = forceGroupLabelVisible;
+    if (!shouldShowGroupLabel && groupLabel) {
+      // Check if this is the first visible option in its group
+      const groupOptions = Array.from(
+        optionGroup.querySelectorAll('.combobox-option'),
+      );
+      const optionIndex = groupOptions.indexOf(option);
+      shouldShowGroupLabel = optionIndex === 0; // Show label for first option in group
+    }
+
+    // Calculate viewport bounds
     const viewportTop = currentScrollTop;
     const viewportBottom = currentScrollTop + scrollAreaHeight;
 
-    // Option boundaries
-    const optionBottom = optionTop + optionHeight;
-
-    // Check if option is already fully visible
+    // Check if option is already visible
     const isFullyVisible =
       optionTop >= viewportTop && optionBottom <= viewportBottom;
 
@@ -2822,6 +2930,14 @@ const SearchCombobox = {
         Date.now() - this.buttonInteractionTime < 3000)
     ) {
       this.ensureHighlightedOptionNoScroll();
+      return;
+    }
+
+    // Check if we're in the middle of keyboard navigation - if so, don't interfere
+    const timeSinceLastKeyboardNav = Date.now() - this.lastKeyboardNavigationTime;
+    const isRecentKeyboardNavigation = timeSinceLastKeyboardNav < 1000; // Give more time
+    if (this.isKeyboardNavigating || isRecentKeyboardNavigation) {
+      // Don't change the highlight during keyboard navigation
       return;
     }
 
