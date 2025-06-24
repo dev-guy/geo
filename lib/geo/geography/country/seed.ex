@@ -1,4 +1,4 @@
-defmodule Geo.Resources.Country.Seed do
+defmodule Geo.Geography.Country.Seed do
   @moduledoc """
   Creates valid `Country` structs through the canonical :create action.
   """

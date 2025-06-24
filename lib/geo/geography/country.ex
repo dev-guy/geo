@@ -1,4 +1,4 @@
-defmodule Geo.Resources.Country do
+defmodule Geo.Geography.Country do
   use Ash.Resource,
     otp_app: :geo,
     domain: Geo.Geography,
@@ -47,7 +47,7 @@ defmodule Geo.Resources.Country do
 
     def read(ash_query, _ecto_query, _opts, _context) do
       iso_code = ash_query.arguments[:iso_code]
-      {:ok, [Geo.Resources.Country.Cache.get_by_iso_code!(iso_code)]}
+      {:ok, [Geo.Geography.Country.Cache.get_by_iso_code!(iso_code)]}
     end
   end
 
@@ -91,7 +91,7 @@ defmodule Geo.Resources.Country do
       argument :query, :string, allow_nil?: true, default: nil
       run fn input, _context ->
         query = input.arguments.query
-        {iso_code_results, name_results} = Geo.Resources.Country.Cache.search!(query)
+        {iso_code_results, name_results} = Geo.Geography.Country.Cache.search!(query)
         {:ok, %{by_iso_code: iso_code_results, by_name: name_results}}
       end
     end

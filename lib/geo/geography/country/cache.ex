@@ -1,14 +1,14 @@
-defmodule Geo.Resources.Country.Cache do
+defmodule Geo.Geography.Country.Cache do
   @moduledoc """
   API for country cache operations. Only used by the Country resource.
   Starts the cache GenServer when needed via the dynamic
-  supervisor Geo.Resources.Country.CacheSupervisor.
+  supervisor Geo.Geography.Country.CacheSupervisor.
   """
 
   require Logger
 
-  @cache_genserver Geo.Resources.Country.CacheGenServer
-  @cache_supervisor Geo.Resources.Country.CacheSupervisor
+  @cache_genserver Geo.Geography.Country.CacheGenServer
+  @cache_supervisor Geo.Geography.Country.CacheSupervisor
 
   @doc """
   Search for countries with lazy cache initialization.

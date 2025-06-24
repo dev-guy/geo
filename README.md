@@ -87,7 +87,7 @@ D) Add/modify secrets to the `geo-demo` app via the fly.io app
 ## Architecture
 
 - **Domain Layer**: `Geo.Geography` - Core business logic and operations
-- **Resource Layer**: `Geo.Resources.Country` - Data models and validations with modular attributes
+- **Resource Layer**: `Geo.Geography.Country` - Data models and validations with modular attributes
 - **Web Layer**: Phoenix LiveView components for interactive UI
 - **Caching Layer**: High-performance country lookup and search caching with supervised GenServer
 - **Attribute Layer**: Reusable attribute modules (`Geo.Resources.Attributes.*`) for DRY resource definitions
@@ -97,7 +97,7 @@ D) Add/modify secrets to the `geo-demo` app via the fly.io app
 
 - **Country Management**: Full CRUD operations for country data (ISO codes, names, flags, slugs)
 - **Intelligent Search**: Multi-criteria search with prioritized results (ISO codes, names)
-- **High-Performance Caching**: Fast searches via `Geo.Resources.Country.Cache` with automatic refresh every 10 minutes
+- **High-Performance Caching**: Fast searches via `Geo.Geography.Country.Cache` with automatic refresh every 10 minutes
 - **Interactive UI**: Real-time search with grouped, sortable results
 - **Upsert Operations**: Efficient create-or-update operations using unique identities
 
@@ -144,7 +144,7 @@ classDiagram
         upsert_country(attrs)
     }
     
-    class Geo.Resources.Country {
+    class Geo.Geography.Country {
         <<Resource>>
         Domain: Geo.Geography
         Source: lib/geo/resources/country.ex
@@ -196,7 +196,7 @@ classDiagram
         slugify() string
     }
     
-    class Geo.Resources.Country.Cache {
+    class Geo.Geography.Country.Cache {
         <<GenServer>>
         start_link() ok_pid
         search!(query) iso_name_results
@@ -206,7 +206,7 @@ classDiagram
         do_search() iso_name_results
     }
     
-    class Geo.Resources.Country.CacheSupervisor {
+    class Geo.Geography.Country.CacheSupervisor {
         <<DynamicSupervisor>>
         start_link() ok_pid
         start_cache_worker() ok_pid
@@ -217,7 +217,7 @@ classDiagram
         restart_cache() ok_pid
     }
     
-    class Geo.Resources.Country.Cache {
+    class Geo.Geography.Country.Cache {
         <<Module>>
         search!(query) tuple
         get_by_iso_code!(iso_code) country
@@ -228,7 +228,7 @@ classDiagram
         status() map
     }
     
-    class Geo.Resources.Country.CacheGenServer {
+    class Geo.Geography.Country.CacheGenServer {
         <<GenServer>>
         start_link() ok_pid
         search!(query) tuple
@@ -238,16 +238,16 @@ classDiagram
         handle_info(:refresh) noreply
     }
     
-    Geo.Geography --> Geo.Resources.Country : uses
-    Geo.Resources.Country --|> Geo.Resources.Attributes.Id : uses
-    Geo.Resources.Country --|> Geo.Resources.Attributes.Name : uses
-    Geo.Resources.Country --|> Geo.Resources.Attributes.Slug : uses
-    Geo.Resources.Country --|> Geo.Resources.Attributes.Timestamps : uses
-    Geo.Resources.Country --> Geo.Resources.Changes.SlugifyName : applies
-    Geo.Resources.Country.CacheGenServer --> Geo.Geography : calls for refresh
-    Geo.Resources.Country.CacheSupervisor --> Geo.Resources.Country.CacheGenServer : supervises dynamically
-    Geo.Resources.Country.Cache --> Geo.Resources.Country.CacheSupervisor : starts workers lazily
-    Geo.Resources.Country.Cache --> Geo.Resources.Country.CacheGenServer : calls when running
+    Geo.Geography --> Geo.Geography.Country : uses
+    Geo.Geography.Country --|> Geo.Resources.Attributes.Id : uses
+    Geo.Geography.Country --|> Geo.Resources.Attributes.Name : uses
+    Geo.Geography.Country --|> Geo.Resources.Attributes.Slug : uses
+    Geo.Geography.Country --|> Geo.Resources.Attributes.Timestamps : uses
+    Geo.Geography.Country --> Geo.Resources.Changes.SlugifyName : applies
+    Geo.Geography.Country.CacheGenServer --> Geo.Geography : calls for refresh
+    Geo.Geography.Country.CacheSupervisor --> Geo.Geography.Country.CacheGenServer : supervises dynamically
+    Geo.Geography.Country.Cache --> Geo.Geography.Country.CacheSupervisor : starts workers lazily
+    Geo.Geography.Country.Cache --> Geo.Geography.Country.CacheGenServer : calls when running
 ```
 
 ### Country Search Sequence Diagram
@@ -258,8 +258,8 @@ sequenceDiagram
     participant LiveView as GeoWeb.HomeLive
     participant Component as GeoWeb.CountrySelector
     participant Domain as Geo.Geography
-    participant Resource as Geo.Resources.Country
-    participant Cache as Geo.Resources.Country.Cache
+    participant Resource as Geo.Geography.Country
+    participant Cache as Geo.Geography.Country.Cache
     participant DB as PostgreSQL
 
     User->>Component: Types search query
@@ -336,7 +336,7 @@ classDiagram
     
     class CountryOptionContent {
         <<Helper Component>>
-        country Geo.Resources.Country
+        country Geo.Geography.Country
         group_order Atom
         group_name String
     }
@@ -346,7 +346,7 @@ classDiagram
         search_countries!(query)
     }
     
-    class Geo.Resources.Country {
+    class Geo.Geography.Country {
         <<Resource>>
         id UUIDv7
         name CiString
@@ -359,8 +359,8 @@ classDiagram
     GeoWeb.CountrySelector --> MishkaChelekom.SearchCombobox : renders
     GeoWeb.CountrySelector --> CountryOptionContent : renders
     GeoWeb.CountrySelector --> Geo.Geography : calls
-    GeoWeb.HomeLive ..> Geo.Resources.Country : displays
-    GeoWeb.CountrySelector ..> Geo.Resources.Country : manages
+    GeoWeb.HomeLive ..> Geo.Geography.Country : displays
+    GeoWeb.CountrySelector ..> Geo.Geography.Country : manages
 ```
 
 ### C4 Architecture Diagrams
@@ -472,7 +472,7 @@ The main domain provides these key operations:
 - `get_country_iso_code_cached/1` - High-performance country search by ISO code
 - `create_country/1`, `update_country/1`, `upsert_country/1` - Country management
 
-### Geo.Resources.Country Resource
+### Geo.Geography.Country Resource
 
 Core attributes:
 - `id` (UUIDv7) - Primary key
@@ -494,9 +494,9 @@ Key features:
 ## Performance Features
 
 ### Caching Strategy
-- `Geo.Resources.Country.Cache` provides lazy-loading cache entry point
-- `Geo.Resources.Country.CacheGenServer` provides fast searches and stops after 5 minutes of inactivity
-- Dynamically supervised by `Geo.Resources.Country.CacheSupervisor` with exponential backoff retry logic
+- `Geo.Geography.Country.Cache` provides lazy-loading cache entry point
+- `Geo.Geography.Country.CacheGenServer` provides fast searches and stops after 5 minutes of inactivity
+- Dynamically supervised by `Geo.Geography.Country.CacheSupervisor` with exponential backoff retry logic
 - Cache only starts when first accessed (lazy loading) - no startup overhead
 - Automatic cache refresh every 10 minutes via scheduled messages when running
 - Intelligent search with prioritized results returned as separate lists:
