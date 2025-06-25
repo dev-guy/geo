@@ -96,8 +96,8 @@ defmodule GeoWeb.Components.SearchCombobox do
     <.search_combobox
       enable_group_sorting={true}
       group_states={group_states}
-      toggle_group_sort_event="toggle_group_sort"
-      toggle_group_collapse_event="toggle_group_collapse">
+      toggle_group_sort_event="search_combobox_toggle_group_sort"
+      toggle_group_collapse_event="search_combobox_toggle_group_collapse">
       <:option group="Fruits" value="apple">Apple</:option>
       <:option group="Fruits" value="banana">Banana</:option>
       <:option group="Vegetables" value="carrot">Carrot</:option>
@@ -105,7 +105,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     </.search_combobox>
 
     # Event Handlers
-    def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
+    def handle_event("search_combobox_toggle_group_sort", %{"group" => group_name}, socket) do
       current_icon = get_in(socket.assigns.group_states, [group_name, :sort_icon])
       new_icon = if current_icon == "hero-chevron-up", do: "hero-chevron-down", else: "hero-chevron-up"
 
@@ -113,7 +113,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       {:noreply, assign(socket, :group_states, new_group_states)}
     end
 
-    def handle_event("toggle_group_collapse", %{"group" => group_name}, socket) do
+    def handle_event("search_combobox_toggle_group_collapse", %{"group" => group_name}, socket) do
       current_collapsed = get_in(socket.assigns.group_states, [group_name, :collapsed])
       new_group_states = put_in(socket.assigns.group_states, [group_name, :collapsed], !current_collapsed)
 
@@ -172,11 +172,11 @@ defmodule GeoWeb.Components.SearchCombobox do
     doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
 
   attr :toggle_group_sort_event, :string,
-    default: "toggle_group_sort",
+    default: "search_combobox_toggle_group_sort",
     doc: "Event name for toggling group sort order"
 
   attr :toggle_group_collapse_event, :string,
-    default: "toggle_group_collapse",
+    default: "search_combobox_toggle_group_collapse",
     doc: "Event name for toggling group collapse state"
 
   attr :group_event_target, :any, default: nil, doc: "Target for group events (phx-target)"

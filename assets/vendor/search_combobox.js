@@ -1,3 +1,12 @@
+/**
+ * Search Combobox
+ *
+ * Intercepts the search input and sends it to the backend for prioritized search.
+ * Lets LiveView handle the dropdown options rendering.
+ *
+ * This work was derived from Mishka Chelekom Combobox version 0.0.5 in 2025.
+ * https://mishka.tools/
+ */
 const SearchCombobox = {
   mounted() {
     this.init();
@@ -364,6 +373,8 @@ const SearchCombobox = {
     // First check if this is a LiveView button - don't interfere with those
     const button = event.target.closest('button[phx-click]');
     if (button) {
+      // Mark the event so document click handler knows not to close dropdown
+      event._isPhxClick = true;
       // Let the click bubble up to LiveView without any interference
       return;
     }
@@ -390,6 +401,11 @@ const SearchCombobox = {
       return;
     }
     
+    // Don't close if this was a phx-click button
+    if (event._isPhxClick || event.target.closest('button[phx-click]')) {
+      return;
+    }
+    
     // Close dropdown when clicking outside
     if (!this.el.contains(event.target)) {
       this.closeDropdown();
@@ -401,7 +417,7 @@ const SearchCombobox = {
       this.toggleMultipleSelection(option, value);
     } else {
       this.setSingleSelection(option, value);
-      this.closeDropdown();
+      // Don't close dropdown - keep it open for continued interaction
     }
   },
 
@@ -422,10 +438,12 @@ const SearchCombobox = {
     // Update display
     this.updateSingleDisplay(option);
     
-    // Clear search term after selection
+    // Clear search term after selection and refresh dropdown content
     if (this.searchInput) {
       this.searchInput.value = '';
       this.searchTerm = '';
+      // Trigger search event with empty value to show all options
+      this.onSearchInput({ target: this.searchInput });
     }
   },
 
@@ -607,7 +625,7 @@ const SearchCombobox = {
       // Add necessary styles to header
       header.style.position = 'sticky';
       header.style.top = index === 0 ? '0px' : `${index * 40}px`; // First header at 0, others stack 40px apart
-      header.style.zIndex = `${1000 - index}`; // Higher headers have higher z-index
+      header.style.zIndex = `${1000 - index}`; // Earlier headers have higher z-index
       header.style.backgroundColor = this.getBackgroundColor();
       header.style.borderBottom = this.getBorderColor();
       header.style.transition = 'opacity 0.2s ease-in-out';
@@ -665,8 +683,23 @@ const SearchCombobox = {
         header.style.opacity = '1';
         header.style.pointerEvents = 'auto';
         
-        // Only hide if the entire first group has scrolled completely past
-        if (groupBottom <= 40) {
+        // Hide first header when second group header becomes sticky OR when first group scrolls past
+        const secondGroupStickyTop = 40;
+        let shouldHideFirstHeader = groupBottom <= 40; // Original condition
+        
+        // Also check if second group header is sticky
+        if (this.stickyHeaders.length > 1 && this.stickyHeaders[1]) {
+          const secondGroup = this.stickyHeaders[1].group;
+          const secondGroupRect = secondGroup.getBoundingClientRect();
+          const secondGroupTop = secondGroupRect.top - scrollRect.top;
+          const isSecondGroupHeaderSticky = secondGroupTop <= secondGroupStickyTop;
+          
+          if (isSecondGroupHeaderSticky) {
+            shouldHideFirstHeader = true;
+          }
+        }
+        
+        if (shouldHideFirstHeader) {
           header.style.opacity = '0';
           header.style.pointerEvents = 'none';
         }
