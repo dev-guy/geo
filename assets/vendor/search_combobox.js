@@ -74,6 +74,7 @@ const SearchCombobox = {
     // Sticky headers state
     this.stickyHeaders = [];
     this.scrollHandlerBound = null;
+    this.headerHeight = 0; // Will be calculated dynamically
 
     // Make scroll area focusable
     if (this.scrollArea) {
@@ -284,7 +285,51 @@ const SearchCombobox = {
     });
     option.setAttribute('data-combobox-navigate', '');
     option.focus();
-    option.scrollIntoView({ block: 'nearest' });
+    
+    // Custom scroll behavior to account for sticky headers
+    this.scrollToOption(option);
+  },
+
+  scrollToOption(option) {
+    if (!this.scrollArea || !option) return;
+    
+    // Get the group this option belongs to
+    const group = option.closest('.option-group');
+    if (!group) {
+      option.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    
+    // Find which group index this is
+    const groups = Array.from(this.el.querySelectorAll('.option-group'));
+    const groupIndex = groups.indexOf(group);
+    
+    // Calculate how much space sticky headers take up
+    const visibleStickyHeaders = Math.min(groupIndex + 1, this.stickyHeaders.length);
+    const stickyHeadersSpace = visibleStickyHeaders * this.headerHeight;
+    
+    // Get option and scroll area positions
+    const scrollRect = this.scrollArea.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    
+    const optionTop = optionRect.top - scrollRect.top;
+    const optionBottom = optionRect.bottom - scrollRect.top;
+    
+    // Check if option is hidden behind sticky headers or outside view
+    const viewportTop = stickyHeadersSpace;
+    const viewportBottom = this.scrollArea.clientHeight;
+    
+    if (optionTop < viewportTop) {
+      // Option is above visible area or hidden behind sticky headers
+      // Scroll so option appears just below the sticky headers
+      const scrollOffset = optionTop - viewportTop;
+      this.scrollArea.scrollBy({ top: scrollOffset, behavior: 'smooth' });
+    } else if (optionBottom > viewportBottom) {
+      // Option is below visible area
+      // Scroll so option appears at bottom of visible area
+      const scrollOffset = optionBottom - viewportBottom;
+      this.scrollArea.scrollBy({ top: scrollOffset, behavior: 'smooth' });
+    }
   },
 
   selectCurrent() {
@@ -341,7 +386,18 @@ const SearchCombobox = {
 
   adjustHeight() {
     const rect = this.dropdown.getBoundingClientRect();
-    this.scrollArea.style.maxHeight = `${window.innerHeight - rect.top - 50}px`;
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.top;
+    
+    // Account for fixed elements in dropdown:
+    // - Dropdown padding (py-2): 16px
+    // - Search input container margin (mt-1 mb-2): 12px  
+    // - Search input height: ~32px
+    // - Bottom margin from viewport: 20px
+    const fixedElementsHeight = 16 + 12 + 32 + 20; // Total: 80px
+    
+    const maxHeight = Math.max(100, spaceBelow - fixedElementsHeight);
+    this.scrollArea.style.maxHeight = `${maxHeight}px`;
   },
 
   isOverScroll(event) {
@@ -568,7 +624,7 @@ const SearchCombobox = {
       }
       
       // Add handler that ensures the event reaches LiveView
-      button._phxClickHandler = (e) => {
+      button._phxClickHandler = () => {
         // Stop the event from bubbling to parent handlers that might close the dropdown
         // Don't stop propagation - LiveView needs the event to bubble up
         // But don't prevent default - let LiveView handle the phx-click
@@ -617,49 +673,82 @@ const SearchCombobox = {
       }
     }
     
+    // Calculate scrollbar width
+    const scrollbarWidth = this.scrollArea.offsetWidth - this.scrollArea.clientWidth;
+    
+    // Calculate header height from the first header if available
+    if (this.stickyHeaders.length > 0) {
+      const firstHeader = this.stickyHeaders[0].header;
+      // Apply basic styles first to get accurate measurements
+      firstHeader.style.marginTop = '0';
+      firstHeader.style.marginBottom = '0';
+      firstHeader.style.paddingLeft = '0.75rem';
+      firstHeader.style.paddingRight = '0.5rem';
+      
+      // Force a layout to get accurate height
+      firstHeader.getBoundingClientRect();
+      this.headerHeight = firstHeader.offsetHeight;
+    }
+    
     // Initialize each header
     this.stickyHeaders.forEach((item, index) => {
       const header = item.header;
       
       // Add necessary styles to header
       header.style.position = 'sticky';
-      header.style.top = index === 0 ? '0px' : `${index * 40}px`; // First header at 0, others stack 40px apart
+      header.style.top = index === 0 ? '0px' : `${index * this.headerHeight}px`; // First header always at top
       header.style.zIndex = `${1000 - index}`; // Earlier headers have higher z-index
       header.style.backgroundColor = this.getBackgroundColor();
       header.style.borderBottom = this.getBorderColor();
       header.style.transition = 'opacity 0.2s ease-in-out';
-      header.style.paddingLeft = getComputedStyle(header).paddingLeft || '0px';
-      header.style.paddingRight = getComputedStyle(header).paddingRight || '0px';
       header.style.marginLeft = '-0.375rem'; // Compensate for px-1.5 padding
-      header.style.marginRight = '-0.375rem';
+      header.style.marginRight = `-${0.375 + (scrollbarWidth / 16)}rem`; // Subtract scrollbar width
       header.style.paddingLeft = '0.75rem'; // Add back padding
-      header.style.paddingRight = '0.75rem';
+      header.style.paddingRight = '0.5rem'; // Right padding
+      header.style.marginTop = '0'; // Remove top margin
+      header.style.marginBottom = '0'; // Remove bottom margin
       
-      // Store original position
+      // Store original position and calculated height
       const rect = item.group.getBoundingClientRect();
       const scrollRect = this.scrollArea.getBoundingClientRect();
       item.originalTop = rect.top - scrollRect.top;
+      item.height = this.headerHeight;
     });
   },
 
   getBackgroundColor() {
-    // Check if dark mode is active by looking at the dropdown's background
+    // Check if dark mode is active by multiple methods
     const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
-    const isDark = dropdownBg.includes('31, 41, 55') || dropdownBg.includes('#1f2937');
-    return isDark ? '#1f2937' : 'white';
+    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+    const htmlClass = document.documentElement.classList.contains('dark');
+    
+    // Check for dark mode indicators
+    const isDark = htmlClass || 
+                  dropdownBg.includes('31, 41, 55') || dropdownBg.includes('#1f2937') ||
+                  bodyBg.includes('31, 41, 55') || bodyBg.includes('#1f2937') ||
+                  dropdownBg.includes('rgb(31, 41, 55)') || dropdownBg.includes('rgb(17, 24, 39)');
+    
+    return isDark ? '#1f2937' : '#ffffff';
   },
 
   getBorderColor() {
-    // Check if dark mode is active by looking at the dropdown's background
+    // Check if dark mode is active by multiple methods
     const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
-    const isDark = dropdownBg.includes('31, 41, 55') || dropdownBg.includes('#1f2937');
-    return isDark ? '1px solid #374151' : '1px solid #e5e7eb';
+    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+    const htmlClass = document.documentElement.classList.contains('dark');
+    
+    // Check for dark mode indicators
+    const isDark = htmlClass || 
+                  dropdownBg.includes('31, 41, 55') || dropdownBg.includes('#1f2937') ||
+                  bodyBg.includes('31, 41, 55') || bodyBg.includes('#1f2937') ||
+                  dropdownBg.includes('rgb(31, 41, 55)') || dropdownBg.includes('rgb(17, 24, 39)');
+    
+    return isDark ? '1px solid #4b5563' : '1px solid #e5e7eb';
   },
 
   handleScroll() {
     if (!this.scrollArea || this.stickyHeaders.length === 0) return;
     
-    const scrollTop = this.scrollArea.scrollTop;
     const scrollRect = this.scrollArea.getBoundingClientRect();
     
     this.stickyHeaders.forEach((item, index) => {
@@ -671,59 +760,63 @@ const SearchCombobox = {
       const groupTop = groupRect.top - scrollRect.top;
       const groupBottom = groupRect.bottom - scrollRect.top;
       
-      // Calculate sticky position based on index
-      const stickyTop = index * 40;
+      // Calculate sticky position based on index using dynamic header height
+      const stickyTop = index * this.headerHeight;
       
-      // First header should always be visible when its group has any visible content
+      // Check if this group has any visible content below the sticky position
+      const hasVisibleContent = groupBottom > stickyTop + this.headerHeight;
+      
+      // All headers should be sticky - first header never hides
       if (index === 0) {
-        // First header is always sticky at the top
+        // First header is ALWAYS visible at the very top - NO CONDITIONS
         header.style.position = 'sticky';
         header.style.top = '0px';
         header.style.opacity = '1';
         header.style.pointerEvents = 'auto';
-        
-        // Hide first header when second group header becomes sticky OR when first group scrolls past
-        const secondGroupStickyTop = 40;
-        let shouldHideFirstHeader = groupBottom <= 40; // Original condition
-        
-        // Also check if second group header is sticky
-        if (this.stickyHeaders.length > 1 && this.stickyHeaders[1]) {
-          const secondGroup = this.stickyHeaders[1].group;
-          const secondGroupRect = secondGroup.getBoundingClientRect();
-          const secondGroupTop = secondGroupRect.top - scrollRect.top;
-          const isSecondGroupHeaderSticky = secondGroupTop <= secondGroupStickyTop;
-          
-          if (isSecondGroupHeaderSticky) {
-            shouldHideFirstHeader = true;
-          }
-        }
-        
-        if (shouldHideFirstHeader) {
-          header.style.opacity = '0';
-          header.style.pointerEvents = 'none';
-        }
+        header.style.zIndex = `${1000}`;
+        header.style.display = 'block';
+        header.style.visibility = 'visible'; // Ensure it's always visible
       } else {
-        // Other headers behave normally
-        if (groupTop <= stickyTop && groupBottom > stickyTop + 40) {
+        // Other headers stick when their group is in view
+        if (groupTop <= stickyTop && hasVisibleContent) {
           // Header should be sticky at its designated position
           header.style.position = 'sticky';
           header.style.top = `${stickyTop}px`;
           header.style.opacity = '1';
           header.style.pointerEvents = 'auto';
+          header.style.zIndex = `${1000 - index}`;
+          header.style.display = 'block';
         } else if (groupTop > stickyTop) {
-          // Group hasn't reached sticky position yet
+          // Group hasn't reached sticky position yet - header moves naturally with group
           header.style.position = 'relative';
-          header.style.top = '0';
+          header.style.top = '0px';
           header.style.opacity = '1';
           header.style.pointerEvents = 'auto';
-        } else if (groupBottom <= stickyTop + 40) {
-          // Group has scrolled past, hide header
-          header.style.position = 'sticky';
-          header.style.top = `${stickyTop}px`;
+          header.style.zIndex = `${1000 - index}`;
+          header.style.display = 'block';
+        } else {
+          // Group has scrolled completely past - hide this header
           header.style.opacity = '0';
           header.style.pointerEvents = 'none';
         }
       }
+      
+      // Ensure group items don't scroll above their own header
+      const groupItems = group.querySelectorAll('.combobox-option');
+      groupItems.forEach(item => {
+        const itemRect = item.getBoundingClientRect();
+        const itemTop = itemRect.top - scrollRect.top;
+        
+        // Hide items that would appear above their group's sticky header
+        if (itemTop < stickyTop + this.headerHeight && index > 0) {
+          item.style.visibility = 'hidden';
+        } else if (itemTop < this.headerHeight && index === 0) {
+          // For first group, items shouldn't appear above the first header
+          item.style.visibility = 'hidden';
+        } else {
+          item.style.visibility = 'visible';
+        }
+      });
     });
   },
 };
