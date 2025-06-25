@@ -9,6 +9,7 @@
  */
 const SearchCombobox = {
   mounted() {
+    this.dropdownShouldBeOpen = false; // Track dropdown state persistently
     this.init();
     this.initializeSelection();
     // Enable phx-click event handling
@@ -17,14 +18,16 @@ const SearchCombobox = {
 
   updated() {
     // Preserve dropdown state across updates
-    const wasOpen = this.dropdown && !this.dropdown.hasAttribute('hidden');
+    const dropdownEl = this.el.querySelector('[data-part="search-combobox-listbox"]');
+    const wasOpen = dropdownEl && !dropdownEl.hasAttribute('hidden');
     const currentSearchValue = this.searchInput ? this.searchInput.value : '';
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
     
     this.init();
     
     // Restore dropdown state and selection after LiveView update
-    if (wasOpen || wasSearching) {
+    // Use persistent state instead of checking DOM
+    if (this.dropdownShouldBeOpen || wasSearching) {
       this.openDropdown();
     }
     
@@ -147,6 +150,7 @@ const SearchCombobox = {
   },
 
   openDropdown() {
+    this.dropdownShouldBeOpen = true; // Mark that dropdown should be open
     this.dropdown.removeAttribute('hidden');
     this.trigger.setAttribute('aria-expanded', 'true');
     this.adjustHeight();
@@ -169,6 +173,7 @@ const SearchCombobox = {
   },
 
   closeDropdown() {
+    this.dropdownShouldBeOpen = false; // Mark that dropdown should be closed
     this.dropdown.setAttribute('hidden', 'true');
     this.trigger.setAttribute('aria-expanded', 'false');
   },
@@ -373,9 +378,8 @@ const SearchCombobox = {
     // First check if this is a LiveView button - don't interfere with those
     const button = event.target.closest('button[phx-click]');
     if (button) {
-      // Mark the event so document click handler knows not to close dropdown
-      event._isPhxClick = true;
-      // Let the click bubble up to LiveView without any interference
+      // Don't process this as an option click - let it bubble to LiveView
+      // The key is to not call event.preventDefault() for these buttons
       return;
     }
     
@@ -396,17 +400,12 @@ const SearchCombobox = {
   },
 
   onDocumentClick(event) {
-    // Don't close if clicking a header button
-    if (event.target.closest('button[data-is-header-button="true"]')) {
+    // Don't close if clicking any button inside the combobox (including phx-click buttons)
+    if (this.el.contains(event.target) && event.target.closest('button')) {
       return;
     }
     
-    // Don't close if this was a phx-click button
-    if (event._isPhxClick || event.target.closest('button[phx-click]')) {
-      return;
-    }
-    
-    // Close dropdown when clicking outside
+    // Close dropdown when clicking outside the combobox
     if (!this.el.contains(event.target)) {
       this.closeDropdown();
     }
