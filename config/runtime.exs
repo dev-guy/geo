@@ -52,12 +52,13 @@ if config_env() == :prod do
       [ssl: [verify: :verify_none]]
     end
 
-  config :geo, Geo.Repo,
-    [
-      url: database_url,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-      socket_options: maybe_ipv6
-    ] ++ ssl_config
+  config :geo,
+         Geo.Repo,
+         [
+           url: database_url,
+           pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+           socket_options: maybe_ipv6
+         ] ++ ssl_config
 
   config :geo, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 

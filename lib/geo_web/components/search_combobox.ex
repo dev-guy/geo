@@ -161,10 +161,23 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   # New attributes for dynamic group management
   attr :enable_group_sorting, :boolean, default: false, doc: "Enable sorting controls for groups"
-  attr :sort_groups, :boolean, default: true, doc: "Whether to sort groups alphabetically (true) or preserve original order (false)"
-  attr :group_states, :map, default: %{}, doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
-  attr :toggle_group_sort_event, :string, default: "toggle_group_sort", doc: "Event name for toggling group sort order"
-  attr :toggle_group_collapse_event, :string, default: "toggle_group_collapse", doc: "Event name for toggling group collapse state"
+
+  attr :sort_groups, :boolean,
+    default: true,
+    doc: "Whether to sort groups alphabetically (true) or preserve original order (false)"
+
+  attr :group_states, :map,
+    default: %{},
+    doc: "Map of group names to their state (collapsed: boolean, sort_icon: string)"
+
+  attr :toggle_group_sort_event, :string,
+    default: "toggle_group_sort",
+    doc: "Event name for toggling group sort order"
+
+  attr :toggle_group_collapse_event, :string,
+    default: "toggle_group_collapse",
+    doc: "Event name for toggling group collapse state"
+
   attr :group_event_target, :any, default: nil, doc: "Target for group events (phx-target)"
 
   slot :start_section, required: false, doc: "Renders heex content in start of an element" do
@@ -214,23 +227,34 @@ defmodule GeoWeb.Components.SearchCombobox do
       |> assign_new(:value, fn -> Map.get(assigns, :value, []) end)
 
     ~H"""
-    <div key={@key} class={[
-      "leading-5",
-      border_class(@border, @variant),
-      color_variant(@variant, @color),
-      rounded_size(@rounded),
-      padding_size(@padding),
-      size_class(@size),
-      space_class(@space)
-    ]}>
-      <div :if={@label || @description} class={["search-combobox-label-wrapper", @description_wrapper_class]}>
+    <div
+      key={@key}
+      class={[
+        "leading-5",
+        border_class(@border, @variant),
+        color_variant(@variant, @color),
+        rounded_size(@rounded),
+        padding_size(@padding),
+        size_class(@size),
+        space_class(@space)
+      ]}
+    >
+      <div
+        :if={@label || @description}
+        class={["search-combobox-label-wrapper", @description_wrapper_class]}
+      >
         <.label :if={@label} for={@id} class={@label_class}>{@label}</.label>
         <div :if={@description} class={@description_class}>
           {@description}
         </div>
       </div>
 
-      <div phx-hook="SearchCombobox" data-multiple={@multiple} data-search-event={@search_event} id={"#{@id}-search-combobox"}>
+      <div
+        phx-hook="SearchCombobox"
+        data-multiple={@multiple}
+        data-search-event={@search_event}
+        id={"#{@id}-search-combobox"}
+      >
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
           <option value=""></option>
@@ -282,7 +306,10 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@selection)}
               </div>
 
-              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400">
+              <div
+                :if={@selection == [] && @placeholder}
+                class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400"
+              >
                 {@placeholder}
               </div>
 
@@ -364,7 +391,20 @@ defmodule GeoWeb.Components.SearchCombobox do
                   <!-- Dynamic Groups with Sorting and Collapsing -->
                   <%= for {group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) do %>
                     <%= if !is_nil(group_label) do %>
-                      <div class={["option-group", if(group_label != (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                      <div class={[
+                        "option-group",
+                        if(
+                          group_label !=
+                            if(@sort_groups,
+                              do: Enum.group_by(@option, & &1[:group]),
+                              else: group_by_preserving_order(@option, & &1[:group])
+                            )
+                            |> List.first()
+                            |> elem(0),
+                          do: "mt-4"
+                        ),
+                        @option_group_class
+                      ]}>
                         <div class="group-label font-semibold my-2 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <button
@@ -393,12 +433,18 @@ defmodule GeoWeb.Components.SearchCombobox do
                               title={"Toggle #{group_label} sort order"}
                             >
                               <span class="mr-1">Sort</span>
-                              <.icon name={get_in(@group_states, [group_label, :sort_icon])} class="h-4 w-4" />
+                              <.icon
+                                name={get_in(@group_states, [group_label, :sort_icon])}
+                                class="h-4 w-4"
+                              />
                             </button>
                           <% end %>
                         </div>
 
-                        <div :if={!get_in(@group_states, [group_label, :collapsed])} class="transition-all duration-200 ease-in-out">
+                        <div
+                          :if={!get_in(@group_states, [group_label, :collapsed])}
+                          class="transition-all duration-200 ease-in-out"
+                        >
                           <.option
                             :for={option <- grouped_options}
                             value={option[:value]}
@@ -418,11 +464,18 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
 
                   <div
-                    :for={{group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group]))}
+                    :for={
+                      {group_label, grouped_options} <-
+                        if @sort_groups,
+                          do: Enum.group_by(@option, & &1[:group]),
+                          else: group_by_preserving_order(@option, & &1[:group])
+                    }
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
-                    <div class="group-label font-semibold my-2 text-gray-700 dark:text-gray-300">{group_label}</div>
+                    <div class="group-label font-semibold my-2 text-gray-700 dark:text-gray-300">
+                      {group_label}
+                    </div>
 
                     <div>
                       <.option
@@ -469,23 +522,34 @@ defmodule GeoWeb.Components.SearchCombobox do
       |> assign_new(:value, fn -> Map.get(assigns, :value) end)
 
     ~H"""
-    <div key={@key} class={[
-      "leading-5",
-      border_class(@border, @variant),
-      color_variant(@variant, @color),
-      rounded_size(@rounded),
-      padding_size(@padding),
-      size_class(@size),
-      space_class(@space)
-    ]}>
-      <div :if={@label || @description} class={["search-combobox-label-wrapper", @description_wrapper_class]}>
+    <div
+      key={@key}
+      class={[
+        "leading-5",
+        border_class(@border, @variant),
+        color_variant(@variant, @color),
+        rounded_size(@rounded),
+        padding_size(@padding),
+        size_class(@size),
+        space_class(@space)
+      ]}
+    >
+      <div
+        :if={@label || @description}
+        class={["search-combobox-label-wrapper", @description_wrapper_class]}
+      >
         <.label :if={@label} for={@id} class={@label_class}>{@label}</.label>
         <div :if={@description} class={@description_class}>
           {@description}
         </div>
       </div>
 
-      <div phx-hook="SearchCombobox" data-multiple={@multiple} data-search-event={@search_event} id={"#{@id}-search-combobox"}>
+      <div
+        phx-hook="SearchCombobox"
+        data-multiple={@multiple}
+        data-search-event={@search_event}
+        id={"#{@id}-search-combobox"}
+      >
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
           <option value=""></option>
@@ -537,7 +601,10 @@ defmodule GeoWeb.Components.SearchCombobox do
                 {render_slot(@selection)}
               </div>
 
-              <div :if={@selection == [] && @placeholder} class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400">
+              <div
+                :if={@selection == [] && @placeholder}
+                class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400"
+              >
                 {@placeholder}
               </div>
 
@@ -612,7 +679,20 @@ defmodule GeoWeb.Components.SearchCombobox do
                   <!-- Dynamic Groups with Sorting and Collapsing -->
                   <%= for {group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) do %>
                     <%= if !is_nil(group_label) do %>
-                      <div class={["option-group", if(group_label != (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group])) |> List.first() |> elem(0), do: "mt-4"), @option_group_class]}>
+                      <div class={[
+                        "option-group",
+                        if(
+                          group_label !=
+                            if(@sort_groups,
+                              do: Enum.group_by(@option, & &1[:group]),
+                              else: group_by_preserving_order(@option, & &1[:group])
+                            )
+                            |> List.first()
+                            |> elem(0),
+                          do: "mt-4"
+                        ),
+                        @option_group_class
+                      ]}>
                         <div class="group-label font-semibold my-2 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <button
@@ -641,12 +721,18 @@ defmodule GeoWeb.Components.SearchCombobox do
                               title={"Toggle #{group_label} sort order"}
                             >
                               <span class="mr-1">Sort</span>
-                              <.icon name={get_in(@group_states, [group_label, :sort_icon])} class="h-4 w-4" />
+                              <.icon
+                                name={get_in(@group_states, [group_label, :sort_icon])}
+                                class="h-4 w-4"
+                              />
                             </button>
                           <% end %>
                         </div>
 
-                        <div :if={!get_in(@group_states, [group_label, :collapsed])} class="transition-all duration-200 ease-in-out">
+                        <div
+                          :if={!get_in(@group_states, [group_label, :collapsed])}
+                          class="transition-all duration-200 ease-in-out"
+                        >
                           <.option
                             :for={option <- grouped_options}
                             value={option[:value]}
@@ -666,11 +752,18 @@ defmodule GeoWeb.Components.SearchCombobox do
                   </.option>
 
                   <div
-                    :for={{group_label, grouped_options} <- (if @sort_groups, do: Enum.group_by(@option, & &1[:group]), else: group_by_preserving_order(@option, & &1[:group]))}
+                    :for={
+                      {group_label, grouped_options} <-
+                        if @sort_groups,
+                          do: Enum.group_by(@option, & &1[:group]),
+                          else: group_by_preserving_order(@option, & &1[:group])
+                    }
                     :if={!is_nil(group_label)}
                     class={["option-group", @option_group_class]}
                   >
-                    <div class="group-label font-semibold my-2 text-gray-700 dark:text-gray-300">{group_label}</div>
+                    <div class="group-label font-semibold my-2 text-gray-700 dark:text-gray-300">
+                      {group_label}
+                    </div>
 
                     <div>
                       <.option
@@ -721,18 +814,17 @@ defmodule GeoWeb.Components.SearchCombobox do
     <div
       role="option"
       class={[
-        "combobox-option cursor-pointer rounded flex justify-between items-center text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700",
-        "[&[data-combobox-navigate]]:bg-blue-500 [&[data-combobox-navigate]]:text-white dark:[&[data-combobox-navigate]]:bg-gray-700 dark:[&[data-combobox-navigate]]:text-gray-100",
+        "combobox-option cursor-pointer rounded flex justify-between items-center text-gray-900 dark:text-gray-100",
+        "hover:bg-blue-100 dark:hover:bg-gray-700 dark:hover:text-white",
+        "[&[data-combobox-navigate]]:bg-blue-100 dark:[&[data-combobox-navigate]]:bg-blue-600 dark:[&[data-combobox-navigate]]:text-white",
+        "[&[data-combobox-navigate]]:hover:bg-blue-100 dark:[&[data-combobox-navigate]]:hover:bg-blue-600",
+        "[&.no-hover]:bg-transparent [&.no-hover]:hover:bg-transparent dark:[&.no-hover]:hover:bg-transparent",
         @class
       ]}
       data-combobox-value={@encoded_value}
     >
       {render_slot(@inner_block)}
-      <svg
-        class="hidden shrink-0 w-3.5 h-3.5 search-combobox-icon"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
+      <svg class="hidden shrink-0 w-3.5 h-3.5 search-combobox-icon" fill="none" viewBox="0 0 24 24">
         <path
           stroke="currentColor"
           stroke-linecap="round"
@@ -911,7 +1003,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:bg-[#18181B] dark:text-[#FAFAFA] dark:[&_.search-combobox-trigger]:border-[#27272a]",
       "[&_.search-combobox-dropdown]:bg-white [&_.search-combobox-dropdown]:border-[#e4e4e7]",
       "dark:[&_.search-combobox-dropdown]:bg-[#18181B] dark:[&_.search-combobox-dropdown]:border-[#27272a]",
-
       "[&_.search-combobox-search-input]:border-[#e4e4e7] dark:[&_.search-combobox-search-input]:border-[#27272a]",
       "[&_.search-combobox-pill]:text-[#09090b] [&_.search-combobox-pill]:bg-[#e4e4e7]",
       "[&_.search-combobox-dropdown]:shadow",
@@ -1046,7 +1137,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-gray-300 dark:[&_.search-combobox-trigger]:border-gray-300 dark:[&_.search-combobox-trigger]:bg-gray-800",
       "[&_.search-combobox-dropdown]:text-gray-700 [&_.search-combobox-dropdown]:border-gray-700 [&_.search-combobox-dropdown]:bg-gray-50",
       "dark:[&_.search-combobox-dropdown]:text-gray-300 dark:[&_.search-combobox-dropdown]:border-gray-300 dark:[&_.search-combobox-dropdown]:bg-gray-800",
-
       "[&_.search-combobox-search-input]:border-gray-700 dark:[&_.search-combobox-search-input]:border-gray-300",
       "[&_.search-combobox-search-input]:text-gray-700 dark:[&_.search-combobox-search-input]:text-gray-300",
       "[&_.search-combobox-pill]:text-gray-700 [&_.search-combobox-pill]:bg-gray-100",
@@ -1061,7 +1151,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-teal-300 dark:[&_.search-combobox-trigger]:border-teal-300 dark:[&_.search-combobox-trigger]:bg-teal-950",
       "[&_.search-combobox-dropdown]:text-teal-700 [&_.search-combobox-dropdown]:border-teal-700 [&_.search-combobox-dropdown]:bg-teal-50",
       "dark:[&_.search-combobox-dropdown]:text-teal-300 dark:[&_.search-combobox-dropdown]:border-teal-300 dark:[&_.search-combobox-dropdown]:bg-teal-950",
-
       "[&_.search-combobox-search-input]:border-teal-700 dark:[&_.search-combobox-search-input]:border-teal-300",
       "[&_.search-combobox-search-input]:text-teal-700 dark:[&_.search-combobox-search-input]:text-teal-300",
       "[&_.search-combobox-pill]:text-teal-700 [&_.search-combobox-pill]:bg-teal-100",
@@ -1076,7 +1165,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-blue-300 dark:[&_.search-combobox-trigger]:border-blue-300 dark:[&_.search-combobox-trigger]:bg-blue-950",
       "[&_.search-combobox-dropdown]:text-blue-700 [&_.search-combobox-dropdown]:border-blue-700 [&_.search-combobox-dropdown]:bg-blue-50",
       "dark:[&_.search-combobox-dropdown]:text-blue-300 dark:[&_.search-combobox-dropdown]:border-blue-300 dark:[&_.search-combobox-dropdown]:bg-blue-950",
-
       "[&_.search-combobox-search-input]:border-blue-700 dark:[&_.search-combobox-search-input]:border-blue-300",
       "[&_.search-combobox-search-input]:text-blue-700 dark:[&_.search-combobox-search-input]:text-blue-300",
       "[&_.search-combobox-pill]:text-blue-700 [&_.search-combobox-pill]:bg-blue-100",
@@ -1091,7 +1179,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-green-300 dark:[&_.search-combobox-trigger]:border-green-300 dark:[&_.search-combobox-trigger]:bg-green-950",
       "[&_.search-combobox-dropdown]:text-green-700 [&_.search-combobox-dropdown]:border-green-700 [&_.search-combobox-dropdown]:bg-green-50",
       "dark:[&_.search-combobox-dropdown]:text-green-300 dark:[&_.search-combobox-dropdown]:border-green-300 dark:[&_.search-combobox-dropdown]:bg-green-950",
-
       "[&_.search-combobox-search-input]:border-green-700 dark:[&_.search-combobox-search-input]:border-green-300",
       "[&_.search-combobox-search-input]:text-green-700 dark:[&_.search-combobox-search-input]:text-green-300",
       "[&_.search-combobox-pill]:text-green-700 [&_.search-combobox-pill]:bg-green-100",
@@ -1106,7 +1193,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-red-300 dark:[&_.search-combobox-trigger]:border-red-300 dark:[&_.search-combobox-trigger]:bg-red-950",
       "[&_.search-combobox-dropdown]:text-red-700 [&_.search-combobox-dropdown]:border-red-700 [&_.search-combobox-dropdown]:bg-red-50",
       "dark:[&_.search-combobox-dropdown]:text-red-300 dark:[&_.search-combobox-dropdown]:border-red-300 dark:[&_.search-combobox-dropdown]:bg-red-950",
-
       "[&_.search-combobox-search-input]:border-red-700 dark:[&_.search-combobox-search-input]:border-red-300",
       "[&_.search-combobox-search-input]:text-red-700 dark:[&_.search-combobox-search-input]:text-red-300",
       "[&_.search-combobox-pill]:text-red-700 [&_.search-combobox-pill]:bg-red-100",
@@ -1121,7 +1207,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#6EC9F2] dark:[&_.search-combobox-trigger]:border-[#6EC9F2] dark:[&_.search-combobox-trigger]:bg-[#03212F]",
       "[&_.search-combobox-dropdown]:text-[#0B84BA] [&_.search-combobox-dropdown]:border-[#0B84BA] [&_.search-combobox-dropdown]:bg-[#E7F6FD]",
       "dark:[&_.search-combobox-dropdown]:text-[#6EC9F2] dark:[&_.search-combobox-dropdown]:border-[#6EC9F2] dark:[&_.search-combobox-dropdown]:bg-[#03212F]",
-
       "[&_.search-combobox-search-input]:border-[#0B84BA] dark:[&_.search-combobox-search-input]:border-[#6EC9F2]",
       "[&_.search-combobox-search-input]:text-[#0B84BA] dark:[&_.search-combobox-search-input]:text-[#6EC9F2]",
       "[&_.search-combobox-pill]:text-[#0B84BA] [&_.search-combobox-pill]:bg-[#B8E6F7]",
@@ -1136,7 +1221,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#CBA2FA] dark:[&_.search-combobox-trigger]:border-[#CBA2FA] dark:[&_.search-combobox-trigger]:bg-[#221431]",
       "[&_.search-combobox-dropdown]:text-[#653C94] [&_.search-combobox-dropdown]:border-[#653C94] [&_.search-combobox-dropdown]:bg-[#F6F0FE]",
       "dark:[&_.search-combobox-dropdown]:text-[#CBA2FA] dark:[&_.search-combobox-dropdown]:border-[#CBA2FA] dark:[&_.search-combobox-dropdown]:bg-[#221431]",
-
       "[&_.search-combobox-search-input]:border-[#653C94] dark:[&_.search-combobox-search-input]:border-[#CBA2FA]",
       "[&_.search-combobox-search-input]:text-[#653C94] dark:[&_.search-combobox-search-input]:text-[#CBA2FA]",
       "[&_.search-combobox-pill]:text-[#653C94] [&_.search-combobox-pill]:bg-[#E8D5FC]",
@@ -1151,7 +1235,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#E4B190] dark:[&_.search-combobox-trigger]:border-[#E4B190] dark:[&_.search-combobox-trigger]:bg-[#2A190E]",
       "[&_.search-combobox-dropdown]:text-[#7E4B2A] [&_.search-combobox-dropdown]:border-[#7E4B2A] [&_.search-combobox-dropdown]:bg-[#FBF2ED]",
       "dark:[&_.search-combobox-dropdown]:text-[#E4B190] dark:[&_.search-combobox-dropdown]:border-[#E4B190] dark:[&_.search-combobox-dropdown]:bg-[#2A190E]",
-
       "[&_.search-combobox-search-input]:border-[#7E4B2A] dark:[&_.search-combobox-search-input]:border-[#E4B190]",
       "[&_.search-combobox-search-input]:text-[#7E4B2A] dark:[&_.search-combobox-search-input]:text-[#E4B190]",
       "[&_.search-combobox-pill]:text-[#7E4B2A] [&_.search-combobox-pill]:bg-[#F0DCC9]",
@@ -1166,7 +1249,6 @@ defmodule GeoWeb.Components.SearchCombobox do
       "dark:[&_.search-combobox-trigger]:text-[#BBBBBB] dark:[&_.search-combobox-trigger]:border-[#BBBBBB] dark:[&_.search-combobox-trigger]:bg-[#4B4B4B]",
       "[&_.search-combobox-dropdown]:text-[#727272] [&_.search-combobox-dropdown]:border-[#727272] [&_.search-combobox-dropdown]:bg-[#F3F3F3]",
       "dark:[&_.search-combobox-dropdown]:text-[#BBBBBB] dark:[&_.search-combobox-dropdown]:border-[#BBBBBB] dark:[&_.search-combobox-dropdown]:bg-[#4B4B4B]",
-
       "[&_.search-combobox-search-input]:border-[#727272] dark:[&_.search-combobox-search-input]:border-[#BBBBBB]",
       "[&_.search-combobox-search-input]:text-[#727272] dark:[&_.search-combobox-search-input]:text-[#BBBBBB]",
       "[&_.search-combobox-pill]:text-[#727272] [&_.search-combobox-pill]:bg-[#E8E8E8]",
@@ -1210,6 +1292,7 @@ defmodule GeoWeb.Components.SearchCombobox do
   defp encode_current_value(value) when is_list(value) do
     Enum.map(value, &encode_value/1)
   end
+
   defp encode_current_value(value), do: encode_value(value)
 
   # Helper function to group by while preserving the order of first appearance
@@ -1217,15 +1300,18 @@ defmodule GeoWeb.Components.SearchCombobox do
     enumerable
     |> Enum.reduce({[], %{}}, fn item, {acc, seen} ->
       key = key_fun.(item)
+
       if Map.has_key?(seen, key) do
         # Key already exists, add to existing group
-        updated_acc = Enum.map(acc, fn {k, items} ->
-          if k == key do
-            {k, items ++ [item]}
-          else
-            {k, items}
-          end
-        end)
+        updated_acc =
+          Enum.map(acc, fn {k, items} ->
+            if k == key do
+              {k, items ++ [item]}
+            else
+              {k, items}
+            end
+          end)
+
         {updated_acc, seen}
       else
         # New key, add new group

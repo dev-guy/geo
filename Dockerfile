@@ -30,8 +30,7 @@ COPY assets assets
 # Install dependencies
 RUN mix deps.get --only prod
 RUN mix assets.setup
-RUN mix assets.build
-RUN mix phx.digest
+RUN mix assets.deploy
 
 # This is a dummy start-up script for troubleshooting
 # RUN echo '#!/bin/sh\n\
@@ -39,7 +38,7 @@ RUN mix phx.digest
 
 # Create a startup script
 RUN echo '#!/bin/sh\n\
-mix phx.server' > /app/start.sh && chmod +x /app/start.sh
+mix geo.start' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application
 CMD ["/app/start.sh"]

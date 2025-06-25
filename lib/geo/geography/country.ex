@@ -15,42 +15,6 @@ defmodule Geo.Geography.Country do
     table "countries"
   end
 
-  attributes do
-    attribute :iso_code, :ci_string do
-      allow_nil? false
-      public? true
-
-      constraints match: ~S/^[A-Z]+$/,
-                  min_length: 2,
-                  max_length: 3
-    end
-
-    attribute :flag, :string do
-      allow_nil? false
-      public? true
-      description "Unicode flag emoji for the country"
-    end
-  end
-
-  identities do
-    identity :unique_iso_code, [:iso_code]
-  end
-
-  # Default sort order when listing countries
-  preparations do
-    prepare build(sort: [iso_code: :asc])
-  end
-
-  # === Manual Actions ===
-  defmodule Manual.GetByIsoCode do
-    use Ash.Resource.ManualRead
-
-    def read(ash_query, _ecto_query, _opts, _context) do
-      iso_code = ash_query.arguments[:iso_code]
-      {:ok, [Geo.Geography.Country.Cache.get_by_iso_code!(iso_code)]}
-    end
-  end
-
   actions do
     defaults [:destroy]
 
@@ -89,11 +53,48 @@ defmodule Geo.Geography.Country do
     # Search the cache to return a tuple of lists of country records
     action :search, :map do
       argument :query, :string, allow_nil?: true, default: nil
+
       run fn input, _context ->
         query = input.arguments.query
         {iso_code_results, name_results} = Geo.Geography.Country.Cache.search!(query)
         {:ok, %{by_iso_code: iso_code_results, by_name: name_results}}
       end
     end
+  end
+
+  # Default sort order when listing countries
+  preparations do
+    prepare build(sort: [iso_code: :asc])
+  end
+
+  attributes do
+    attribute :iso_code, :ci_string do
+      allow_nil? false
+      public? true
+
+      constraints match: ~S/^[A-Z]+$/,
+                  min_length: 2,
+                  max_length: 3
+    end
+
+    attribute :flag, :string do
+      allow_nil? false
+      public? true
+      description "Unicode flag emoji for the country"
+    end
+  end
+
+  # === Manual Actions ===
+  defmodule Manual.GetByIsoCode do
+    use Ash.Resource.ManualRead
+
+    def read(ash_query, _ecto_query, _opts, _context) do
+      iso_code = ash_query.arguments[:iso_code]
+      {:ok, [Geo.Geography.Country.Cache.get_by_iso_code!(iso_code)]}
+    end
+  end
+
+  identities do
+    identity :unique_iso_code, [:iso_code]
   end
 end
