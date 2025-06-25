@@ -158,6 +158,7 @@ defmodule GeoWeb.Components.SearchCombobox do
   attr :description, :string, default: nil, doc: "Determines a short description"
   attr :multiple, :boolean, default: false, doc: "Multiple selections in the combobox"
   attr :search_event, :string, default: nil, doc: "Phoenix event to trigger when searching"
+  attr :search_event_target, :any, default: nil, doc: "Target for search events (phx-target)"
 
   # New attributes for dynamic group management
   attr :enable_group_sorting, :boolean, default: false, doc: "Enable sorting controls for groups"
@@ -254,6 +255,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         data-multiple={@multiple}
         data-search-event={@search_event}
         id={"#{@id}-search-combobox"}
+        phx-target={@search_event_target}
       >
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="combobox-select hidden" {@rest}>
@@ -549,6 +551,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         data-multiple={@multiple}
         data-search-event={@search_event}
         id={"#{@id}-search-combobox"}
+        phx-target={@search_event_target}
       >
         <input type="hidden" name={@name} />
         <select id={@id} name={@name} class="combobox-select hidden" {@rest}>

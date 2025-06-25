@@ -100,10 +100,7 @@ defmodule Geo.MixProject do
         "esbuild geo --minify",
         "phx.digest"
       ],
-      "geo.deploy": ["cmd fly deploy --strategy immediate --skip-release-command"],
-      "geo.start": ["phx.server"],
-      "geo.restart": ["cmd ./scripts/restart_server.sh"],
-      "geo.stop": ["cmd ./scripts/stop_server.sh"]
+      "geo.deploy": ["cmd fly deploy --strategy immediate --skip-release-command"]
     ]
 
     if Mix.env() == :dev do

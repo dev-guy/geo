@@ -118,6 +118,7 @@ defmodule GeoWeb.CountrySelector do
           placeholder="Select a country..."
           search_placeholder="Type to search countries"
           search_event="search_combobox_updated"
+          search_event_target={@myself}
           phx-target={@myself}
           variant="bordered"
           color="primary"
