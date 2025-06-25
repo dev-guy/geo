@@ -6,9 +6,13 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "format": "prettier --write \"assets/**/*.js\" \"test/**/*.js\" \"*.js\"",
+    "lint": "eslint \"assets/**/*.js\" \"test/**/*.js\" \"*.js\" --fix"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0"
+    "@playwright/test": "^1.40.0",
+    "eslint": "^9.29.0",
+    "prettier": "^3.6.0"
   }
 }

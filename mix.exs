@@ -4,7 +4,7 @@ defmodule Geo.MixProject do
   def project do
     base_config = [
       app: :geo,
-      version: "0.1.1",
+      version: "0.1.5",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -96,7 +96,10 @@ defmodule Geo.MixProject do
         "esbuild geo --minify",
         "phx.digest"
       ],
-      deploy: ["cmd fly deploy --strategy immediate --skip-release-command"]
+      "geo.deploy": ["cmd fly deploy --strategy immediate --skip-release-command"],
+      "geo.start": ["phx.server"],
+      "geo.restart": ["cmd ./scripts/restart_server.sh"],
+      "geo.stop": ["cmd ./scripts/stop_server.sh"]
     ]
 
     if Mix.env() == :dev do

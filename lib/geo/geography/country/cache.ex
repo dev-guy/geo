@@ -38,6 +38,7 @@ defmodule Geo.Geography.Country.Cache do
     ensure_running()
 
     country = GenServer.call(@cache_genserver, {:get_by_iso_code, iso_code})
+
     if country do
       country
     else
@@ -72,25 +73,69 @@ defmodule Geo.Geography.Country.Cache do
   Returns :ok if cache is running or successfully started.
   """
   def ensure_running do
-    if running?() do
-      :ok
-    else
-      Logger.info("Starting cache worker")
+    case running?() do
+      true ->
+        :ok
 
-      case @cache_supervisor.start_cache_worker() do
-        {:ok, _pid} ->
-          Logger.info("Cache worker started successfully")
-          :ok
+      false ->
+        # Use a global lock to prevent race conditions when starting the cache
+        case :global.trans(
+               {__MODULE__, :start_cache},
+               fn ->
+                 # Double-check inside the transaction
+                 case running?() do
+                   true ->
+                     {:ok, :already_running}
 
-        {:error, {:already_started, _pid}} ->
-          # Race condition - another process started it
-          Logger.info("Cache worker was started by another process")
-          :ok
+                   false ->
+                     Logger.info("Starting cache worker")
 
-        {:error, reason} ->
-          Logger.error("Failed to start cache worker: #{inspect(reason)}")
-          {:error, reason}
-      end
+                     case @cache_supervisor.start_cache_worker() do
+                       {:ok, _pid} ->
+                         # Wait a bit for the process to register, then verify it's running
+                         :timer.sleep(100)
+
+                         case running?() do
+                           true ->
+                             Logger.info("Cache worker started successfully")
+                             {:ok, :started}
+
+                           false ->
+                             Logger.warning(
+                               "Cache worker started but not yet registered, retrying..."
+                             )
+
+                             {:error, :not_registered}
+                         end
+
+                       {:error, {:already_started, _pid}} ->
+                         # Another process started it between our checks
+                         Logger.info("Cache worker was started by another process")
+                         {:ok, :already_started}
+
+                       {:error, reason} ->
+                         Logger.error("Failed to start cache worker: #{inspect(reason)}")
+                         {:error, reason}
+                     end
+                 end
+               end,
+               [node()],
+               5000
+             ) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            {:error, reason}
+
+          :aborted ->
+            # Transaction was aborted, likely due to timeout
+            # Check if cache is now running (maybe another process succeeded)
+            case running?() do
+              true -> :ok
+              false -> {:error, :timeout}
+            end
+        end
     end
   end
 
@@ -122,4 +167,38 @@ defmodule Geo.Geography.Country.Cache do
       process_info: if(running, do: Process.info(Process.whereis(@cache_genserver)), else: nil)
     }
   end
+
+  # Alternative simpler approach - uncomment to use direct GenServer startup
+  # def ensure_running_simple do
+  #   case running?() do
+  #     true -> :ok
+  #     false ->
+  #       case :global.trans({__MODULE__, :start_cache}, fn ->
+  #         case running?() do
+  #           true -> {:ok, :already_running}
+  #           false ->
+  #             Logger.info("Starting cache worker directly")
+  #             case @cache_genserver.start_link([]) do
+  #               {:ok, _pid} ->
+  #                 Logger.info("Cache worker started successfully")
+  #                 {:ok, :started}
+  #               {:error, {:already_started, _pid}} ->
+  #                 Logger.info("Cache worker was started by another process")
+  #                 {:ok, :already_started}
+  #               {:error, reason} ->
+  #                 Logger.error("Failed to start cache worker: #{inspect(reason)}")
+  #                 {:error, reason}
+  #             end
+  #         end
+  #       end, [node()], 5000) do
+  #         {:ok, _} -> :ok
+  #         {:error, reason} -> {:error, reason}
+  #         :aborted ->
+  #           case running?() do
+  #             true -> :ok
+  #             false -> {:error, :timeout}
+  #           end
+  #       end
+  #   end
+  # end
 end

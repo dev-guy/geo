@@ -1,4 +1,5 @@
 .rules
+.claude
 
 # The directory Mix will write compiled artifacts to.
 /_build/
@@ -41,3 +42,4 @@ node_modules/
 
 /test-results/
 playwright-report/
+test_output.txt

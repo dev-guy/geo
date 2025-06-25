@@ -57,9 +57,11 @@ defmodule Geo.Geography.Country.CacheGenServer do
 
   @impl true
   def handle_call({:get_by_iso_code, iso_code}, _from, state) do
-    country = Enum.find(state.countries_by_iso_code, fn country ->
-      Comp.equal?(country.iso_code, iso_code)
-    end)
+    country =
+      Enum.find(state.countries_by_iso_code, fn country ->
+        Comp.equal?(country.iso_code, iso_code)
+      end)
+
     new_state = reset_inactivity_timer(state)
     {:reply, country, new_state}
   end
@@ -167,9 +169,10 @@ defmodule Geo.Geography.Country.CacheGenServer do
       countries = Geo.Geography.list_countries!()
 
       # Sort by name for countries_by_name
-      countries_by_name = Enum.sort_by(countries, fn country ->
-        country.name
-      end)
+      countries_by_name =
+        Enum.sort_by(countries, fn country ->
+          country.name
+        end)
 
       # Sort by ISO code for countries_by_iso_code
       # Default Ash sort
@@ -239,26 +242,30 @@ defmodule Geo.Geography.Country.CacheGenServer do
     name_results = exact_name ++ starts_with_name ++ exact_iso_code_name ++ partial_name
 
     # 1. Add countries from name_results to iso_code_results if not already present (by iso_code)
-    iso_codes_in_iso_code_results = MapSet.new(iso_code_results, fn country ->
-      Ash.CiString.to_comparable_string(country.iso_code)
-    end)
+    iso_codes_in_iso_code_results =
+      MapSet.new(iso_code_results, fn country ->
+        Ash.CiString.to_comparable_string(country.iso_code)
+      end)
 
-    countries_to_add_to_iso = Enum.filter(name_results, fn country ->
-      iso_code_str = Ash.CiString.to_comparable_string(country.iso_code)
-      not MapSet.member?(iso_codes_in_iso_code_results, iso_code_str)
-    end)
+    countries_to_add_to_iso =
+      Enum.filter(name_results, fn country ->
+        iso_code_str = Ash.CiString.to_comparable_string(country.iso_code)
+        not MapSet.member?(iso_codes_in_iso_code_results, iso_code_str)
+      end)
 
     updated_iso_code_results = iso_code_results ++ countries_to_add_to_iso
 
     # 2. Add countries from iso_code_results to name_results if not already present (by iso_code)
-    iso_codes_in_name_results = MapSet.new(name_results, fn country ->
-      Ash.CiString.to_comparable_string(country.iso_code)
-    end)
+    iso_codes_in_name_results =
+      MapSet.new(name_results, fn country ->
+        Ash.CiString.to_comparable_string(country.iso_code)
+      end)
 
-    countries_to_add_to_name = Enum.filter(iso_code_results, fn country ->
-      iso_code_str = Ash.CiString.to_comparable_string(country.iso_code)
-      not MapSet.member?(iso_codes_in_name_results, iso_code_str)
-    end)
+    countries_to_add_to_name =
+      Enum.filter(iso_code_results, fn country ->
+        iso_code_str = Ash.CiString.to_comparable_string(country.iso_code)
+        not MapSet.member?(iso_codes_in_name_results, iso_code_str)
+      end)
 
     updated_name_results = name_results ++ countries_to_add_to_name
 
