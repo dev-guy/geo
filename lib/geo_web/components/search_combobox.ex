@@ -241,7 +241,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     >
       <div
         :if={@label || @description}
-        class={["search-combobox-label-wrapper", @description_wrapper_class]}
+        class={["combobox-label-wrapper", @description_wrapper_class]}
       >
         <.label :if={@label} for={@id} class={@label_class}>{@label}</.label>
         <div :if={@description} class={@description_class}>
@@ -256,7 +256,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         id={"#{@id}-search-combobox"}
       >
         <input type="hidden" name={@name} />
-        <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
+        <select id={@id} name={@name} class="combobox-select hidden" {@rest}>
           <option value=""></option>
 
           <%= if Enum.empty?(@option) do %>
@@ -283,7 +283,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
           <div
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
+            class="combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
@@ -308,7 +308,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
               <div
                 :if={@selection == [] && @placeholder}
-                class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400"
+                class="combobox-placeholder select-none text-gray-500 dark:text-gray-400"
               >
                 {@placeholder}
               </div>
@@ -316,8 +316,8 @@ defmodule GeoWeb.Components.SearchCombobox do
               <div
                 data-part="select_toggle_label"
                 class={[
-                  "selected_value flex flex-wrap items-center gap-2 [&_.search-combobox-pill]:py-0.5",
-                  "[&_.search-combobox-pill]:px-1 [&_.search-combobox-pill]:leading-4"
+                  "selected_value flex flex-wrap items-center gap-2 [&_.combobox-pill]:py-0.5",
+                  "[&_.combobox-pill]:px-1 [&_.combobox-pill]:leading-4"
                 ]}
               >
               </div>
@@ -351,7 +351,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                class="shrink-0 search-combobox-icon"
+                class="shrink-0 combobox-icon"
               >
                 <path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" />
               </svg>
@@ -363,7 +363,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             role="listbox"
             data-part="search-combobox-listbox"
             aria-multiselectable={@multiple}
-            class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
+            class="combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
             hidden
           >
             <div class="mt-1 mb-2 mx-1.5">
@@ -374,7 +374,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 aria-autocomplete="list"
                 aria-activedescendant=""
                 aria-label={@search_placeholder}
-                class="search-combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                class="combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 data-part="search"
                 placeholder={@search_placeholder}
               />
@@ -536,7 +536,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     >
       <div
         :if={@label || @description}
-        class={["search-combobox-label-wrapper", @description_wrapper_class]}
+        class={["combobox-label-wrapper", @description_wrapper_class]}
       >
         <.label :if={@label} for={@id} class={@label_class}>{@label}</.label>
         <div :if={@description} class={@description_class}>
@@ -551,7 +551,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         id={"#{@id}-search-combobox"}
       >
         <input type="hidden" name={@name} />
-        <select id={@id} name={@name} class="search-combobox-select hidden" {@rest}>
+        <select id={@id} name={@name} class="combobox-select hidden" {@rest}>
           <option value=""></option>
 
           <%= if Enum.empty?(@option) do %>
@@ -578,7 +578,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
         <div id={"#{@id}-search-combobox-wrapper"} data-current-value={@value || ""} class="relative">
           <div
-            class="search-combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
+            class="combobox-trigger w-full text-start py-1 flex items-center justify-between cursor-pointer border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded="false"
@@ -603,7 +603,7 @@ defmodule GeoWeb.Components.SearchCombobox do
 
               <div
                 :if={@selection == [] && @placeholder}
-                class="search-combobox-placeholder select-none text-gray-500 dark:text-gray-400"
+                class="combobox-placeholder select-none text-gray-500 dark:text-gray-400"
               >
                 {@placeholder}
               </div>
@@ -639,7 +639,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                class="shrink-0 search-combobox-icon"
+                class="shrink-0 combobox-icon"
               >
                 <path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" />
               </svg>
@@ -651,7 +651,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             role="listbox"
             data-part="search-combobox-listbox"
             aria-multiselectable={@multiple}
-            class="search-combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
+            class="combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
             hidden
           >
             <div class="mt-1 mb-2 mx-1.5">
@@ -662,7 +662,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                 aria-autocomplete="list"
                 aria-activedescendant=""
                 aria-label={@search_placeholder}
-                class="search-combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                class="combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 data-part="search"
                 placeholder={@search_placeholder}
               />
@@ -824,16 +824,7 @@ defmodule GeoWeb.Components.SearchCombobox do
       data-combobox-value={@encoded_value}
     >
       {render_slot(@inner_block)}
-      <svg class="hidden shrink-0 w-3.5 h-3.5 search-combobox-icon" fill="none" viewBox="0 0 24 24">
-        <path
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M20 6 9 17l-5-5"
-        >
-        </path>
-      </svg>
+      <.icon name="hero-check" class="hidden shrink-0 w-3.5 h-3.5 combobox-icon" />
     </div>
     """
   end
@@ -864,36 +855,36 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   defp size_class("extra_small") do
     [
-      "[&_.search-combobox-trigger]:min-h-7 [&_.search-combobox-icon]:size-3 text-[12px]",
-      "[&_.search-combobox-search-input]:h-6 [&_.search-combobox-search-input]:text-[12px]"
+      "[&_.combobox-trigger]:min-h-7 [&_.combobox-icon]:size-3 text-[12px]",
+      "[&_.combobox-search-input]:h-6 [&_.combobox-search-input]:text-[12px]"
     ]
   end
 
   defp size_class("small") do
     [
-      "[&_.search-combobox-trigger]:min-h-8 [&_.search-combobox-icon]:size-3.5 text-[13px]",
-      "[&_.search-combobox-search-input]:h-7 [&_.search-combobox-search-input]:text-[13px]"
+      "[&_.combobox-trigger]:min-h-8 [&_.combobox-icon]:size-3.5 text-[13px]",
+      "[&_.combobox-search-input]:h-7 [&_.combobox-search-input]:text-[13px]"
     ]
   end
 
   defp size_class("medium") do
     [
-      "[&_.search-combobox-trigger]:min-h-9 [&_.search-combobox-icon]:size-4 text-[14px]",
-      "[&_.search-combobox-search-input]:h-8 [&_.search-combobox-search-input]:text-[14px]"
+      "[&_.combobox-trigger]:min-h-9 [&_.combobox-icon]:size-4 text-[14px]",
+      "[&_.combobox-search-input]:h-8 [&_.combobox-search-input]:text-[14px]"
     ]
   end
 
   defp size_class("large") do
     [
-      "[&_.search-combobox-trigger]:min-h-10 [&_.search-combobox-icon]:size-[18px] text-[15px]",
-      "[&_.search-combobox-search-input]:h-9 [&_.search-combobox-search-input]:text-[15px]"
+      "[&_.combobox-trigger]:min-h-10 [&_.combobox-icon]:size-[18px] text-[15px]",
+      "[&_.combobox-search-input]:h-9 [&_.combobox-search-input]:text-[15px]"
     ]
   end
 
   defp size_class("extra_large") do
     [
-      "[&_.search-combobox-trigger]:min-h-11 [&_.search-combobox-icon]:size-5 text-[16px]",
-      "[&_.search-combobox-search-input]:h-10 [&_.search-combobox-search-input]:text-[16px]"
+      "[&_.combobox-trigger]:min-h-11 [&_.combobox-icon]:size-5 text-[16px]",
+      "[&_.combobox-search-input]:h-10 [&_.combobox-search-input]:text-[16px]"
     ]
   end
 
@@ -901,43 +892,43 @@ defmodule GeoWeb.Components.SearchCombobox do
 
   defp rounded_size("extra_small") do
     [
-      "[&_.search-combobox-trigger]:rounded-sm [&_.search-combobox-dropdown]:rounded-sm",
-      "[&_.search-combobox-pill]:rounded-[0.0625rem] [&_.search-combobox-search-input]:rounded-sm"
+      "[&_.combobox-trigger]:rounded-sm [&_.combobox-dropdown]:rounded-sm",
+      "[&_.combobox-pill]:rounded-[0.0625rem] [&_.combobox-search-input]:rounded-sm"
     ]
   end
 
   defp rounded_size("small") do
     [
-      "[&_.search-combobox-trigger]:rounded [&_.search-combobox-dropdown]:rounded",
-      "[&_.search-combobox-pill]:rounded-[0.13rem] [&_.search-combobox-search-input]:rounded"
+      "[&_.combobox-trigger]:rounded [&_.combobox-dropdown]:rounded",
+      "[&_.combobox-pill]:rounded-[0.13rem] [&_.combobox-search-input]:rounded"
     ]
   end
 
   defp rounded_size("medium") do
     [
-      "[&_.search-combobox-trigger]:rounded-md [&_.search-combobox-dropdown]:rounded-md",
-      "[&_.search-combobox-pill]:rounded-[0.19rem] [&_.search-combobox-search-input]:rounded-md"
+      "[&_.combobox-trigger]:rounded-md [&_.combobox-dropdown]:rounded-md",
+      "[&_.combobox-pill]:rounded-[0.19rem] [&_.combobox-search-input]:rounded-md"
     ]
   end
 
   defp rounded_size("large") do
     [
-      "[&_.search-combobox-trigger]:rounded-lg [&_.search-combobox-dropdown]:rounded-lg",
-      "[&_.search-combobox-pill]:rounded-[0.3rem] [&_.search-combobox-search-input]:rounded-lg"
+      "[&_.combobox-trigger]:rounded-lg [&_.combobox-dropdown]:rounded-lg",
+      "[&_.combobox-pill]:rounded-[0.3rem] [&_.combobox-search-input]:rounded-lg"
     ]
   end
 
   defp rounded_size("extra_large") do
     [
-      "[&_.search-combobox-trigger]:rounded-xl [&_.search-combobox-dropdown]:rounded-xl",
-      "[&_.search-combobox-pill]:rounded-[0.313rem] [&_.search-combobox-search-input]:rounded-xl"
+      "[&_.combobox-trigger]:rounded-xl [&_.combobox-dropdown]:rounded-xl",
+      "[&_.combobox-pill]:rounded-[0.313rem] [&_.combobox-search-input]:rounded-xl"
     ]
   end
 
   defp rounded_size("full") do
     [
-      "[&_.search-combobox-trigger]:rounded-full [&_.search-combobox-dropdown]:rounded-full",
-      "[&_.search-combobox-pill]:rounded-full [&_.search-combobox-search-input]:rounded-full"
+      "[&_.combobox-trigger]:rounded-full [&_.combobox-dropdown]:rounded-full",
+      "[&_.combobox-pill]:rounded-full [&_.combobox-search-input]:rounded-full"
     ]
   end
 
@@ -951,309 +942,309 @@ defmodule GeoWeb.Components.SearchCombobox do
   defp border_class("none", _), do: nil
 
   defp border_class("extra_small", _),
-    do: "[&_.search-combobox-trigger]:border [&_.search-combobox-dropdown]:border"
+    do: "[&_.combobox-trigger]:border [&_.combobox-dropdown]:border"
 
   defp border_class("small", _),
-    do: "[&_.search-combobox-trigger]:border-2 [&_.search-combobox-dropdown]:border-2"
+    do: "[&_.combobox-trigger]:border-2 [&_.combobox-dropdown]:border-2"
 
   defp border_class("medium", _),
-    do: "[&_.search-combobox-trigger]:border-[3px] [&_.search-combobox-dropdown]:border-[3px]"
+    do: "[&_.combobox-trigger]:border-[3px] [&_.combobox-dropdown]:border-[3px]"
 
   defp border_class("large", _),
-    do: "[&_.search-combobox-trigger]:border-4 [&_.search-combobox-dropdown]:border-4"
+    do: "[&_.combobox-trigger]:border-4 [&_.combobox-dropdown]:border-4"
 
   defp border_class("extra_large", _),
-    do: "[&_.search-combobox-trigger]:border-[5px] [&_.search-combobox-dropdown]:border-[5px]"
+    do: "[&_.combobox-trigger]:border-[5px] [&_.combobox-dropdown]:border-[5px]"
 
   defp border_class(params, _) when is_binary(params), do: params
 
   defp padding_size("extra_small") do
-    ["[&_.search-combobox-trigger]:px-2 [&_.combobox-option]:px-2", "[&_.combobox-option]:py-0.5"]
+    ["[&_.combobox-trigger]:px-2 [&_.combobox-option]:px-2", "[&_.combobox-option]:py-0.5"]
   end
 
   defp padding_size("small") do
-    ["[&_.search-combobox-trigger]:px-3 [&_.combobox-option]:px-3", "[&_.combobox-option]:py-1"]
+    ["[&_.combobox-trigger]:px-3 [&_.combobox-option]:px-3", "[&_.combobox-option]:py-1"]
   end
 
   defp padding_size("medium") do
-    ["[&_.search-combobox-trigger]:px-4 [&_.combobox-option]:px-4", "[&_.combobox-option]:py-1.5"]
+    ["[&_.combobox-trigger]:px-4 [&_.combobox-option]:px-4", "[&_.combobox-option]:py-1.5"]
   end
 
   defp padding_size("large") do
-    ["[&_.search-combobox-trigger]:px-5 [&_.combobox-option]:px-5", "[&_.combobox-option]:py-2"]
+    ["[&_.combobox-trigger]:px-5 [&_.combobox-option]:px-5", "[&_.combobox-option]:py-2"]
   end
 
   defp padding_size("extra_large") do
-    ["[&_.search-combobox-trigger]:px-6 [&_.combobox-option]:px-6", "[&_.combobox-option]:py-2.5"]
+    ["[&_.combobox-trigger]:px-6 [&_.combobox-option]:px-6", "[&_.combobox-option]:py-2.5"]
   end
 
   defp padding_size(params) when is_binary(params), do: params
 
-  defp space_class("extra_small"), do: "space-y-2 [&_.search-combobox-label-wrapper]:space-y-1"
-  defp space_class("small"), do: "space-y-3 [&_.search-combobox-label-wrapper]:space-y-2"
-  defp space_class("medium"), do: "space-y-4 [&_.search-combobox-label-wrapper]:space-y-3"
-  defp space_class("large"), do: "space-y-5 [&_.search-combobox-label-wrapper]:space-y-4"
-  defp space_class("extra_large"), do: "space-y-6 [&_.search-combobox-label-wrapper]:space-y-5"
+  defp space_class("extra_small"), do: "space-y-2 [&_.combobox-label-wrapper]:space-y-1"
+  defp space_class("small"), do: "space-y-3 [&_.combobox-label-wrapper]:space-y-2"
+  defp space_class("medium"), do: "space-y-4 [&_.combobox-label-wrapper]:space-y-3"
+  defp space_class("large"), do: "space-y-5 [&_.combobox-label-wrapper]:space-y-4"
+  defp space_class("extra_large"), do: "space-y-6 [&_.combobox-label-wrapper]:space-y-5"
   defp space_class("none"), do: nil
   defp space_class(params) when is_binary(params), do: params
 
   defp color_variant("base", _) do
     [
-      "[&_.search-combobox-trigger]:bg-white text-[#09090b] [&_.search-combobox-trigger]:border-[#e4e4e7] [&_.search-combobox-trigger]:shadow-sm",
-      "dark:[&_.search-combobox-trigger]:bg-[#18181B] dark:text-[#FAFAFA] dark:[&_.search-combobox-trigger]:border-[#27272a]",
-      "[&_.search-combobox-dropdown]:bg-white [&_.search-combobox-dropdown]:border-[#e4e4e7]",
-      "dark:[&_.search-combobox-dropdown]:bg-[#18181B] dark:[&_.search-combobox-dropdown]:border-[#27272a]",
-      "[&_.search-combobox-search-input]:border-[#e4e4e7] dark:[&_.search-combobox-search-input]:border-[#27272a]",
-      "[&_.search-combobox-pill]:text-[#09090b] [&_.search-combobox-pill]:bg-[#e4e4e7]",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-gray-600 dark:[&_.search-combobox-sort-icon]:text-gray-300"
+      "[&_.combobox-trigger]:bg-white text-[#09090b] [&_.combobox-trigger]:border-[#e4e4e7] [&_.combobox-trigger]:shadow-sm",
+      "dark:[&_.combobox-trigger]:bg-[#18181B] dark:text-[#FAFAFA] dark:[&_.combobox-trigger]:border-[#27272a]",
+      "[&_.combobox-dropdown]:bg-white [&_.combobox-dropdown]:border-[#e4e4e7]",
+      "dark:[&_.combobox-dropdown]:bg-[#18181B] dark:[&_.combobox-dropdown]:border-[#27272a]",
+      "[&_.combobox-search-input]:border-[#e4e4e7] dark:[&_.combobox-search-input]:border-[#27272a]",
+      "[&_.combobox-pill]:text-[#09090b] [&_.combobox-pill]:bg-[#e4e4e7]",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-gray-600 dark:[&_.combobox-sort-icon]:text-gray-300"
     ]
   end
 
   defp color_variant("default", "natural") do
     [
-      "[&_.search-combobox-trigger]:bg-[#4B4B4B] text-white dark:[&_.search-combobox-trigger]:bg-[#DDDDDD] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#4B4B4B] dark:[&_.search-combobox-dropdown]:bg-[#E8E8E8]",
+      "[&_.combobox-trigger]:bg-[#4B4B4B] text-white dark:[&_.combobox-trigger]:bg-[#DDDDDD] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#4B4B4B] dark:[&_.combobox-dropdown]:bg-[#E8E8E8]",
       "hover:[&_.combobox-option]:bg-[#282828] dark:hover:[&_.combobox-option]:bg-[#E8E8E8]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#282828] dark:[&_.search-combobox-pill]:bg-[#E8E8E8]",
-      "[&_.search-combobox-sort-icon]:text-white dark:[&_.search-combobox-sort-icon]:text-black"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#282828] dark:[&_.combobox-pill]:bg-[#E8E8E8]",
+      "[&_.combobox-sort-icon]:text-white dark:[&_.combobox-sort-icon]:text-black"
     ]
   end
 
   defp color_variant("default", "primary") do
     [
-      "[&_.search-combobox-trigger]:bg-[#007F8C] text-white dark:[&_.search-combobox-trigger]:bg-[#01B8CA] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#007F8C] dark:[&_.search-combobox-dropdown]:bg-[#01B8CA]",
+      "[&_.combobox-trigger]:bg-[#007F8C] text-white dark:[&_.combobox-trigger]:bg-[#01B8CA] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#007F8C] dark:[&_.combobox-dropdown]:bg-[#01B8CA]",
       "hover:[&_.combobox-option]:bg-[#016974] dark:hover:[&_.combobox-option]:bg-[#77D5E3]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#016974] dark:[&_.search-combobox-pill]:bg-[#77D5E3]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#016974] dark:[&_.combobox-pill]:bg-[#77D5E3]"
     ]
   end
 
   defp color_variant("default", "secondary") do
     [
-      "[&_.search-combobox-trigger]:bg-[#266EF1] text-white dark:[&_.search-combobox-trigger]:bg-[#6DAAFB] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#266EF1] dark:[&_.search-combobox-dropdown]:bg-[#6DAAFB]",
+      "[&_.combobox-trigger]:bg-[#266EF1] text-white dark:[&_.combobox-trigger]:bg-[#6DAAFB] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#266EF1] dark:[&_.combobox-dropdown]:bg-[#6DAAFB]",
       "hover:[&_.combobox-option]:bg-[#175BCC] dark:hover:[&_.combobox-option]:bg-[#A9C9FF]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#175BCC] dark:[&_.search-combobox-pill]:bg-[#A9C9FF]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#175BCC] dark:[&_.combobox-pill]:bg-[#A9C9FF]"
     ]
   end
 
   defp color_variant("default", "success") do
     [
-      "[&_.search-combobox-trigger]:bg-[#0E8345] text-white dark:[&_.search-combobox-trigger]:bg-[#06C167] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#0E8345] dark:[&_.search-combobox-dropdown]:bg-[#06C167]",
+      "[&_.combobox-trigger]:bg-[#0E8345] text-white dark:[&_.combobox-trigger]:bg-[#06C167] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#0E8345] dark:[&_.combobox-dropdown]:bg-[#06C167]",
       "hover:[&_.combobox-option]:bg-[#166C3B] dark:hover:[&_.combobox-option]:bg-[#7FD99A]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#166C3B] dark:[&_.search-combobox-pill]:bg-[#7FD99A]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#166C3B] dark:[&_.combobox-pill]:bg-[#7FD99A]"
     ]
   end
 
   defp color_variant("default", "warning") do
     [
-      "[&_.search-combobox-trigger]:bg-[#CA8D01] text-white dark:[&_.search-combobox-trigger]:bg-[#FDC034] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#CA8D01] dark:[&_.search-combobox-dropdown]:bg-[#FDC034]",
+      "[&_.combobox-trigger]:bg-[#CA8D01] text-white dark:[&_.combobox-trigger]:bg-[#FDC034] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#CA8D01] dark:[&_.combobox-dropdown]:bg-[#FDC034]",
       "hover:[&_.combobox-option]:bg-[#976A01] dark:hover:[&_.combobox-option]:bg-[#FDD067]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#976A01] dark:[&_.search-combobox-pill]:bg-[#FDD067]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#976A01] dark:[&_.combobox-pill]:bg-[#FDD067]"
     ]
   end
 
   defp color_variant("default", "danger") do
     [
-      "[&_.search-combobox-trigger]:bg-[#DE1135] text-white dark:[&_.search-combobox-trigger]:bg-[#FC7F79] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#DE1135] dark:[&_.search-combobox-dropdown]:bg-[#FC7F79]",
+      "[&_.combobox-trigger]:bg-[#DE1135] text-white dark:[&_.combobox-trigger]:bg-[#FC7F79] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#DE1135] dark:[&_.combobox-dropdown]:bg-[#FC7F79]",
       "hover:[&_.combobox-option]:bg-[#BB032A] dark:hover:[&_.combobox-option]:bg-[#FFB2AB]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#BB032A] dark:[&_.search-combobox-pill]:bg-[#FFB2AB]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#BB032A] dark:[&_.combobox-pill]:bg-[#FFB2AB]"
     ]
   end
 
   defp color_variant("default", "info") do
     [
-      "[&_.search-combobox-trigger]:bg-[#0B84BA] text-white dark:[&_.search-combobox-trigger]:bg-[#3EB7ED] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#0B84BA] dark:[&_.search-combobox-dropdown]:bg-[#3EB7ED]",
+      "[&_.combobox-trigger]:bg-[#0B84BA] text-white dark:[&_.combobox-trigger]:bg-[#3EB7ED] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#0B84BA] dark:[&_.combobox-dropdown]:bg-[#3EB7ED]",
       "hover:[&_.combobox-option]:bg-[#08638C] dark:hover:[&_.combobox-option]:bg-[#6EC9F2]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#08638C] dark:[&_.search-combobox-pill]:bg-[#6EC9F2]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#08638C] dark:[&_.combobox-pill]:bg-[#6EC9F2]"
     ]
   end
 
   defp color_variant("default", "misc") do
     [
-      "[&_.search-combobox-trigger]:bg-[#8750C5] text-white dark:[&_.search-combobox-trigger]:bg-[#BA83F9] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#8750C5] dark:[&_.search-combobox-dropdown]:bg-[#BA83F9]",
+      "[&_.combobox-trigger]:bg-[#8750C5] text-white dark:[&_.combobox-trigger]:bg-[#BA83F9] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#8750C5] dark:[&_.combobox-dropdown]:bg-[#BA83F9]",
       "hover:[&_.combobox-option]:bg-[#653C94] dark:hover:[&_.combobox-option]:bg-[#CBA2FA]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#653C94] dark:[&_.search-combobox-pill]:bg-[#CBA2FA]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#653C94] dark:[&_.combobox-pill]:bg-[#CBA2FA]"
     ]
   end
 
   defp color_variant("default", "dawn") do
     [
-      "[&_.search-combobox-trigger]:bg-[#A86438] text-white dark:[&_.search-combobox-trigger]:bg-[#DB976B] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#A86438] dark:[&_.search-combobox-dropdown]:bg-[#DB976B]",
+      "[&_.combobox-trigger]:bg-[#A86438] text-white dark:[&_.combobox-trigger]:bg-[#DB976B] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#A86438] dark:[&_.combobox-dropdown]:bg-[#DB976B]",
       "hover:[&_.combobox-option]:bg-[#7E4B2A] dark:hover:[&_.combobox-option]:bg-[#E4B190]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#7E4B2A] dark:[&_.search-combobox-pill]:bg-[#E4B190]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#7E4B2A] dark:[&_.combobox-pill]:bg-[#E4B190]"
     ]
   end
 
   defp color_variant("default", "silver") do
     [
-      "[&_.search-combobox-trigger]:bg-[#868686] text-white dark:[&_.search-combobox-trigger]:bg-[#A6A6A6] dark:text-black",
-      "[&_.search-combobox-dropdown]:bg-[#868686] dark:[&_.search-combobox-dropdown]:bg-[#A6A6A6]",
+      "[&_.combobox-trigger]:bg-[#868686] text-white dark:[&_.combobox-trigger]:bg-[#A6A6A6] dark:text-black",
+      "[&_.combobox-dropdown]:bg-[#868686] dark:[&_.combobox-dropdown]:bg-[#A6A6A6]",
       "hover:[&_.combobox-option]:bg-[#727272] dark:hover:[&_.combobox-option]:bg-[#BBBBBB]",
-      "[&_.search-combobox-search-input]:border-white dark:[&_.search-combobox-search-input]:border-black",
-      "[&_.search-combobox-search-input]:text-white dark:[&_.search-combobox-search-input]:text-black",
-      "[&_.search-combobox-search-input]:placeholder-white dark:[&_.search-combobox-search-input]:placeholder-black",
-      "[&_.search-combobox-pill]:bg-[#727272] dark:[&_.search-combobox-pill]:bg-[#BBBBBB]"
+      "[&_.combobox-search-input]:border-white dark:[&_.combobox-search-input]:border-black",
+      "[&_.combobox-search-input]:text-white dark:[&_.combobox-search-input]:text-black",
+      "[&_.combobox-search-input]:placeholder-white dark:[&_.combobox-search-input]:placeholder-black",
+      "[&_.combobox-pill]:bg-[#727272] dark:[&_.combobox-pill]:bg-[#BBBBBB]"
     ]
   end
 
   defp color_variant("bordered", "natural") do
     [
-      "[&_.search-combobox-trigger]:text-gray-700 [&_.search-combobox-trigger]:border-gray-700 [&_.search-combobox-trigger]:bg-gray-50",
-      "dark:[&_.search-combobox-trigger]:text-gray-300 dark:[&_.search-combobox-trigger]:border-gray-300 dark:[&_.search-combobox-trigger]:bg-gray-800",
-      "[&_.search-combobox-dropdown]:text-gray-700 [&_.search-combobox-dropdown]:border-gray-700 [&_.search-combobox-dropdown]:bg-gray-50",
-      "dark:[&_.search-combobox-dropdown]:text-gray-300 dark:[&_.search-combobox-dropdown]:border-gray-300 dark:[&_.search-combobox-dropdown]:bg-gray-800",
-      "[&_.search-combobox-search-input]:border-gray-700 dark:[&_.search-combobox-search-input]:border-gray-300",
-      "[&_.search-combobox-search-input]:text-gray-700 dark:[&_.search-combobox-search-input]:text-gray-300",
-      "[&_.search-combobox-pill]:text-gray-700 [&_.search-combobox-pill]:bg-gray-100",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-gray-700 dark:[&_.search-combobox-sort-icon]:text-gray-300"
+      "[&_.combobox-trigger]:text-gray-700 [&_.combobox-trigger]:border-gray-700 [&_.combobox-trigger]:bg-gray-50",
+      "dark:[&_.combobox-trigger]:text-gray-300 dark:[&_.combobox-trigger]:border-gray-300 dark:[&_.combobox-trigger]:bg-gray-800",
+      "[&_.combobox-dropdown]:text-gray-700 [&_.combobox-dropdown]:border-gray-700 [&_.combobox-dropdown]:bg-gray-50",
+      "dark:[&_.combobox-dropdown]:text-gray-300 dark:[&_.combobox-dropdown]:border-gray-300 dark:[&_.combobox-dropdown]:bg-gray-800",
+      "[&_.combobox-search-input]:border-gray-700 dark:[&_.combobox-search-input]:border-gray-300",
+      "[&_.combobox-search-input]:text-gray-700 dark:[&_.combobox-search-input]:text-gray-300",
+      "[&_.combobox-pill]:text-gray-700 [&_.combobox-pill]:bg-gray-100",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-gray-700 dark:[&_.combobox-sort-icon]:text-gray-300"
     ]
   end
 
   defp color_variant("bordered", "primary") do
     [
-      "[&_.search-combobox-trigger]:text-teal-700 [&_.search-combobox-trigger]:border-teal-700 [&_.search-combobox-trigger]:bg-teal-50",
-      "dark:[&_.search-combobox-trigger]:text-teal-300 dark:[&_.search-combobox-trigger]:border-teal-300 dark:[&_.search-combobox-trigger]:bg-teal-950",
-      "[&_.search-combobox-dropdown]:text-teal-700 [&_.search-combobox-dropdown]:border-teal-700 [&_.search-combobox-dropdown]:bg-teal-50",
-      "dark:[&_.search-combobox-dropdown]:text-teal-300 dark:[&_.search-combobox-dropdown]:border-teal-300 dark:[&_.search-combobox-dropdown]:bg-teal-950",
-      "[&_.search-combobox-search-input]:border-teal-700 dark:[&_.search-combobox-search-input]:border-teal-300",
-      "[&_.search-combobox-search-input]:text-teal-700 dark:[&_.search-combobox-search-input]:text-teal-300",
-      "[&_.search-combobox-pill]:text-teal-700 [&_.search-combobox-pill]:bg-teal-100",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-teal-700 dark:[&_.search-combobox-sort-icon]:text-teal-300"
+      "[&_.combobox-trigger]:text-teal-700 [&_.combobox-trigger]:border-teal-700 [&_.combobox-trigger]:bg-teal-50",
+      "dark:[&_.combobox-trigger]:text-teal-300 dark:[&_.combobox-trigger]:border-teal-300 dark:[&_.combobox-trigger]:bg-teal-950",
+      "[&_.combobox-dropdown]:text-teal-700 [&_.combobox-dropdown]:border-teal-700 [&_.combobox-dropdown]:bg-teal-50",
+      "dark:[&_.combobox-dropdown]:text-teal-300 dark:[&_.combobox-dropdown]:border-teal-300 dark:[&_.combobox-dropdown]:bg-teal-950",
+      "[&_.combobox-search-input]:border-teal-700 dark:[&_.combobox-search-input]:border-teal-300",
+      "[&_.combobox-search-input]:text-teal-700 dark:[&_.combobox-search-input]:text-teal-300",
+      "[&_.combobox-pill]:text-teal-700 [&_.combobox-pill]:bg-teal-100",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-teal-700 dark:[&_.combobox-sort-icon]:text-teal-300"
     ]
   end
 
   defp color_variant("bordered", "secondary") do
     [
-      "[&_.search-combobox-trigger]:text-blue-700 [&_.search-combobox-trigger]:border-blue-700 [&_.search-combobox-trigger]:bg-blue-50",
-      "dark:[&_.search-combobox-trigger]:text-blue-300 dark:[&_.search-combobox-trigger]:border-blue-300 dark:[&_.search-combobox-trigger]:bg-blue-950",
-      "[&_.search-combobox-dropdown]:text-blue-700 [&_.search-combobox-dropdown]:border-blue-700 [&_.search-combobox-dropdown]:bg-blue-50",
-      "dark:[&_.search-combobox-dropdown]:text-blue-300 dark:[&_.search-combobox-dropdown]:border-blue-300 dark:[&_.search-combobox-dropdown]:bg-blue-950",
-      "[&_.search-combobox-search-input]:border-blue-700 dark:[&_.search-combobox-search-input]:border-blue-300",
-      "[&_.search-combobox-search-input]:text-blue-700 dark:[&_.search-combobox-search-input]:text-blue-300",
-      "[&_.search-combobox-pill]:text-blue-700 [&_.search-combobox-pill]:bg-blue-100",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-blue-700 dark:[&_.search-combobox-sort-icon]:text-blue-300"
+      "[&_.combobox-trigger]:text-blue-700 [&_.combobox-trigger]:border-blue-700 [&_.combobox-trigger]:bg-blue-50",
+      "dark:[&_.combobox-trigger]:text-blue-300 dark:[&_.combobox-trigger]:border-blue-300 dark:[&_.combobox-trigger]:bg-blue-950",
+      "[&_.combobox-dropdown]:text-blue-700 [&_.combobox-dropdown]:border-blue-700 [&_.combobox-dropdown]:bg-blue-50",
+      "dark:[&_.combobox-dropdown]:text-blue-300 dark:[&_.combobox-dropdown]:border-blue-300 dark:[&_.combobox-dropdown]:bg-blue-950",
+      "[&_.combobox-search-input]:border-blue-700 dark:[&_.combobox-search-input]:border-blue-300",
+      "[&_.combobox-search-input]:text-blue-700 dark:[&_.combobox-search-input]:text-blue-300",
+      "[&_.combobox-pill]:text-blue-700 [&_.combobox-pill]:bg-blue-100",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-blue-700 dark:[&_.combobox-sort-icon]:text-blue-300"
     ]
   end
 
   defp color_variant("bordered", "success") do
     [
-      "[&_.search-combobox-trigger]:text-green-700 [&_.search-combobox-trigger]:border-green-700 [&_.search-combobox-trigger]:bg-green-50",
-      "dark:[&_.search-combobox-trigger]:text-green-300 dark:[&_.search-combobox-trigger]:border-green-300 dark:[&_.search-combobox-trigger]:bg-green-950",
-      "[&_.search-combobox-dropdown]:text-green-700 [&_.search-combobox-dropdown]:border-green-700 [&_.search-combobox-dropdown]:bg-green-50",
-      "dark:[&_.search-combobox-dropdown]:text-green-300 dark:[&_.search-combobox-dropdown]:border-green-300 dark:[&_.search-combobox-dropdown]:bg-green-950",
-      "[&_.search-combobox-search-input]:border-green-700 dark:[&_.search-combobox-search-input]:border-green-300",
-      "[&_.search-combobox-search-input]:text-green-700 dark:[&_.search-combobox-search-input]:text-green-300",
-      "[&_.search-combobox-pill]:text-green-700 [&_.search-combobox-pill]:bg-green-100",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-green-700 dark:[&_.search-combobox-sort-icon]:text-green-300"
+      "[&_.combobox-trigger]:text-green-700 [&_.combobox-trigger]:border-green-700 [&_.combobox-trigger]:bg-green-50",
+      "dark:[&_.combobox-trigger]:text-green-300 dark:[&_.combobox-trigger]:border-green-300 dark:[&_.combobox-trigger]:bg-green-950",
+      "[&_.combobox-dropdown]:text-green-700 [&_.combobox-dropdown]:border-green-700 [&_.combobox-dropdown]:bg-green-50",
+      "dark:[&_.combobox-dropdown]:text-green-300 dark:[&_.combobox-dropdown]:border-green-300 dark:[&_.combobox-dropdown]:bg-green-950",
+      "[&_.combobox-search-input]:border-green-700 dark:[&_.combobox-search-input]:border-green-300",
+      "[&_.combobox-search-input]:text-green-700 dark:[&_.combobox-search-input]:text-green-300",
+      "[&_.combobox-pill]:text-green-700 [&_.combobox-pill]:bg-green-100",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-green-700 dark:[&_.combobox-sort-icon]:text-green-300"
     ]
   end
 
   defp color_variant("bordered", "danger") do
     [
-      "[&_.search-combobox-trigger]:text-red-700 [&_.search-combobox-trigger]:border-red-700 [&_.search-combobox-trigger]:bg-red-50",
-      "dark:[&_.search-combobox-trigger]:text-red-300 dark:[&_.search-combobox-trigger]:border-red-300 dark:[&_.search-combobox-trigger]:bg-red-950",
-      "[&_.search-combobox-dropdown]:text-red-700 [&_.search-combobox-dropdown]:border-red-700 [&_.search-combobox-dropdown]:bg-red-50",
-      "dark:[&_.search-combobox-dropdown]:text-red-300 dark:[&_.search-combobox-dropdown]:border-red-300 dark:[&_.search-combobox-dropdown]:bg-red-950",
-      "[&_.search-combobox-search-input]:border-red-700 dark:[&_.search-combobox-search-input]:border-red-300",
-      "[&_.search-combobox-search-input]:text-red-700 dark:[&_.search-combobox-search-input]:text-red-300",
-      "[&_.search-combobox-pill]:text-red-700 [&_.search-combobox-pill]:bg-red-100",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-red-700 dark:[&_.search-combobox-sort-icon]:text-red-300"
+      "[&_.combobox-trigger]:text-red-700 [&_.combobox-trigger]:border-red-700 [&_.combobox-trigger]:bg-red-50",
+      "dark:[&_.combobox-trigger]:text-red-300 dark:[&_.combobox-trigger]:border-red-300 dark:[&_.combobox-trigger]:bg-red-950",
+      "[&_.combobox-dropdown]:text-red-700 [&_.combobox-dropdown]:border-red-700 [&_.combobox-dropdown]:bg-red-50",
+      "dark:[&_.combobox-dropdown]:text-red-300 dark:[&_.combobox-dropdown]:border-red-300 dark:[&_.combobox-dropdown]:bg-red-950",
+      "[&_.combobox-search-input]:border-red-700 dark:[&_.combobox-search-input]:border-red-300",
+      "[&_.combobox-search-input]:text-red-700 dark:[&_.combobox-search-input]:text-red-300",
+      "[&_.combobox-pill]:text-red-700 [&_.combobox-pill]:bg-red-100",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-red-700 dark:[&_.combobox-sort-icon]:text-red-300"
     ]
   end
 
   defp color_variant("bordered", "info") do
     [
-      "[&_.search-combobox-trigger]:text-[#0B84BA] [&_.search-combobox-trigger]:border-[#0B84BA] [&_.search-combobox-trigger]:bg-[#E7F6FD]",
-      "dark:[&_.search-combobox-trigger]:text-[#6EC9F2] dark:[&_.search-combobox-trigger]:border-[#6EC9F2] dark:[&_.search-combobox-trigger]:bg-[#03212F]",
-      "[&_.search-combobox-dropdown]:text-[#0B84BA] [&_.search-combobox-dropdown]:border-[#0B84BA] [&_.search-combobox-dropdown]:bg-[#E7F6FD]",
-      "dark:[&_.search-combobox-dropdown]:text-[#6EC9F2] dark:[&_.search-combobox-dropdown]:border-[#6EC9F2] dark:[&_.search-combobox-dropdown]:bg-[#03212F]",
-      "[&_.search-combobox-search-input]:border-[#0B84BA] dark:[&_.search-combobox-search-input]:border-[#6EC9F2]",
-      "[&_.search-combobox-search-input]:text-[#0B84BA] dark:[&_.search-combobox-search-input]:text-[#6EC9F2]",
-      "[&_.search-combobox-pill]:text-[#0B84BA] [&_.search-combobox-pill]:bg-[#B8E6F7]",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-[#0B84BA] dark:[&_.search-combobox-sort-icon]:text-[#6EC9F2]"
+      "[&_.combobox-trigger]:text-[#0B84BA] [&_.combobox-trigger]:border-[#0B84BA] [&_.combobox-trigger]:bg-[#E7F6FD]",
+      "dark:[&_.combobox-trigger]:text-[#6EC9F2] dark:[&_.combobox-trigger]:border-[#6EC9F2] dark:[&_.combobox-trigger]:bg-[#03212F]",
+      "[&_.combobox-dropdown]:text-[#0B84BA] [&_.combobox-dropdown]:border-[#0B84BA] [&_.combobox-dropdown]:bg-[#E7F6FD]",
+      "dark:[&_.combobox-dropdown]:text-[#6EC9F2] dark:[&_.combobox-dropdown]:border-[#6EC9F2] dark:[&_.combobox-dropdown]:bg-[#03212F]",
+      "[&_.combobox-search-input]:border-[#0B84BA] dark:[&_.combobox-search-input]:border-[#6EC9F2]",
+      "[&_.combobox-search-input]:text-[#0B84BA] dark:[&_.combobox-search-input]:text-[#6EC9F2]",
+      "[&_.combobox-pill]:text-[#0B84BA] [&_.combobox-pill]:bg-[#B8E6F7]",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-[#0B84BA] dark:[&_.combobox-sort-icon]:text-[#6EC9F2]"
     ]
   end
 
   defp color_variant("bordered", "misc") do
     [
-      "[&_.search-combobox-trigger]:text-[#653C94] [&_.search-combobox-trigger]:border-[#653C94] [&_.search-combobox-trigger]:bg-[#F6F0FE]",
-      "dark:[&_.search-combobox-trigger]:text-[#CBA2FA] dark:[&_.search-combobox-trigger]:border-[#CBA2FA] dark:[&_.search-combobox-trigger]:bg-[#221431]",
-      "[&_.search-combobox-dropdown]:text-[#653C94] [&_.search-combobox-dropdown]:border-[#653C94] [&_.search-combobox-dropdown]:bg-[#F6F0FE]",
-      "dark:[&_.search-combobox-dropdown]:text-[#CBA2FA] dark:[&_.search-combobox-dropdown]:border-[#CBA2FA] dark:[&_.search-combobox-dropdown]:bg-[#221431]",
-      "[&_.search-combobox-search-input]:border-[#653C94] dark:[&_.search-combobox-search-input]:border-[#CBA2FA]",
-      "[&_.search-combobox-search-input]:text-[#653C94] dark:[&_.search-combobox-search-input]:text-[#CBA2FA]",
-      "[&_.search-combobox-pill]:text-[#653C94] [&_.search-combobox-pill]:bg-[#E8D5FC]",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-[#653C94] dark:[&_.search-combobox-sort-icon]:text-[#CBA2FA]"
+      "[&_.combobox-trigger]:text-[#653C94] [&_.combobox-trigger]:border-[#653C94] [&_.combobox-trigger]:bg-[#F6F0FE]",
+      "dark:[&_.combobox-trigger]:text-[#CBA2FA] dark:[&_.combobox-trigger]:border-[#CBA2FA] dark:[&_.combobox-trigger]:bg-[#221431]",
+      "[&_.combobox-dropdown]:text-[#653C94] [&_.combobox-dropdown]:border-[#653C94] [&_.combobox-dropdown]:bg-[#F6F0FE]",
+      "dark:[&_.combobox-dropdown]:text-[#CBA2FA] dark:[&_.combobox-dropdown]:border-[#CBA2FA] dark:[&_.combobox-dropdown]:bg-[#221431]",
+      "[&_.combobox-search-input]:border-[#653C94] dark:[&_.combobox-search-input]:border-[#CBA2FA]",
+      "[&_.combobox-search-input]:text-[#653C94] dark:[&_.combobox-search-input]:text-[#CBA2FA]",
+      "[&_.combobox-pill]:text-[#653C94] [&_.combobox-pill]:bg-[#E8D5FC]",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-[#653C94] dark:[&_.combobox-sort-icon]:text-[#CBA2FA]"
     ]
   end
 
   defp color_variant("bordered", "dawn") do
     [
-      "[&_.search-combobox-trigger]:text-[#7E4B2A] [&_.search-combobox-trigger]:border-[#7E4B2A] [&_.search-combobox-trigger]:bg-[#FBF2ED]",
-      "dark:[&_.search-combobox-trigger]:text-[#E4B190] dark:[&_.search-combobox-trigger]:border-[#E4B190] dark:[&_.search-combobox-trigger]:bg-[#2A190E]",
-      "[&_.search-combobox-dropdown]:text-[#7E4B2A] [&_.search-combobox-dropdown]:border-[#7E4B2A] [&_.search-combobox-dropdown]:bg-[#FBF2ED]",
-      "dark:[&_.search-combobox-dropdown]:text-[#E4B190] dark:[&_.search-combobox-dropdown]:border-[#E4B190] dark:[&_.search-combobox-dropdown]:bg-[#2A190E]",
-      "[&_.search-combobox-search-input]:border-[#7E4B2A] dark:[&_.search-combobox-search-input]:border-[#E4B190]",
-      "[&_.search-combobox-search-input]:text-[#7E4B2A] dark:[&_.search-combobox-search-input]:text-[#E4B190]",
-      "[&_.search-combobox-pill]:text-[#7E4B2A] [&_.search-combobox-pill]:bg-[#F0DCC9]",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-[#7E4B2A] dark:[&_.search-combobox-sort-icon]:text-[#E4B190]"
+      "[&_.combobox-trigger]:text-[#7E4B2A] [&_.combobox-trigger]:border-[#7E4B2A] [&_.combobox-trigger]:bg-[#FBF2ED]",
+      "dark:[&_.combobox-trigger]:text-[#E4B190] dark:[&_.combobox-trigger]:border-[#E4B190] dark:[&_.combobox-trigger]:bg-[#2A190E]",
+      "[&_.combobox-dropdown]:text-[#7E4B2A] [&_.combobox-dropdown]:border-[#7E4B2A] [&_.combobox-dropdown]:bg-[#FBF2ED]",
+      "dark:[&_.combobox-dropdown]:text-[#E4B190] dark:[&_.combobox-dropdown]:border-[#E4B190] dark:[&_.combobox-dropdown]:bg-[#2A190E]",
+      "[&_.combobox-search-input]:border-[#7E4B2A] dark:[&_.combobox-search-input]:border-[#E4B190]",
+      "[&_.combobox-search-input]:text-[#7E4B2A] dark:[&_.combobox-search-input]:text-[#E4B190]",
+      "[&_.combobox-pill]:text-[#7E4B2A] [&_.combobox-pill]:bg-[#F0DCC9]",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-[#7E4B2A] dark:[&_.combobox-sort-icon]:text-[#E4B190]"
     ]
   end
 
   defp color_variant("bordered", "silver") do
     [
-      "[&_.search-combobox-trigger]:text-[#727272] [&_.search-combobox-trigger]:border-[#727272] [&_.search-combobox-trigger]:bg-[#F3F3F3]",
-      "dark:[&_.search-combobox-trigger]:text-[#BBBBBB] dark:[&_.search-combobox-trigger]:border-[#BBBBBB] dark:[&_.search-combobox-trigger]:bg-[#4B4B4B]",
-      "[&_.search-combobox-dropdown]:text-[#727272] [&_.search-combobox-dropdown]:border-[#727272] [&_.search-combobox-dropdown]:bg-[#F3F3F3]",
-      "dark:[&_.search-combobox-dropdown]:text-[#BBBBBB] dark:[&_.search-combobox-dropdown]:border-[#BBBBBB] dark:[&_.search-combobox-dropdown]:bg-[#4B4B4B]",
-      "[&_.search-combobox-search-input]:border-[#727272] dark:[&_.search-combobox-search-input]:border-[#BBBBBB]",
-      "[&_.search-combobox-search-input]:text-[#727272] dark:[&_.search-combobox-search-input]:text-[#BBBBBB]",
-      "[&_.search-combobox-pill]:text-[#727272] [&_.search-combobox-pill]:bg-[#E8E8E8]",
-      "[&_.search-combobox-dropdown]:shadow",
-      "[&_.search-combobox-sort-icon]:text-[#727272] dark:[&_.search-combobox-sort-icon]:text-[#BBBBBB]"
+      "[&_.combobox-trigger]:text-[#727272] [&_.combobox-trigger]:border-[#727272] [&_.combobox-trigger]:bg-[#F3F3F3]",
+      "dark:[&_.combobox-trigger]:text-[#BBBBBB] dark:[&_.combobox-trigger]:border-[#BBBBBB] dark:[&_.combobox-trigger]:bg-[#4B4B4B]",
+      "[&_.combobox-dropdown]:text-[#727272] [&_.combobox-dropdown]:border-[#727272] [&_.combobox-dropdown]:bg-[#F3F3F3]",
+      "dark:[&_.combobox-dropdown]:text-[#BBBBBB] dark:[&_.combobox-dropdown]:border-[#BBBBBB] dark:[&_.combobox-dropdown]:bg-[#4B4B4B]",
+      "[&_.combobox-search-input]:border-[#727272] dark:[&_.combobox-search-input]:border-[#BBBBBB]",
+      "[&_.combobox-search-input]:text-[#727272] dark:[&_.combobox-search-input]:text-[#BBBBBB]",
+      "[&_.combobox-pill]:text-[#727272] [&_.combobox-pill]:bg-[#E8E8E8]",
+      "[&_.combobox-dropdown]:shadow",
+      "[&_.combobox-sort-icon]:text-[#727272] dark:[&_.combobox-sort-icon]:text-[#BBBBBB]"
     ]
   end
 

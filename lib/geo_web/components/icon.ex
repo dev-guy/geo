@@ -15,8 +15,8 @@ defmodule GeoWeb.Components.Icon do
   ## Examples:
 
       <.icon name="hero-home" class="w-6 h-6" />
-      <.icon name="fa-github" variant="brands" size="lg" />
-      <.icon name="material-settings" color="primary" animate="spin" />
+      <.icon name="hero-sun" class="w-4 h-4" />
+      <.icon name="hero-moon" class="w-4 h-4" />
 
   ## Properties:
   - `name` - Required. The identifier of the icon to display
@@ -47,6 +47,8 @@ defmodule GeoWeb.Components.Icon do
 
       <.icon name="hero-x-mark-solid" />
       <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+      <.icon name="hero-sun" class="h-4 w-4" />
+      <.icon name="hero-moon" class="h-4 w-4" />
   """
   @doc type: :component
   attr :name, :string, required: true

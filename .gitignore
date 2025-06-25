@@ -1,6 +1,9 @@
 .rules
 .claude
 
+# dialyzer
+priv/plts
+
 # The directory Mix will write compiled artifacts to.
 /_build/
 

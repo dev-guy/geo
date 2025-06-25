@@ -20,16 +20,16 @@ test.describe('Country Selector Navigation', () => {
         await page.waitForLoadState('networkidle');
       }
       // Open the combobox
-      await page.click('.search-combobox-trigger');
+      await page.click('.combobox-trigger');
 
       // Wait for dropdown with longer timeout for all browsers due to occasional slowness
       const timeout = browserName === 'firefox' ? 20000 : 15000;
-      await page.waitForSelector('.search-combobox-dropdown:not([hidden])', {
+      await page.waitForSelector('.combobox-dropdown:not([hidden])', {
         timeout,
       });
 
       // Type "by" in the search box to get a predictable set of results with multiple groups
-      const searchInput = page.locator('.search-combobox-search-input');
+      const searchInput = page.locator('.combobox-search-input');
       await searchInput.fill('by');
       await page.waitForTimeout(1000); // Wait for search results
 
@@ -163,16 +163,16 @@ test.describe('Country Selector Navigation', () => {
         await page.waitForLoadState('networkidle');
       }
       // Open the combobox
-      await page.click('.search-combobox-trigger');
+      await page.click('.combobox-trigger');
 
       // Wait for dropdown with longer timeout for all browsers due to occasional slowness
       const timeout = browserName === 'firefox' ? 20000 : 15000;
-      await page.waitForSelector('.search-combobox-dropdown:not([hidden])', {
+      await page.waitForSelector('.combobox-dropdown:not([hidden])', {
         timeout,
       });
 
       // Type "an" in the search box to get a different set of results
-      const searchInput = page.locator('.search-combobox-search-input');
+      const searchInput = page.locator('.combobox-search-input');
       await searchInput.fill('an');
       await page.waitForTimeout(1000); // Wait for search results
 

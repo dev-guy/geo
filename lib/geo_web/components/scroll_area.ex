@@ -58,7 +58,7 @@ defmodule GeoWeb.Components.ScrollArea do
       <div
         class={[
           "w-full overflow-auto relative scroll-viewport focus:outline-none",
-          "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "scroll-hide md:scroll-show",
           @height
         ]}
         tabindex="0"

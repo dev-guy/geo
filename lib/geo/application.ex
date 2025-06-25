@@ -31,12 +31,12 @@ defmodule Geo.Application do
         [
           Geo.Repo,
           GeoWeb.Telemetry,
-          {Geo.Geography.Country.CacheSupervisor, []},
-          # Start to serve requests, typically the last entry
-          GeoWeb.Endpoint,
           {Phoenix.PubSub, name: Geo.PubSub},
+          {Geo.Geography.Country.CacheSupervisor, []},
           # Start the Finch HTTP client for sending emails
-          {Finch, name: Geo.Finch}
+          {Finch, name: Geo.Finch},
+          # Start to serve requests, typically the last entry
+          GeoWeb.Endpoint
         ]
     end
   end
