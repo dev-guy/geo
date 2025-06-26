@@ -49,7 +49,7 @@ LiveView:
 
 ## Fly.io deployment
 
-These tips are only suitable for a hobby project. Real projects should ise an alternative Postgres solution.
+These tips are only suitable for a hobby project. Real projects should use an alternative Postgres solution.
 
 ### Environment variables (secrets)
 
