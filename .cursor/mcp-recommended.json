@@ -1,13 +1,13 @@
 {
   "mcpServers": {
       "tidewave": {
-          "command": "/Users/terrislinenbach/healthcompass/mcp-proxy",
+          "command": "mcp-proxy",
           "args": [
               "http://localhost:4000/tidewave/mcp"
           ]
       },
       "ash": {
-          "command": "/Users/terrislinenbach/healthcompass/mcp-proxy",
+          "command": "mcp-proxy",
           "args": [
               "http://localhost:4000/ash_ai/mcp"
           ]
