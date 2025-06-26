@@ -9,6 +9,24 @@
       </p>
     </div>
     <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900 dark:text-gray-100">
+      <a
+        href="https://fly.io"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+      >
+        <span>Powered by</span>
+        <img
+          src="https://fly.io/static/images/brand/logo-landscape.svg"
+          alt="Fly.io"
+          class="h-4 w-auto dark:hidden"
+        />
+        <img
+          src="https://fly.io/static/images/brand/logo-landscape-inverted.svg"
+          alt="Fly.io"
+          class="h-4 w-auto hidden dark:block"
+        />
+      </a>
       <GeoWeb.Components.ThemeToggle.theme_toggle theme={assigns[:theme] || "system"} />
     </div>
   </div>

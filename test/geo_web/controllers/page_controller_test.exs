@@ -3,6 +3,12 @@ defmodule GeoWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+    response = html_response(conn, 200)
+    
+    # Check for fly.io badge in the layout
+    assert response =~ "Powered by"
+    assert response =~ "https://fly.io"
+    assert response =~ "fly.io/static/images/brand/logo-landscape.svg"
+    assert response =~ "fly.io/static/images/brand/logo-landscape-inverted.svg"
   end
 end
