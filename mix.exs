@@ -44,7 +44,7 @@ defmodule Geo.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:usage_rules, "~> 0.1", only: [:dev]},
-      {:ash_ai, "~> 0.1"},
+      {:ash_ai, "~> 0.1", only: [:dev]},
       {:tidewave, "~> 0.1", only: [:dev]},
       {:mishka_chelekom, "~> 0.0", only: [:dev]},
       {:live_debugger, "~> 0.2", only: [:dev]},
