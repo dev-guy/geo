@@ -49,6 +49,8 @@ LiveView:
 
 ## Fly.io deployment
 
+These tips are only suitable for a hobby project. Real projects should ise an alternative Postgres solution.
+
 ### Environment variables (secrets)
 
 - `DATABASE_URL`
