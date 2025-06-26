@@ -700,7 +700,8 @@ const SearchCombobox = {
       this.toggleMultipleSelection(option, value);
     } else {
       this.setSingleSelection(option, value);
-      // Don't close dropdown - keep it open for continued interaction
+      // Close dropdown after single selection
+      this.closeDropdown();
     }
   },
 
