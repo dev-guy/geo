@@ -2,11 +2,6 @@ app = "geo-demo"
 primary_region = "sjc"
 kill_signal = "SIGTERM"
 
-[build]
-
-[deploy]
-  release_command = "/app/bin/migrate"
-
 [env]
   PHX_HOST = "geo-demo.fly.dev"
   PORT = "8080"

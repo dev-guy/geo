@@ -82,6 +82,30 @@ D) Add/modify secrets to the `geo-demo` app via the fly.io web app
 
 - Set `DATABASE_URL` to `postgresql://geo_demo:<db password >@geo-demo-db.internal:5432/geo_demo?sslmode=disable`
 
+E) Modify Dockerfile
+
+Environment variables
+
+```txt
+# Set env vars
+ENV MIX_ENV=prod
+ENV PHX_SERVER=true
+ENV ECTO_IPV6=tru
+```
+
+CMD script
+
+Since I run migrations from my laptop, I created a `start.sh` that runs `mix phx.server` and can be easily changed for troubleshooting.
+
+```txt
+# Create a startup script
+RUN echo '#!/bin/sh\n\
+mix phx.server' > /app/start.sh && chmod +x /app/start.sh
+
+# Start the application
+CMD ["/app/start.sh"]
+```
+
 ### Redeployment
 
 After updating secrets or code, run `mix deploy`
