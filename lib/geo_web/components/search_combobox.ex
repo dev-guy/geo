@@ -407,43 +407,13 @@ defmodule GeoWeb.Components.SearchCombobox do
                         ),
                         @option_group_class
                       ]}>
-                        <div class="group-label font-semibold my-2 flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <button
-                              type="button"
-                              phx-click={@toggle_group_collapse_event}
-                              phx-value-group={group_label}
-                              phx-target={@group_event_target}
-                              data-is-header-button="true"
-                              class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title="Toggle group visibility"
-                            >
-                              <%= if get_in(@group_states, [group_label, :collapsed]) do %>
-                                <.icon name="hero-chevron-right" class="h-4 w-4" />
-                              <% else %>
-                                <.icon name="hero-chevron-down" class="h-4 w-4" />
-                              <% end %>
-                            </button>
-                            <span>{group_label}</span>
-                          </div>
-                          <%= if get_in(@group_states, [group_label, :sort_icon]) do %>
-                            <button
-                              type="button"
-                              phx-click={@toggle_group_sort_event}
-                              phx-value-group={group_label}
-                              phx-target={@group_event_target}
-                              data-is-header-button="true"
-                              class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title={"Toggle #{group_label} sort order"}
-                            >
-                              <span class="mr-1">Sort</span>
-                              <.icon
-                                name={get_in(@group_states, [group_label, :sort_icon])}
-                                class="h-4 w-4"
-                              />
-                            </button>
-                          <% end %>
-                        </div>
+                        <.group_header
+                          group_label={group_label}
+                          group_states={@group_states}
+                          toggle_group_collapse_event={@toggle_group_collapse_event}
+                          toggle_group_sort_event={@toggle_group_sort_event}
+                          group_event_target={@group_event_target}
+                        />
 
                         <div
                           :if={!get_in(@group_states, [group_label, :collapsed])}
@@ -698,43 +668,13 @@ defmodule GeoWeb.Components.SearchCombobox do
                         ),
                         @option_group_class
                       ]}>
-                        <div class="group-label font-semibold my-2 flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <button
-                              type="button"
-                              phx-click={@toggle_group_collapse_event}
-                              phx-value-group={group_label}
-                              phx-target={@group_event_target}
-                              data-is-header-button="true"
-                              class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title="Toggle group visibility"
-                            >
-                              <%= if get_in(@group_states, [group_label, :collapsed]) do %>
-                                <.icon name="hero-chevron-right" class="h-4 w-4" />
-                              <% else %>
-                                <.icon name="hero-chevron-down" class="h-4 w-4" />
-                              <% end %>
-                            </button>
-                            <span>{group_label}</span>
-                          </div>
-                          <%= if get_in(@group_states, [group_label, :sort_icon]) do %>
-                            <button
-                              type="button"
-                              phx-click={@toggle_group_sort_event}
-                              phx-value-group={group_label}
-                              phx-target={@group_event_target}
-                              data-is-header-button="true"
-                              class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title={"Toggle #{group_label} sort order"}
-                            >
-                              <span class="mr-1">Sort</span>
-                              <.icon
-                                name={get_in(@group_states, [group_label, :sort_icon])}
-                                class="h-4 w-4"
-                              />
-                            </button>
-                          <% end %>
-                        </div>
+                        <.group_header
+                          group_label={group_label}
+                          group_states={@group_states}
+                          toggle_group_collapse_event={@toggle_group_collapse_event}
+                          toggle_group_sort_event={@toggle_group_sort_event}
+                          group_event_target={@group_event_target}
+                        />
 
                         <div
                           :if={!get_in(@group_states, [group_label, :collapsed])}
@@ -832,6 +772,55 @@ defmodule GeoWeb.Components.SearchCombobox do
     >
       {render_slot(@inner_block)}
       <.icon name="hero-check" class="hidden shrink-0 w-3.5 h-3.5 combobox-icon" />
+    </div>
+    """
+  end
+
+  # Private component for group header with sorting controls
+  attr :group_label, :string, required: true
+  attr :group_states, :map, required: true
+  attr :toggle_group_collapse_event, :string, required: true
+  attr :toggle_group_sort_event, :string, required: true
+  attr :group_event_target, :any, required: true
+
+  defp group_header(assigns) do
+    ~H"""
+    <div class="group-label font-semibold my-2 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          phx-click={@toggle_group_collapse_event}
+          phx-value-group={@group_label}
+          phx-target={@group_event_target}
+          data-is-header-button="true"
+          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          title="Toggle group visibility"
+        >
+          <%= if get_in(@group_states, [@group_label, :collapsed]) do %>
+            <.icon name="hero-chevron-right" class="h-4 w-4" />
+          <% else %>
+            <.icon name="hero-chevron-down" class="h-4 w-4" />
+          <% end %>
+        </button>
+        <span>{@group_label}</span>
+      </div>
+      <%= if get_in(@group_states, [@group_label, :sort_icon]) do %>
+        <button
+          type="button"
+          phx-click={@toggle_group_sort_event}
+          phx-value-group={@group_label}
+          phx-target={@group_event_target}
+          data-is-header-button="true"
+          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          title={"Toggle #{@group_label} sort order"}
+        >
+          <span class="mr-1">Sort</span>
+          <.icon
+            name={get_in(@group_states, [@group_label, :sort_icon])}
+            class="h-4 w-4"
+          />
+        </button>
+      <% end %>
     </div>
     """
   end

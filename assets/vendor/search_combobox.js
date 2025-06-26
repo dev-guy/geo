@@ -549,17 +549,21 @@ const SearchCombobox = {
   },
 
   adjustHeight() {
-    const rect = this.dropdown.getBoundingClientRect();
+    // Get dropdown position to calculate available space
+    const dropdownRect = this.dropdown.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - rect.top;
-
+    const viewportMargin = 10; // Stay 10px away from viewport edges
+    
+    // Calculate available space below the dropdown
+    const spaceBelow = viewportHeight - dropdownRect.top - viewportMargin;
+    
     // Calculate actual heights of fixed elements in dropdown
     const fixedElementsHeight = this.calculateFixedElementsHeight();
-
-    // Ensure a reasonable max height that allows for scrolling
-    // Cap at 300px or available space, whichever is smaller
-    const availableHeight = spaceBelow - fixedElementsHeight;
-    const maxHeight = Math.max(100, Math.min(300, availableHeight));
+    
+    // Calculate optimal height (use most of available space, minus fixed elements)
+    const maxHeight = Math.max(100, spaceBelow - fixedElementsHeight);
+    
+    // Apply height to scroll area
     this.scrollArea.style.maxHeight = `${maxHeight}px`;
     this.scrollArea.style.height = `${maxHeight}px`;
 
@@ -591,10 +595,10 @@ const SearchCombobox = {
       searchContainerHeight = marginTop + marginBottom + containerHeight;
     }
 
-    // Add some bottom margin from viewport for visual breathing room
-    const viewportMargin = 20;
+    // Add some visual breathing room within the dropdown
+    const internalPadding = 8;
 
-    return dropdownPaddingTop + dropdownPaddingBottom + searchContainerHeight + viewportMargin;
+    return dropdownPaddingTop + dropdownPaddingBottom + searchContainerHeight + internalPadding;
   },
 
   isOverScroll(event) {
@@ -966,18 +970,16 @@ const SearchCombobox = {
       header.style.setProperty('padding-top', '0', 'important');
       header.style.setProperty('padding-bottom', '0', 'important');
 
-      // Set inner padding for content
+      // Set inner padding for content (preserve original padding from CSS)
       header.style.paddingLeft = '0.75rem';
-      header.style.paddingRight = '2rem'; // Extra padding on right for scrollbar
+      header.style.paddingRight = '0.75rem'; // Consistent padding, no extra space for scrollbar
 
       // Ensure full width and proper sizing
       header.style.width = '100%';
       header.style.boxSizing = 'border-box';
 
-      // Fix flex layout to prevent wrapping
-      header.style.flexWrap = 'nowrap';
-      header.style.alignItems = 'center';
-      header.style.justifyContent = 'space-between';
+      // Let CSS handle the flexbox layout - don't override existing flex properties
+      // The template already has 'flex items-center justify-between' classes
 
       // Ensure consistent height
       header.style.height = `${this.headerHeight}px`;
