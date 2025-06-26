@@ -26,11 +26,8 @@ Resources:
 - Implementing manual reads and generic actions
 - Defining reusable attributes via macros
 - Implementing `slug` attributes that are computed via a 'change' when not provided (a change is the primary mechanism for customizing what happens during create, update, and destroy actions)
-
-Other:
-
-- Using Ash with a custom supervised GenServer
-- Seeding data using bulk upsert
+- Implementing Ash actions that use a custom supervised GenServer
+- Seeding data via bulk upsert
 
 LiveView:
 
@@ -43,11 +40,11 @@ LiveView:
 
 ## Custom Mix Aliases
 
-- `seed` : Add seed data
+- `seed`: Upserts seed data
 - `restart`: Starts/restarts server in background process
 - `stop`: Stops server running in background process 
 
-## Fly.io deployment
+## Running on Fly.io
 
 These tips are only suitable for a hobby project. Real projects should use an alternative Postgres solution.
 
