@@ -931,7 +931,7 @@ const SearchCombobox = {
       firstHeader.style.marginTop = '0';
       firstHeader.style.marginBottom = '0';
       firstHeader.style.paddingLeft = '0.75rem';
-      firstHeader.style.paddingRight = '0.5rem';
+      firstHeader.style.paddingRight = '0.75rem';
 
       // Force a layout to get accurate height
       firstHeader.getBoundingClientRect();
@@ -968,7 +968,7 @@ const SearchCombobox = {
 
       // Set inner padding for content
       header.style.paddingLeft = '0.75rem';
-      header.style.paddingRight = '2rem'; // Extra padding on right for scrollbar
+      header.style.paddingRight = '0.75rem'; // Match left padding for better balance
 
       // Ensure full width and proper sizing
       header.style.width = '100%';
@@ -997,39 +997,23 @@ const SearchCombobox = {
   },
 
   getBackgroundColor() {
-    // TODO memoize
-    // Create a temporary element to get Tailwind colors
-    // To handle dark mode
-    const tempEl = document.createElement('div');
-    tempEl.className = 'bg-white dark:bg-gray-800';
-    tempEl.style.position = 'absolute';
-    tempEl.style.visibility = 'hidden';
-    tempEl.style.pointerEvents = 'none';
-    document.body.appendChild(tempEl);
-
-    const computedStyle = window.getComputedStyle(tempEl);
-    const backgroundColor = computedStyle.backgroundColor;
-
-    document.body.removeChild(tempEl);
-    return backgroundColor;
+    // Use the dropdown's actual background color which already responds to dark mode
+    if (this.dropdown) {
+      const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
+      return dropdownBg || 'rgb(255, 255, 255)';
+    }
+    // Fallback if dropdown is not available
+    return 'rgb(255, 255, 255)';
   },
 
   getBorderColor() {
-    // Create a temporary element to get Tailwind border colors
-    const tempEl = document.createElement('div');
-    tempEl.className = 'border-gray-200 dark:border-gray-600';
-    tempEl.style.position = 'absolute';
-    tempEl.style.visibility = 'hidden';
-    tempEl.style.pointerEvents = 'none';
-    tempEl.style.borderWidth = '1px';
-    tempEl.style.borderStyle = 'solid';
-    document.body.appendChild(tempEl);
-
-    const computedStyle = window.getComputedStyle(tempEl);
-    const borderColor = computedStyle.borderColor;
-
-    document.body.removeChild(tempEl);
-    return `1px solid ${borderColor}`;
+    // Use the dropdown's actual border color which already responds to dark mode
+    if (this.dropdown) {
+      const dropdownBorder = window.getComputedStyle(this.dropdown).borderColor;
+      return `1px solid ${dropdownBorder || 'rgb(229, 231, 235)'}`;
+    }
+    // Fallback if dropdown is not available
+    return '1px solid rgb(229, 231, 235)';
   },
 
   handleScroll() {
