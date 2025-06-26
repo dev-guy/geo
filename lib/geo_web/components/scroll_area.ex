@@ -63,8 +63,10 @@ defmodule GeoWeb.Components.ScrollArea do
         ]}
         tabindex="0"
       >
-        <div class={["scroll-content", padding_size(@padding), @content_class]}>
-          {render_slot(@inner_block)}
+        <div class="overflow-y-auto max-h-60 scroll-hide">
+          <div class={["scroll-content", padding_size(@padding), @content_class]}>
+            {render_slot(@inner_block)}
+          </div>
         </div>
       </div>
 

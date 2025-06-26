@@ -414,6 +414,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               phx-click={@toggle_group_collapse_event}
                               phx-value-group={group_label}
                               phx-target={@group_event_target}
+                              data-is-header-button="true"
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title="Toggle group visibility"
                             >
@@ -431,6 +432,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               phx-click={@toggle_group_sort_event}
                               phx-value-group={group_label}
                               phx-target={@group_event_target}
+                              data-is-header-button="true"
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title={"Toggle #{group_label} sort order"}
                             >
@@ -615,7 +617,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             </div>
 
             <div class="flex items-center gap-1">
-              <div class="shrink-0" data-part="clear-combobox-button" role="button" hidden>
+              <div class="shrink-0" data-part="clear-combobox-button" role="button" hidden={is_nil(@value) || @value == ""}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -703,6 +705,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               phx-click={@toggle_group_collapse_event}
                               phx-value-group={group_label}
                               phx-target={@group_event_target}
+                              data-is-header-button="true"
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title="Toggle group visibility"
                             >
@@ -720,6 +723,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                               phx-click={@toggle_group_sort_event}
                               phx-value-group={group_label}
                               phx-target={@group_event_target}
+                              data-is-header-button="true"
                               class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                               title={"Toggle #{group_label} sort order"}
                             >

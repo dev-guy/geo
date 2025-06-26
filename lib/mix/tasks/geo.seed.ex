@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Geo.Seed do
+defmodule Mix.Tasks.Seed do
   @moduledoc """
   Runs database seeds without starting the full application supervision tree.
 
@@ -7,8 +7,7 @@ defmodule Mix.Tasks.Geo.Seed do
 
   ## Examples
 
-      mix geo.seed
-      mix geo.seed --file priv/repo/custom_seeds.exs
+      mix seed
   """
 
   use Mix.Task

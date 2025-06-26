@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Geo.Stop do
+defmodule Mix.Tasks.Stop do
   @moduledoc """
   Stops the Phoenix server if it's running.
 
@@ -6,12 +6,12 @@ defmodule Mix.Tasks.Geo.Stop do
 
   ## Examples
 
-      mix geo.stop
+      mix stop
   """
 
   use Mix.Task
 
-  @shortdoc "Stops the Phoenix server"
+  @shortdoc "Stops the Geo service"
 
   @impl Mix.Task
   def run(_args) do

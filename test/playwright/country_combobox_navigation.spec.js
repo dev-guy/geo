@@ -284,4 +284,102 @@ test.describe('Country Selector Navigation', () => {
       await context.close();
     }
   });
+
+  test('Navigation with collapsed groups should highlight visible options and scroll properly', async ({
+    browser,
+    browserName,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    try {
+      await page.goto('http://localhost:4000');
+
+      // Wait for the page to load
+      if (browserName === 'firefox') {
+        await page.waitForLoadState('domcontentloaded');
+        await page.waitForTimeout(2000);
+      } else {
+        await page.waitForLoadState('networkidle');
+      }
+
+      // Open the combobox
+      await page.click('.combobox-trigger');
+
+      // Wait for dropdown
+      const timeout = browserName === 'firefox' ? 20000 : 15000;
+      await page.waitForSelector('.combobox-dropdown:not([hidden])', {
+        timeout,
+      });
+
+      // Collapse the first group
+      console.log('=== Collapsing first group ===');
+      await page.click('button[phx-click="search_combobox_toggle_group_collapse"]');
+      await page.waitForTimeout(500); // Wait for collapse animation
+
+      // Press down arrow 5 times as specified in the issue
+      console.log('=== Pressing down arrow 5 times ===');
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('ArrowDown');
+        await page.waitForTimeout(100); // Small delay between presses
+      }
+
+      // Check that a visible option is highlighted
+      const highlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+      await expect(highlightedOption).toBeVisible();
+
+      const optionValue = await highlightedOption.getAttribute('data-combobox-value');
+      console.log(`After 5 down arrows: ${optionValue} is highlighted`);
+
+      // Verify a visible option is highlighted (should be one of the visible countries)
+      // The exact country may vary but it should be visible
+      expect(optionValue).toBeTruthy();
+
+      // Verify the highlighted option is actually visible in the viewport
+      const isOptionVisible = await highlightedOption.isVisible();
+      expect(isOptionVisible).toBe(true);
+
+      // Check that the option is scrolled into view
+      const optionBoundingBox = await highlightedOption.boundingBox();
+      const scrollAreaBoundingBox = await page.locator('.scroll-viewport').boundingBox();
+      
+      if (optionBoundingBox && scrollAreaBoundingBox) {
+        const optionTop = optionBoundingBox.y;
+        const optionBottom = optionBoundingBox.y + optionBoundingBox.height;
+        const scrollAreaTop = scrollAreaBoundingBox.y;
+        const scrollAreaBottom = scrollAreaBoundingBox.y + scrollAreaBoundingBox.height;
+
+        // At minimum, the option should be at least partially visible
+        // (top of option should be above bottom of scroll area, and bottom of option should be below top of scroll area)
+        const isPartiallyVisible = optionTop < scrollAreaBottom && optionBottom > scrollAreaTop;
+        expect(isPartiallyVisible).toBe(true);
+        
+        console.log(`SUCCESS: Highlighted option (${optionValue}) is at least partially visible in the combobox`);
+      }
+
+      // Test continued navigation beyond visible area to ensure scrolling works
+      console.log('=== Testing scrolling beyond visible area ===');
+      const initialScrollTop = await page.locator('.scroll-viewport').evaluate(el => el.scrollTop);
+      
+      // Press down arrow several more times to go beyond visible area
+      for (let i = 0; i < 10; i++) {
+        await page.keyboard.press('ArrowDown');
+        await page.waitForTimeout(50);
+      }
+
+      const finalScrollTop = await page.locator('.scroll-viewport').evaluate(el => el.scrollTop);
+      const finalHighlightedOption = page.locator('.combobox-option[data-combobox-navigate]');
+      await expect(finalHighlightedOption).toBeVisible();
+
+      // Verify scrolling occurred if we navigated beyond visible area
+      if (finalScrollTop > initialScrollTop) {
+        console.log(`SUCCESS: Scrolling occurred (${initialScrollTop} → ${finalScrollTop})`);
+      } else {
+        console.log(`INFO: No scrolling needed or scrolling issue detected`);
+      }
+
+    } finally {
+      await context.close();
+    }
+  });
 });

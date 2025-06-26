@@ -44,10 +44,9 @@ LiveView:
 
 ## Custom Mix Aliases
 
-- `geo.seed` : Add seed data
-- `geo.start` : Alias for `phx.server`
-- `geo.stop`
-- `geo.restart`
+- `seed` : Add seed data
+- `restart`: Starts/restarts server in background process
+- `stop`: Stops server running in background process 
 
 ## Fly.io deployment
 

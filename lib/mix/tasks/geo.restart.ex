@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Geo.Restart do
+defmodule Mix.Tasks.Restart do
   @moduledoc """
   Restarts the Phoenix server in the background with output redirected to geo.log.
 
@@ -10,19 +10,18 @@ defmodule Mix.Tasks.Geo.Restart do
   ## Examples
 
       mix restart
-      mix geo.restart
   """
 
   use Mix.Task
 
-  @shortdoc "Restarts the Phoenix server in background mode"
+  @shortdoc "Restarts the Geo service"
 
     @impl Mix.Task
   def run(_args) do
     log_file = "geo.log"
 
     # Stop existing server using the geo.stop task
-    Mix.Tasks.Geo.Stop.run([])
+    Mix.Tasks.Stop.run([])
 
     # Start server in background with output redirection
     Mix.shell().info("Starting Phoenix server in background...")
@@ -62,7 +61,7 @@ defmodule Mix.Tasks.Geo.Restart do
           pid ->
             Mix.shell().info("Phoenix server started successfully with PID: #{pid}")
             Mix.shell().info("Server is running in background. Check #{log_file} for logs.")
-            Mix.shell().info("To stop the server, run: mix geo.stop")
+            Mix.shell().info("To stop the server, run: mix stop")
         end
 
       {error, exit_code} ->
