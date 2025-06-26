@@ -549,19 +549,40 @@ const SearchCombobox = {
   },
 
   adjustHeight() {
-    const rect = this.dropdown.getBoundingClientRect();
+    const triggerRect = this.trigger.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - rect.top;
+    const viewportMargin = 10; // 10px margin from viewport edges
+
+    // Calculate space above and below the trigger
+    const spaceAbove = triggerRect.top - viewportMargin;
+    const spaceBelow = viewportHeight - triggerRect.bottom - viewportMargin;
 
     // Calculate actual heights of fixed elements in dropdown
     const fixedElementsHeight = this.calculateFixedElementsHeight();
 
-    // Ensure a reasonable max height that allows for scrolling
-    // Cap at 300px or available space, whichever is smaller
-    const availableHeight = spaceBelow - fixedElementsHeight;
-    const maxHeight = Math.max(100, Math.min(300, availableHeight));
-    this.scrollArea.style.maxHeight = `${maxHeight}px`;
-    this.scrollArea.style.height = `${maxHeight}px`;
+    // Determine which direction has more space and position accordingly
+    const useAbove = spaceAbove > spaceBelow;
+    const availableSpace = useAbove ? spaceAbove : spaceBelow;
+    
+    // Calculate maximum height for scroll area (subtract fixed elements and make it 5px shorter)
+    const maxScrollHeight = Math.max(100, availableSpace - fixedElementsHeight - 5);
+
+    // Position the dropdown using CSS classes and transforms
+    if (useAbove) {
+      // Position above the trigger
+      this.dropdown.classList.remove('top-full', 'mt-2');
+      this.dropdown.classList.add('bottom-full', 'mb-2');
+      this.dropdown.style.transform = 'translateY(0)';
+    } else {
+      // Position below the trigger (default)
+      this.dropdown.classList.remove('bottom-full', 'mb-2');
+      this.dropdown.classList.add('top-full', 'mt-2');
+      this.dropdown.style.transform = 'translateY(0)';
+    }
+
+    // Set scroll area height
+    this.scrollArea.style.maxHeight = `${maxScrollHeight}px`;
+    this.scrollArea.style.height = `${maxScrollHeight}px`;
 
     // Remove height constraints from content container to allow scrolling
     // and remove overflow styles to let the outer scroll area handle scrolling
@@ -591,10 +612,7 @@ const SearchCombobox = {
       searchContainerHeight = marginTop + marginBottom + containerHeight;
     }
 
-    // Add some bottom margin from viewport for visual breathing room
-    const viewportMargin = 20;
-
-    return dropdownPaddingTop + dropdownPaddingBottom + searchContainerHeight + viewportMargin;
+    return dropdownPaddingTop + dropdownPaddingBottom + searchContainerHeight;
   },
 
   isOverScroll(event) {
