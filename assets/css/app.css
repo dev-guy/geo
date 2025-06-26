@@ -3,3 +3,24 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+
+@layer utilities {
+  .scroll-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scroll-hide {
+    -ms-overflow-style: none;  /* For IE/Edge */
+    scrollbar-width: none;      /* For Firefox */
+  }
+  
+  /* Show scrollbars on desktop (md and up) */
+  @media (min-width: 768px) {
+    .md\:scroll-show::-webkit-scrollbar {
+      display: block;
+    }
+    .md\:scroll-show {
+      -ms-overflow-style: auto;
+      scrollbar-width: auto;
+    }
+  }
+}

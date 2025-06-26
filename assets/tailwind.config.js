@@ -88,5 +88,16 @@ module.exports = {
         { values },
       );
     }),
+    plugin(function({ addUtilities }) {
+      addUtilities({
+        '.scroll-hide': {
+          '-ms-overflow-style': 'none',      // IE and Edge
+          'scrollbar-width': 'none',         // Firefox
+        },
+        '.scroll-hide::-webkit-scrollbar': {
+          display: 'none',                   // WebKit browsers (Safari/Chrome on iOS)
+        },
+      });
+    }),
   ],
 };
