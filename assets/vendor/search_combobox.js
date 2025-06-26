@@ -932,10 +932,16 @@ const SearchCombobox = {
       firstHeader.style.marginBottom = '0';
       firstHeader.style.paddingLeft = '0.75rem';
       firstHeader.style.paddingRight = '0.5rem';
+      
+      // Apply border to calculate total height including borders
+      firstHeader.style.borderTop = this.getBorderColor();
+      firstHeader.style.borderBottom = this.getBorderColor();
 
       // Force a layout to get accurate height
       firstHeader.getBoundingClientRect();
-      this.headerHeight = firstHeader.offsetHeight;
+      // Use getBoundingClientRect().height which includes borders
+      const rect = firstHeader.getBoundingClientRect();
+      this.headerHeight = rect.height;
     }
 
     // Initialize each header
@@ -984,9 +990,15 @@ const SearchCombobox = {
       header.style.minHeight = `${this.headerHeight}px`;
       header.style.maxHeight = `${this.headerHeight}px`;
 
-      // Add borders for better visibility
-      header.style.borderTop = this.getBorderColor();
-      header.style.borderBottom = this.getBorderColor();
+      // Add borders - only top border for first header, only bottom border for others
+      // This prevents double borders when headers are stacked
+      if (index === 0) {
+        header.style.borderTop = this.getBorderColor();
+        header.style.borderBottom = this.getBorderColor();
+      } else {
+        header.style.borderTop = 'none';
+        header.style.borderBottom = this.getBorderColor();
+      }
 
       // Store original position and calculated height
       const rect = item.group.getBoundingClientRect();
