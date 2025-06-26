@@ -87,18 +87,16 @@ E) Modify Dockerfile
 Environment variables
 
 ```txt
-# Set env vars
 ENV MIX_ENV=prod
 ENV PHX_SERVER=true
 ENV ECTO_IPV6=tru
 ```
 
-CMD script
+CMD/Run script
 
 Since I run migrations from my laptop, I created a `start.sh` that runs `mix phx.server` and can be easily changed for troubleshooting.
 
 ```txt
-# Create a startup script
 RUN echo '#!/bin/sh\n\
 mix phx.server' > /app/start.sh && chmod +x /app/start.sh
 
