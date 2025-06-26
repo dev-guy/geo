@@ -65,7 +65,7 @@ const SearchCombobox = {
     this.debounceTimer = null;
     this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
     this.isMultiple = this.el.getAttribute('data-multiple') === 'true';
-    
+
     // Track if we just cleared the value to handle race condition with LiveView updates
     if (this.justCleared === undefined) {
       this.justCleared = false;
@@ -180,6 +180,11 @@ const SearchCombobox = {
 
     // Initialize sticky headers
     this.initializeStickyHeaders();
+
+    // Trigger initial scroll handler to set correct header visibility
+    if (this.handleScroll) {
+      setTimeout(() => this.handleScroll(), 0);
+    }
   },
 
   closeDropdown() {
@@ -271,14 +276,14 @@ const SearchCombobox = {
   navigateOptions(direction) {
     this.isKeyboardNavigating = true;
 
-    // Get only visible options (not hidden by collapsed groups)
+    // Get all navigable elements (options and group headers)
     // Note: We ignore visibility:hidden because that's only used for scroll positioning,
     // not for actual availability of options
-    const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option')).filter(opt => {
-      const style = window.getComputedStyle(opt);
+    const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option, .group-label')).filter(el => {
+      const style = window.getComputedStyle(el);
       return style.display !== 'none';
     });
-    
+
     if (!visibleOpts.length) return;
 
     // Disable hover effects for all options until there's a new hover event
@@ -287,19 +292,19 @@ const SearchCombobox = {
 
     let current = this.el.querySelector('[data-combobox-navigate]');
     let idx = current ? visibleOpts.indexOf(current) : -1;
-    
+
     // If no current option is highlighted
     if (idx === -1) {
       if (direction === 'down') {
-        // Down arrow: start from the first option
+        // Down arrow: start from the first element (header or option)
         this.highlight(visibleOpts[0]);
       } else {
-        // Up arrow: start from the last option
+        // Up arrow: start from the last element (header or option)
         this.highlight(visibleOpts[visibleOpts.length - 1]);
       }
       return;
     }
-    
+
     // Calculate next index WITH wrapping
     let next = direction === 'down'
       ? visibleOpts[(idx + 1) % visibleOpts.length]
@@ -307,24 +312,45 @@ const SearchCombobox = {
     this.highlight(next);
   },
 
-  highlight(option) {
-    // Remove navigation attribute from all options to clear any previous highlighting
+  highlight(element) {
+    // Remove navigation attribute from all elements to clear any previous highlighting
     this.el.querySelectorAll('[data-combobox-navigate]').forEach(o => {
       o.removeAttribute('data-combobox-navigate');
       // Force removal of any hover states that might persist
       o.blur();
     });
-    option.setAttribute('data-combobox-navigate', '');
-    
-    // Focus the option but prevent page scroll
-    option.focus({ preventScroll: true });
+    element.setAttribute('data-combobox-navigate', '');
+
+    // Only focus if it's an option (headers aren't focusable)
+    if (element.classList.contains('combobox-option')) {
+      element.focus({ preventScroll: true });
+    }
 
     // Custom scroll behavior to account for sticky headers
-    this.scrollToOption(option);
+    this.scrollToOption(element);
   },
 
   scrollToOption(option) {
     if (!this.scrollArea || !option) return;
+
+    // Check if this is a sticky header
+    const isHeader = option.classList.contains('group-label');
+    if (isHeader) {
+      // For sticky headers, we need to scroll to their parent group instead
+      const group = option.closest('.option-group');
+      if (group) {
+        // Find the first option in this group
+        const firstOption = group.querySelector('.combobox-option');
+        if (firstOption) {
+          // Scroll to show the first option of the group
+          option = firstOption;
+        } else {
+          // If no options in group, just scroll to top
+          this.scrollArea.scrollTop = 0;
+          return;
+        }
+      }
+    }
 
     // Get viewport information
     const { viewportTop, viewportBottom } = this.getEffectiveViewport();
@@ -335,60 +361,24 @@ const SearchCombobox = {
     const optionTop = optionRect.top - scrollRect.top;
     const optionBottom = optionRect.bottom - scrollRect.top;
 
-    const { effectiveHeight, maxVisibleRows } = this.getEffectiveViewport();
     const padding = 8;
-    
-    console.log('ScrollToOption Debug:', {
-      optionText: option.textContent?.trim(),
-      viewportTop,
-      viewportBottom,
-      optionTop,
-      optionBottom,
-      scrollAreaClientHeight: this.scrollArea.clientHeight,
-      scrollTop: this.scrollArea.scrollTop,
-      scrollHeight: this.scrollArea.scrollHeight,
-      effectiveHeight,
-      maxVisibleRows,
-      rowHeight: this.rowHeight || this.getRowHeight(),
-      padding,
-      isAboveViewport: optionTop < viewportTop + padding,
-      isBelowViewport: optionBottom > viewportBottom - padding,
-      needsScrollUp: optionTop < viewportTop + padding,
-      needsScrollDown: optionBottom > viewportBottom - padding
-    });
 
     // If option is above the visible area (hidden by sticky headers)
     if (optionTop < viewportTop + padding) {
-      console.log('Option is above viewport, scrolling up');
       // Calculate how much to scroll up to show the option below sticky headers
       const scrollUpAmount = (viewportTop + padding) - optionTop;
       const oldScrollTop = this.scrollArea.scrollTop;
       const newScrollTop = Math.max(0, oldScrollTop - scrollUpAmount);
-      console.log('Scroll UP calculation:', {
-        scrollUpAmount,
-        oldScrollTop,
-        newScrollTop
-      });
       this.scrollArea.scrollTop = newScrollTop;
     }
     // If option is below the visible area
     else if (optionBottom > viewportBottom - padding) {
-      console.log('Option is below viewport, scrolling down');
       // Calculate how much to scroll down to show the option at the bottom
       const scrollDownAmount = optionBottom - (viewportBottom - padding);
       const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
       const oldScrollTop = this.scrollArea.scrollTop;
       const newScrollTop = Math.min(maxScrollTop, oldScrollTop + scrollDownAmount);
-      console.log('Scroll DOWN calculation:', {
-        scrollDownAmount,
-        maxScrollTop,
-        oldScrollTop,
-        newScrollTop,
-        calculation: `${optionBottom} - (${viewportBottom} - ${padding}) = ${scrollDownAmount}`
-      });
       this.scrollArea.scrollTop = newScrollTop;
-    } else {
-      console.log('Option is already visible - no scroll needed');
     }
   },
 
@@ -398,7 +388,7 @@ const SearchCombobox = {
         viewportTop: 0,
         viewportBottom: 0,
         effectiveHeight: 0,
-        maxVisibleRows: 0
+        maxVisibleRows: 0,
       };
     }
 
@@ -410,25 +400,25 @@ const SearchCombobox = {
         viewportTop: 0,
         viewportBottom: totalHeight,
         effectiveHeight: effectiveHeight,
-        maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight)
+        maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight),
       };
     }
 
     // Calculate how much space is taken up by currently visible sticky headers
     const scrollRect = this.scrollArea.getBoundingClientRect();
     let visibleHeadersCount = 0;
-    
+
     // Count headers that are currently sticky (visible at the top)
     for (let i = 0; i < this.stickyHeaders.length; i++) {
       const item = this.stickyHeaders[i];
       const group = item.group;
       const groupRect = group.getBoundingClientRect();
       const groupTopRelativeToScroll = groupRect.top - scrollRect.top;
-      
-      // A header becomes sticky when its group reaches the position where 
+
+      // A header becomes sticky when its group reaches the position where
       // previous headers are already stacked
       const headerStickyPosition = i * this.headerHeight;
-      
+
       if (groupTopRelativeToScroll <= headerStickyPosition) {
         visibleHeadersCount++;
       } else {
@@ -444,7 +434,7 @@ const SearchCombobox = {
       viewportTop: stickyHeadersSpace,
       viewportBottom: totalHeight,
       effectiveHeight: effectiveHeight,
-      maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight)
+      maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight),
     };
   },
 
@@ -453,11 +443,11 @@ const SearchCombobox = {
     if (this.rowHeight === 0) {
       this.rowHeight = this.getRowHeight();
     }
-    
+
     if (this.rowHeight === 0) {
       return 0; // No options available yet
     }
-    
+
     // Calculate how many complete rows can fit
     return Math.floor(effectiveHeight / this.rowHeight);
   },
@@ -468,19 +458,22 @@ const SearchCombobox = {
     if (!firstOption) {
       return 0;
     }
-    
+
     // Get the computed height including margins
     const rect = firstOption.getBoundingClientRect();
     const styles = window.getComputedStyle(firstOption);
     const marginTop = parseFloat(styles.marginTop) || 0;
     const marginBottom = parseFloat(styles.marginBottom) || 0;
-    
+
     return rect.height + marginTop + marginBottom;
   },
 
   selectCurrent() {
     const curr = this.el.querySelector('[data-combobox-navigate]');
-    curr && curr.click();
+    // Only click if it's an option (not a header)
+    if (curr && curr.classList.contains('combobox-option')) {
+      curr.click();
+    }
   },
 
   onOptionMouseEnter(event) {
@@ -545,22 +538,13 @@ const SearchCombobox = {
 
   pageScroll(direction) {
     // Calculate effective scrollable height accounting for sticky headers
-    const { effectiveHeight, maxVisibleRows } = this.getEffectiveViewport();
-    
+    const { maxVisibleRows } = this.getEffectiveViewport();
+
     // Scroll by 80% of visible rows, but at least 3 rows
     const rowsToScroll = Math.max(3, Math.floor(maxVisibleRows * 0.8));
     const rowHeight = this.rowHeight || this.getRowHeight();
     const delta = rowsToScroll * rowHeight;
-    
-    console.log('PageScroll Debug:', {
-      direction,
-      effectiveHeight,
-      maxVisibleRows,
-      rowHeight,
-      rowsToScroll,
-      delta
-    });
-    
+
     this.scrollArea.scrollBy({ top: direction === 'down' ? delta : -delta, behavior: 'smooth' });
   },
 
@@ -578,7 +562,7 @@ const SearchCombobox = {
     const maxHeight = Math.max(100, Math.min(300, availableHeight));
     this.scrollArea.style.maxHeight = `${maxHeight}px`;
     this.scrollArea.style.height = `${maxHeight}px`;
-    
+
     // Remove height constraints from content container to allow scrolling
     // and remove overflow styles to let the outer scroll area handle scrolling
     const contentContainer = this.scrollArea.firstElementChild;
@@ -635,34 +619,34 @@ const SearchCombobox = {
   },
 
   getFirstVisibleOption() {
-    // Get only visible options (not hidden by collapsed groups)
-    const options = Array.from(this.el.querySelectorAll('.combobox-option')).filter(opt => {
-      const style = window.getComputedStyle(opt);
+    // Get all visible navigable elements (options and headers)
+    const elements = Array.from(this.el.querySelectorAll('.combobox-option, .group-label')).filter(el => {
+      const style = window.getComputedStyle(el);
       return style.display !== 'none';
     });
-    
-    if (!options.length) return null;
 
-    // If no sticky headers, just return the first visible option
+    if (!elements.length) return null;
+
+    // If no sticky headers, just return the first visible element
     if (!this.stickyHeaders.length) {
-      return options[0];
+      return elements[0];
     }
 
-    // Find the first option that would be visible (not hidden behind sticky headers)
+    // Find the first element that would be visible (not hidden behind sticky headers)
     const { viewportTop } = this.getEffectiveViewport();
     const scrollRect = this.scrollArea.getBoundingClientRect();
 
-    for (const option of options) {
-      const optionRect = option.getBoundingClientRect();
-      
-      // If option's bottom edge is below the sticky headers, it's visible
-      if (optionRect.bottom - scrollRect.top > viewportTop) {
-        return option;
+    for (const element of elements) {
+      const elementRect = element.getBoundingClientRect();
+
+      // If element's bottom edge is below the sticky headers, it's visible
+      if (elementRect.bottom - scrollRect.top > viewportTop) {
+        return element;
       }
     }
 
-    // Fallback to first visible option if none are found
-    return options[0];
+    // Fallback to first visible element if none are found
+    return elements[0];
   },
 
   onOptionClick(event) {
@@ -775,7 +759,6 @@ const SearchCombobox = {
 
     // If we just cleared, ignore the stale value and keep the button hidden
     if (this.justCleared) {
-      console.log('initializeSelection - justCleared flag is set, keeping clear button hidden');
       this.updateSingleDisplay(null);
       // Reset the flag after the first update cycle
       this.justCleared = false;
@@ -783,22 +766,18 @@ const SearchCombobox = {
     }
 
     const currentValue = this.selectEl.value;
-    console.log('initializeSelection - current value:', currentValue);
-    
+
     if (currentValue && currentValue !== '') {
       const option = this.el.querySelector(`.combobox-option[data-combobox-value="${currentValue}"]`);
       if (option) {
         option.setAttribute('data-combobox-selected', '');
-        console.log('initializeSelection - found option, calling updateSingleDisplay with option');
         this.updateSingleDisplay(option);
       } else {
         // Value exists but option not found in current view, still show clear button
-        console.log('initializeSelection - value exists but option not found, showing clear button');
         this.updateSingleDisplay({value: currentValue}); // Pass a pseudo-option to show clear button
       }
     } else {
       // No value selected, ensure display reflects this
-      console.log('initializeSelection - no value, calling updateSingleDisplay(null)');
       this.updateSingleDisplay(null);
     }
   },
@@ -806,9 +785,6 @@ const SearchCombobox = {
   updateSingleDisplay(selectedOption) {
     const placeholder = this.el.querySelector('.combobox-placeholder');
     const clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
-
-    console.log('updateSingleDisplay called with:', selectedOption);
-    console.log('clearButton element:', clearButton);
 
     if (placeholder) {
       placeholder.classList.toggle('hidden', !!selectedOption);
@@ -818,13 +794,10 @@ const SearchCombobox = {
       // When selectedOption is null/undefined, we want to hide the clear button
       // When selectedOption exists, we want to show the clear button
       if (selectedOption) {
-        console.log('Showing clear button');
         clearButton.removeAttribute('hidden');
       } else {
-        console.log('Hiding clear button');
         clearButton.setAttribute('hidden', 'true');
       }
-      console.log('Clear button hidden attribute after update:', clearButton.hasAttribute('hidden'));
     }
   },
 
@@ -853,7 +826,6 @@ const SearchCombobox = {
   },
 
   handleClearClick(event) {
-    console.log('handleClearClick called');
     event.preventDefault();
     event.stopPropagation();
 
@@ -862,7 +834,6 @@ const SearchCombobox = {
 
     // Clear the selection
     if (this.selectEl) {
-      console.log('Clearing select value, was:', this.selectEl.value);
       this.selectEl.value = '';
       // Dispatch both change and input events to ensure LiveView updates
       this.selectEl.dispatchEvent(new Event('change', { bubbles: true }));
@@ -880,7 +851,6 @@ const SearchCombobox = {
       .forEach(opt => opt.removeAttribute('data-combobox-selected'));
 
     // Update display immediately
-    console.log('Calling updateSingleDisplay(null) from handleClearClick');
     this.updateSingleDisplay(null);
 
     // Focus search input but don't open dropdown
@@ -917,8 +887,8 @@ const SearchCombobox = {
   initializeStickyHeaders() {
     if (!this.scrollArea) return;
 
-    // Find all group headers
-    const groups = this.el.querySelectorAll('.option-group');
+    // Find all group headers within the dropdown
+    const groups = this.dropdown.querySelectorAll('.option-group');
     this.stickyHeaders = [];
 
     groups.forEach((group, index) => {
@@ -975,42 +945,44 @@ const SearchCombobox = {
       header.style.position = 'sticky';
       header.style.top = `${index * this.headerHeight}px`; // Stack headers directly with no gap
       header.style.zIndex = `${1000 - index}`; // Earlier headers have higher z-index
-      header.style.backgroundColor = this.getBackgroundColor();
+      // Use the dropdown's background color
+      const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
+      header.style.backgroundColor = dropdownBg || 'rgb(255, 255, 255)';
       header.style.transition = 'opacity 0.2s ease-in-out';
-      
+
       // Ensure headers start visible
       header.style.opacity = '1';
       header.style.visibility = 'visible';
       header.style.display = 'flex';
-      
+
       // Remove all margins and ensure no gaps
       header.style.setProperty('margin-top', '0', 'important');
       header.style.setProperty('margin-bottom', '0', 'important');
       header.style.marginLeft = '0';
       header.style.marginRight = '0';
-      
+
       // Remove any padding that could create gaps
       header.style.setProperty('padding-top', '0', 'important');
       header.style.setProperty('padding-bottom', '0', 'important');
-      
+
       // Set inner padding for content
       header.style.paddingLeft = '0.75rem';
       header.style.paddingRight = '2rem'; // Extra padding on right for scrollbar
-      
+
       // Ensure full width and proper sizing
       header.style.width = '100%';
       header.style.boxSizing = 'border-box';
-      
+
       // Fix flex layout to prevent wrapping
       header.style.flexWrap = 'nowrap';
       header.style.alignItems = 'center';
       header.style.justifyContent = 'space-between';
-      
+
       // Ensure consistent height
       header.style.height = `${this.headerHeight}px`;
       header.style.minHeight = `${this.headerHeight}px`;
       header.style.maxHeight = `${this.headerHeight}px`;
-      
+
       // Add borders for better visibility
       header.style.borderTop = this.getBorderColor();
       header.style.borderBottom = this.getBorderColor();
@@ -1063,11 +1035,31 @@ const SearchCombobox = {
     if (!this.scrollArea || this.stickyHeaders.length === 0) return;
 
     const scrollRect = this.scrollArea.getBoundingClientRect();
+    const scrollTop = this.scrollArea.scrollTop;
 
-    // ALL headers should ALWAYS be visible - they're sticky!
-    // We only need to handle item visibility
+    // Handle each sticky header
     this.stickyHeaders.forEach((item, index) => {
       const group = item.group;
+      const header = item.header;
+
+      // Get the original position of this header's group
+      const groupRect = group.getBoundingClientRect();
+      const groupTop = groupRect.top - scrollRect.top + scrollTop;
+
+      // Calculate how far the header is from its original position
+      const distanceFromOrigin = scrollTop - groupTop;
+
+      // If the header is too far from its origin (more than 5000px),
+      // it won't render properly with sticky positioning
+      if (distanceFromOrigin > 5000 && groupTop < scrollTop) {
+        // Switch to absolute positioning
+        header.style.position = 'absolute';
+        header.style.top = `${scrollTop + (index * this.headerHeight)}px`;
+      } else {
+        // Use normal sticky positioning
+        header.style.position = 'sticky';
+        header.style.top = `${index * this.headerHeight}px`;
+      }
 
       // Calculate where this header is positioned
       const headerStickyTop = index * this.headerHeight;

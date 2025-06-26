@@ -56,7 +56,7 @@ LiveView:
 - `SECRET_KEY_BASE`
 - `ECTO_IPV6` set to `true`
 
-#### Initial Deployment
+### Initial Deployment
 
 A) Create the Postgres server `geo-demo-db`
 
@@ -82,9 +82,11 @@ D) Add/modify secrets to the `geo-demo` app via the fly.io app
 
 - Set `DATABASE_URL` to `postgresql://geo_demo:<db password >@geo-demo-db.internal:5432/geo_demo?sslmode=disable`
 
-### After updating secrets or code
+### Redeployment
 
-`fly deploy --strategy immediate --skip-release-command`
+After updating secrets or code
+
+`mix deploy`
 
 ### ssh into the application server
 

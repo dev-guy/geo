@@ -100,7 +100,7 @@ defmodule Geo.MixProject do
         "esbuild geo --minify",
         "phx.digest"
       ],
-      "geo.deploy": ["cmd fly deploy --strategy immediate --skip-release-command"]
+      deploy: ["cmd fly deploy --strategy immediate --skip-release-command"]
     ]
 
     if Mix.env() == :dev do
