@@ -612,7 +612,10 @@ const SearchCombobox = {
       searchContainerHeight = marginTop + marginBottom + containerHeight;
     }
 
-    return dropdownPaddingTop + dropdownPaddingBottom + searchContainerHeight;
+    // Add some visual breathing room within the dropdown
+    const internalPadding = 8;
+
+    return dropdownPaddingTop + dropdownPaddingBottom + searchContainerHeight + internalPadding;
   },
 
   isOverScroll(event) {
@@ -913,6 +916,28 @@ const SearchCombobox = {
     groups.forEach((group, index) => {
       const header = group.querySelector('.group-label');
       if (header) {
+        // Remove any margins or gaps from the group container itself
+        group.style.setProperty('margin', '0', 'important');
+        group.style.setProperty('padding', '0', 'important');
+        
+        // Remove top margin from first option after the header
+        const firstOption = header.nextElementSibling;
+        if (firstOption && firstOption.classList.contains('combobox-option')) {
+          firstOption.style.setProperty('margin-top', '0', 'important');
+        }
+        
+        // Also check if there's a container between header and options
+        const optionsContainer = group.querySelector('.group-label ~ *');
+        if (optionsContainer && !optionsContainer.classList.contains('combobox-option')) {
+          optionsContainer.style.setProperty('margin-top', '0', 'important');
+          optionsContainer.style.setProperty('padding-top', '0', 'important');
+          // Remove margin from first option within the container
+          const firstInnerOption = optionsContainer.querySelector('.combobox-option');
+          if (firstInnerOption) {
+            firstInnerOption.style.setProperty('margin-top', '0', 'important');
+          }
+        }
+        
         this.stickyHeaders.push({
           group: group,
           header: header,
@@ -921,6 +946,14 @@ const SearchCombobox = {
         });
       }
     });
+
+    // Remove any gap from the parent container that might be causing spacing
+    const contentWrapper = this.scrollArea.querySelector('.px-1\\.5');
+    if (contentWrapper) {
+      contentWrapper.style.setProperty('gap', '0', 'important');
+      contentWrapper.style.setProperty('row-gap', '0', 'important');
+      contentWrapper.style.setProperty('column-gap', '0', 'important');
+    }
 
     // Set up scroll handler if we have headers
     if (this.stickyHeaders.length > 0) {
@@ -942,18 +975,51 @@ const SearchCombobox = {
       }
     }
 
+    // Force a layout reflow to ensure all style changes from initializeStickyHeaders are applied
+    if (this.scrollArea) {
+      void this.scrollArea.offsetHeight;
+    }
+
     // Calculate header height from the first header if available
     if (this.stickyHeaders.length > 0) {
       const firstHeader = this.stickyHeaders[0].header;
-      // Apply basic styles first to get accurate measurements
-      firstHeader.style.marginTop = '0';
-      firstHeader.style.marginBottom = '0';
+      
+      // Apply all styles that will be used on every header
+      firstHeader.style.setProperty('margin', '0', 'important');
+      firstHeader.style.setProperty('padding', '0', 'important');
       firstHeader.style.paddingLeft = '0.75rem';
-      firstHeader.style.paddingRight = '0.75rem';
+      firstHeader.style.paddingRight = '2rem';
+      firstHeader.style.display = 'flex';
+      firstHeader.style.alignItems = 'center';
+      firstHeader.style.justifyContent = 'space-between';
+      firstHeader.style.boxSizing = 'border-box';
+      firstHeader.style.lineHeight = '1.5'; // Ensure consistent line height
+      
+      // Only apply bottom border for measurement (all headers will have this)
+      firstHeader.style.borderTop = 'none';
+      firstHeader.style.borderBottom = this.getBorderColor();
 
       // Force a layout to get accurate height
-      firstHeader.getBoundingClientRect();
-      this.headerHeight = firstHeader.offsetHeight;
+      const rect = firstHeader.getBoundingClientRect();
+      this.headerHeight = rect.height; // Keep exact height, don't floor
+      
+      // Measure if there's a gap between first and second header
+      if (this.stickyHeaders.length > 1) {
+        const secondGroup = this.stickyHeaders[1].group;
+        const secondHeader = this.stickyHeaders[1].header;
+        
+        // Force layout before measuring
+        void this.scrollArea.offsetHeight;
+        
+        const firstGroupBottom = this.stickyHeaders[0].group.getBoundingClientRect().bottom;
+        const secondHeaderTop = secondHeader.getBoundingClientRect().top;
+        this.headerGap = Math.max(0, secondHeaderTop - firstGroupBottom);
+        
+        // Log for debugging
+        console.log('Header gap measured:', this.headerGap, 'px');
+      } else {
+        this.headerGap = 0;
+      }
     }
 
     // Initialize each header
@@ -962,8 +1028,27 @@ const SearchCombobox = {
 
       // Add necessary styles to header
       header.style.position = 'sticky';
-      header.style.top = `${index * this.headerHeight}px`; // Stack headers directly with no gap
+      
+      // Stack headers flush by subtracting any measured gap
+      // If gap is still visible, we'll use a small overlap
+      let topPosition;
+      if (index === 0) {
+        topPosition = 0;
+      } else {
+        // Calculate position based on measured gap
+        const basePosition = index * this.headerHeight;
+        const gapAdjustment = index * this.headerGap;
+        topPosition = basePosition - gapAdjustment;
+        
+        // If there's still a visible gap, apply a minimum 1px overlap
+        if (this.headerGap < 1) {
+          topPosition -= index; // 1px overlap per header
+        }
+      }
+      
+      header.style.top = `${topPosition}px`;
       header.style.zIndex = `${1000 - index}`; // Earlier headers have higher z-index
+      
       // Use the dropdown's background color
       const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
       header.style.backgroundColor = dropdownBg || 'rgb(255, 255, 255)';
@@ -974,37 +1059,45 @@ const SearchCombobox = {
       header.style.visibility = 'visible';
       header.style.display = 'flex';
 
-      // Remove all margins and ensure no gaps
-      header.style.setProperty('margin-top', '0', 'important');
-      header.style.setProperty('margin-bottom', '0', 'important');
-      header.style.marginLeft = '0';
-      header.style.marginRight = '0';
+      // Remove ALL spacing - use important to override any Tailwind classes
+      header.style.setProperty('margin', '0', 'important');
+      header.style.setProperty('padding', '0', 'important');
+      
+      // Remove any box-shadow or outline that might create visual gaps
+      header.style.setProperty('box-shadow', 'none', 'important');
+      header.style.setProperty('outline', 'none', 'important');
+      header.style.setProperty('transform', 'none', 'important');
 
-      // Remove any padding that could create gaps
-      header.style.setProperty('padding-top', '0', 'important');
-      header.style.setProperty('padding-bottom', '0', 'important');
-
-      // Set inner padding for content
+      // Set inner padding for content (preserve original padding from CSS)
       header.style.paddingLeft = '0.75rem';
-      header.style.paddingRight = '0.75rem'; // Match left padding for better balance
+      header.style.paddingRight = '0.75rem'; // Consistent padding, no extra space for scrollbar
 
       // Ensure full width and proper sizing
       header.style.width = '100%';
       header.style.boxSizing = 'border-box';
 
       // Fix flex layout to prevent wrapping
-      header.style.flexWrap = 'nowrap';
-      header.style.alignItems = 'center';
-      header.style.justifyContent = 'space-between';
+      // The template already has 'flex items-center justify-between' classes
+      // header.style.flexWrap = 'nowrap';
+      //header.style.alignItems = 'center';
+      // header.style.justifyContent = 'space-between';
+      // TODO
+      header.style.lineHeight = '1.5'; // Consistent line height
 
-      // Ensure consistent height
+      // Set exact height to match our calculation
       header.style.height = `${this.headerHeight}px`;
       header.style.minHeight = `${this.headerHeight}px`;
       header.style.maxHeight = `${this.headerHeight}px`;
 
-      // Add borders for better visibility
-      header.style.borderTop = this.getBorderColor();
+      // All headers get only bottom border to maintain consistent height
+      header.style.borderTop = 'none';
       header.style.borderBottom = this.getBorderColor();
+      
+      // Add top border only to the first header when it's at the very top
+      if (index === 0) {
+        // We'll add this border dynamically during scroll to prevent initial gap
+        header.setAttribute('data-first-header', 'true');
+      }
 
       // Store original position and calculated height
       const rect = item.group.getBoundingClientRect();
@@ -1039,6 +1132,14 @@ const SearchCombobox = {
 
     const scrollRect = this.scrollArea.getBoundingClientRect();
     const scrollTop = this.scrollArea.scrollTop;
+
+    // Add top border to first header only when scrolled
+    const firstHeader = this.stickyHeaders[0]?.header;
+    if (firstHeader && scrollTop > 0) {
+      firstHeader.style.borderTop = this.getBorderColor();
+    } else if (firstHeader) {
+      firstHeader.style.borderTop = 'none';
+    }
 
     // Handle each sticky header
     this.stickyHeaders.forEach((item, index) => {
