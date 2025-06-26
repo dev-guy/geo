@@ -4,12 +4,14 @@ defmodule Geo.MixProject do
   def project do
     base_config = [
       app: :geo,
-      version: "0.1.5",
-      elixir: "~> 1.14",
+      version: "0.1.7", # GEO_VERSION
+      # See also .tool-versions
+      elixir: "~> 1.18", # Mishka Chelekom requires 1.17
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      dialyzer: dialyzer()
     ]
 
     if Mix.env() == :dev do
@@ -38,6 +40,8 @@ defmodule Geo.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:usage_rules, "~> 0.1", only: [:dev]},
       {:ash_ai, "~> 0.1"},
@@ -96,10 +100,7 @@ defmodule Geo.MixProject do
         "esbuild geo --minify",
         "phx.digest"
       ],
-      "geo.deploy": ["cmd fly deploy --strategy immediate --skip-release-command"],
-      "geo.start": ["phx.server"],
-      "geo.restart": ["cmd ./scripts/restart_server.sh"],
-      "geo.stop": ["cmd ./scripts/stop_server.sh"]
+      deploy: ["cmd fly deploy --strategy immediate --skip-release-command"]
     ]
 
     if Mix.env() == :dev do
@@ -112,5 +113,14 @@ defmodule Geo.MixProject do
   defp deps_get_with_sync(_args) do
     Mix.Task.run("deps.get")
     Mix.Task.run("usage_rules.sync", [".rules", "--all"])
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+      plt_add_apps: [:mix],
+      ignore_warnings: ".dialyzer_ignore.exs",
+      list_unused_filters: true
+    ]
   end
 end

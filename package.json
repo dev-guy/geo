@@ -11,7 +11,7 @@
     "lint": "eslint \"assets/**/*.js\" \"test/**/*.js\" \"*.js\" --fix"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
+    "@playwright/test": "^1.53.1",
     "eslint": "^9.29.0",
     "prettier": "^3.6.0"
   }

@@ -117,15 +117,16 @@ defmodule GeoWeb.CountrySelector do
           value={get_selected_country_iso_code(@selected_country)}
           placeholder="Select a country..."
           search_placeholder="Type to search countries"
-          search_event="search_combobox_updated"
+          search_event="search_combobox_search"
+          search_event_target={@myself}
           phx-target={@myself}
           variant="bordered"
           color="primary"
           height="h-fit max-h-[32rem]"
           enable_group_sorting={true}
           sort_groups={false}
-          toggle_group_sort_event="toggle_group_sort"
-          toggle_group_collapse_event="toggle_group_collapse"
+          toggle_group_sort_event="search_combobox_toggle_group_sort"
+          toggle_group_collapse_event="search_combobox_toggle_group_collapse"
           group_event_target={@myself}
           group_states={@group_states}
         >
@@ -171,7 +172,7 @@ defmodule GeoWeb.CountrySelector do
   end
 
   @impl true
-  def handle_event("search_combobox_updated", %{"value" => query}, socket) do
+  def handle_event("search_combobox_search", %{"value" => query}, socket) do
     # Check if trimmed query is empty, but keep original query for search
     %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} =
       Geo.Geography.search_countries!(query)
@@ -196,7 +197,7 @@ defmodule GeoWeb.CountrySelector do
     {:noreply, socket}
   end
 
-  def handle_event("toggle_group_sort", %{"group" => group_name}, socket) do
+  def handle_event("search_combobox_toggle_group_sort", %{"group" => group_name}, socket) do
     case group_name do
       "By Country Code" ->
         orders = socket.assigns.iso_code_sort_orders
@@ -247,7 +248,7 @@ defmodule GeoWeb.CountrySelector do
     end
   end
 
-  def handle_event("toggle_group_collapse", %{"group" => group_name}, socket) do
+  def handle_event("search_combobox_toggle_group_collapse", %{"group" => group_name}, socket) do
     case group_name do
       "By Country Code" ->
         {:noreply,
