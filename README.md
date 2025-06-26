@@ -127,6 +127,8 @@ After updating secrets or code, run `mix deploy`
 - **Interactive UI**: Real-time search with grouped, sortable results
 - **Upsert Operations**: Efficient create-or-update operations using unique identities
 
+This project uses `dialyzer` and `credo` for code cleanliness.
+
 ### Requirements
 
 - PostgreSQL
@@ -152,7 +154,15 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
 
 ## Running Tests
 
-1. UI: `npm test`
+1. UI:
+  - `npm run lint`
+  - `npm format`
+  - `npm test`
+
+3. Elixir:
+  - `mix credo`
+  - `mix dialyzer`
+  - `mix test`
 
 ## Architecture
 
