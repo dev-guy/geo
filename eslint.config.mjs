@@ -15,6 +15,7 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        localStorage: 'readonly',
 
         // Phoenix/LiveView globals
         LiveSocket: 'readonly',
