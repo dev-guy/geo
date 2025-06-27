@@ -919,8 +919,14 @@ const SearchCombobox = {
       header.style.backgroundColor = dropdownBg || 'rgb(255, 255, 255)';
       header.style.transition = 'opacity 0.2s ease-in-out';
 
-      header.style.opacity = hasVisibleContent ? '1' : '0';
-      header.style.visibility = hasVisibleContent ? 'visible' : 'hidden';
+      // Only hide if collapsed, let sticky handle scroll visibility
+      if (!hasVisibleContent) {
+        header.style.opacity = '0';
+        header.style.visibility = 'hidden';
+      } else {
+        header.style.opacity = '1';
+        header.style.visibility = 'visible';
+      }
       header.style.display = 'flex';
 
       header.style.setProperty('margin', '0', 'important');
@@ -1000,42 +1006,32 @@ const SearchCombobox = {
       const contentContainer = group.querySelector('.transition-all.duration-200.ease-in-out');
       const isCollapsed = contentContainer && contentContainer.hasAttribute('hidden');
       
-      // For the first header, it should always be visible if it has content
-      if (index === 0) {
-        if (isCollapsed || groupBottom <= 0) {
-          // Hide only if collapsed or completely scrolled out
-          header.style.opacity = '0';
-          header.style.visibility = 'hidden';
-        } else {
-          // Always show the first header when it has visible content
-          header.style.opacity = '1';
-          header.style.visibility = 'visible';
-        }
-        header.style.position = 'sticky';
-        header.style.top = '0';
+      // Set sticky positioning for all headers
+      header.style.position = 'sticky';
+      header.style.top = `${index * this.headerHeight}px`;
+      
+      // Only hide headers if their group is collapsed
+      if (isCollapsed) {
+        header.style.opacity = '0';
+        header.style.visibility = 'hidden';
         header.style.transform = 'none';
       } else {
-        // For subsequent headers, calculate visibility based on available space
-        const previousHeadersHeight = index * this.headerHeight;
-        const hasVisibleContent = !isCollapsed && groupBottom > previousHeadersHeight;
-
-        if (!hasVisibleContent) {
-          header.style.opacity = '0';
-          header.style.visibility = 'hidden';
-        } else {
-          header.style.opacity = '1';
-          header.style.visibility = 'visible';
-        }
-
-        header.style.position = 'sticky';
-        header.style.top = `${index * this.headerHeight}px`;
-
-        // Handle overlapping when scrolling
-        if (hasVisibleContent) {
-          const nextItem = index < this.stickyHeaders.length - 1 ? this.stickyHeaders[index + 1] : null;
-          if (nextItem) {
-            const nextGroupRect = nextItem.group.getBoundingClientRect();
-            const nextGroupTop = nextGroupRect.top - scrollRect.top;
+        // Show headers and let sticky positioning handle when they scroll out
+        header.style.opacity = '1';
+        header.style.visibility = 'visible';
+        
+        // Handle push-up animation when headers overlap
+        if (index < this.stickyHeaders.length - 1) {
+          const nextItem = this.stickyHeaders[index + 1];
+          const nextGroup = nextItem.group;
+          const nextGroupRect = nextGroup.getBoundingClientRect();
+          const nextGroupTop = nextGroupRect.top - scrollRect.top;
+          
+          // Check if next group is not collapsed
+          const nextContentContainer = nextGroup.querySelector('.transition-all.duration-200.ease-in-out');
+          const nextIsCollapsed = nextContentContainer && nextContentContainer.hasAttribute('hidden');
+          
+          if (!nextIsCollapsed) {
             const currentHeaderBottom = (index + 1) * this.headerHeight;
             
             if (nextGroupTop < currentHeaderBottom) {
@@ -1058,11 +1054,17 @@ const SearchCombobox = {
         const itemRect = item.getBoundingClientRect();
         const itemTop = itemRect.top - scrollRect.top;
 
-        // Check all visible headers up to this group's index
+        // Check if item is under any non-collapsed sticky header above this group
         let shouldHide = false;
         for (let i = 0; i <= index; i++) {
-          const checkHeader = this.stickyHeaders[i].header;
-          if (checkHeader.style.visibility === 'visible') {
+          const checkItem = this.stickyHeaders[i];
+          const checkGroup = checkItem.group;
+          
+          // Check if this header's group is not collapsed
+          const checkContentContainer = checkGroup.querySelector('.transition-all.duration-200.ease-in-out');
+          const checkIsCollapsed = checkContentContainer && checkContentContainer.hasAttribute('hidden');
+          
+          if (!checkIsCollapsed) {
             const headerBottom = (i + 1) * this.headerHeight;
             if (itemTop < headerBottom) {
               shouldHide = true;

@@ -39,6 +39,8 @@
 
 - ✅ NO gap between search input and first header
 - ✅ First header sticks immediately when scrolling starts
-- ✅ Headers transition smoothly when groups overlap
+- ✅ First header scrolls away naturally with its content when the entire group is scrolled out
+- ✅ Headers transition smoothly when groups overlap (push-up effect)
 - ✅ No artificial padding or gaps in the content area
-- ✅ Collapsed groups don't leave empty space
+- ✅ Collapsed groups properly hide their headers
+- ✅ CSS sticky positioning works naturally without manual visibility interference
