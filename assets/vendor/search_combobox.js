@@ -51,7 +51,9 @@ const SearchCombobox = {
     this.trigger = this.el.querySelector('.combobox-trigger');
     this.searchInput = this.el.querySelector('.combobox-search-input');
     this.dropdown = this.el.querySelector('[data-part="search-combobox-listbox"]');
-    this.scrollArea = this.el.querySelector('.scroll-viewport');
+    this.scrollViewport = this.el.querySelector('.scroll-viewport');
+    // Find the actual scrolling container (the nested div with overflow-y-auto)
+    this.scrollArea = this.scrollViewport ? this.scrollViewport.querySelector('.overflow-y-auto') : null;
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
 
