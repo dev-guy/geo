@@ -10,7 +10,7 @@ https://geo-demo.fly.dev/
 
 ## Purpose
 
-Geo is the world's most overengineered country combobox. Countries are stored in a Postgres table and cached in memory for fast searches.
+Geo is the world's most over-engineered country combobox. Countries are stored in a Postgres table and cached in memory for fast searches.
 
 ![CleanShot 2025-06-12 at 20 40 52@2x](https://github.com/user-attachments/assets/d477b01d-dece-4fff-ac26-d139cfc8a611)
 **Or:**
@@ -38,7 +38,7 @@ LiveView:
   - Not very fun fact: It has complex state and took well over 90% of the development effort. Ash was the easy part, by far!
 - A LiveView component that orchestrates Phoenix components and Ash resources
 
-## Custom Mix Aliases
+## Custom Mix Tasks
 
 - `seed`: Upserts seed data
 - `restart`: Starts/restarts server in background process
@@ -47,8 +47,15 @@ LiveView:
 ## Running on Fly.io
 
 These tips are only suitable for a hobby project. Real projects should use an alternative Postgres solution.
+### Preparation
 
-### Environment variables (secrets)
+1. Go to fly.io and create an account
+2. Install the fly command aka flyctl
+  - brew install fly
+
+### Environment Variables (secrets)
+
+fly will add these for you:
 
 - `DATABASE_URL`
 - `SECRET_KEY_BASE`
@@ -76,13 +83,14 @@ C) Create the `geo-demo` app
   - Configuration: 1 CPU, 512 MB
 - `fly deploy --strategy immediate --skip-release-command`
 
-D) Add/modify secrets to the `geo-demo` app via the fly.io web app
+D) Modify secrets for `geo-demo`
 
+- Using the the fly.io web app, navigate to the geo-demo app and then to Secrets
 - Set `DATABASE_URL` to `postgresql://geo_demo:<db password >@geo-demo-db.internal:5432/geo_demo?sslmode=disable`
 
 E) Modify Dockerfile
 
-Environment variables
+Environment variables:
 
 ```txt
 ENV MIX_ENV=prod
@@ -90,9 +98,9 @@ ENV PHX_SERVER=true
 ENV ECTO_IPV6=true
 ```
 
-CMD/Run script
+CMD/Run script:
 
-Since I run migrations and seeders on my laptop, I created a `start.sh` that runs `mix phx.server` and can be easily changed for troubleshooting.
+Since I run migrations and seeders on my laptop, I created a `start.sh` that runs `mix phx.server` and can be easily changed when troubleshooting.
 
 ```txt
 RUN echo '#!/bin/sh\n\
