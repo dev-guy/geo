@@ -183,6 +183,7 @@ defmodule GeoWeb.Components.Alert do
         flash={@flash}
         variant={@variant}
         width="medium"
+        phx-mounted={auto_dismiss_alert("#flash-#{@variant}-error")}
       />
       <.flash
         id="client-error"
@@ -205,6 +206,7 @@ defmodule GeoWeb.Components.Alert do
         title={gettext("Something went wrong!")}
         phx-disconnected={show_alert(".phx-server-error #server-error")}
         phx-connected={hide_alert("#server-error")}
+        phx-mounted={auto_dismiss_alert("#server-error")}
         width="medium"
         hidden
       >
@@ -819,5 +821,78 @@ defmodule GeoWeb.Components.Alert do
          "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
+  end
+
+  @doc """
+  Auto-dismisses an alert element after a delay with a dissolving animation.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    Defaults to a new `%JS{}`.
+    - `selector`: A string representing the CSS selector of the alert element to be auto-dismissed.
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 5000ms (5 seconds).
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with commands to auto-dismiss the alert element after the specified delay
+    with a 2-second dissolving animation.
+
+  ## Transition Details
+
+    - After the delay, the element transitions from full opacity and scale (`opacity-100 translate-y-0 sm:scale-100`)
+    to reduced opacity and scale (`opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95`)
+    over a duration of 2000 milliseconds (2 seconds).
+
+  ## Example
+
+    ```elixir
+    auto_dismiss_alert(%JS{}, "#alert-box")
+    auto_dismiss_alert(%JS{}, "#alert-box", 3000)  # Custom 3-second delay
+    ```
+
+  This example will auto-dismiss the alert element with the ID `alert-box` after 5 seconds (or custom delay)
+  using a 2-second dissolving animation.
+  """
+
+  def auto_dismiss_alert(js \\ %JS{}, selector, delay \\ 5000) do
+    auto_dismiss_alert(js, selector, :error, delay)
+  end
+
+  @doc """
+  Auto-dismisses an alert element after a delay with a dissolving animation and clears the specified flash key.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    Defaults to a new `%JS{}`.
+    - `selector`: A string representing the CSS selector of the alert element to be auto-dismissed.
+    - `flash_key`: The flash key to clear (e.g., `:error`, `:info`).
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 5000ms (5 seconds).
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with commands to auto-dismiss the alert element after the specified delay
+    with a 2-second dissolving animation and clear the flash message.
+
+  ## Example
+
+    ```elixir
+    auto_dismiss_alert(%JS{}, "#alert-box", :error, 3000)
+    ```
+  """
+
+  def auto_dismiss_alert(js \\ %JS{}, selector, flash_key, delay \\ 5000) do
+    js
+    |> JS.hide(
+      to: selector,
+      time: 2000,
+      delay: delay,
+      transition:
+        {"transition-all transform ease-in duration-[2000ms]",
+         "opacity-100 translate-y-0 sm:scale-100",
+         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+    )
+    |> JS.push("lv:clear-flash", value: %{key: flash_key}, delay: delay + 2000)
   end
 end
