@@ -892,7 +892,8 @@ const SearchCombobox = {
 
       header.style.setProperty('box-shadow', 'none', 'important');
       header.style.setProperty('outline', 'none', 'important');
-      header.style.setProperty('transform', 'none', 'important');
+      header.style.transform = 'none';
+      header.style.transition = 'transform 0.15s ease-out, opacity 0.2s ease-in-out';
 
       header.style.paddingLeft = '0.75rem';
       header.style.paddingRight = '0.75rem';
@@ -954,20 +955,48 @@ const SearchCombobox = {
       const header = item.header;
 
       const groupRect = group.getBoundingClientRect();
-      const groupTop = groupRect.top - scrollRect.top + scrollTop;
+      const groupTop = groupRect.top - scrollRect.top;
+      const groupBottom = groupRect.bottom - scrollRect.top;
 
-      const distanceFromOrigin = scrollTop - groupTop;
+      // Calculate if the entire group is above the viewport
+      const groupIsAboveViewport = groupBottom <= 0;
+      
+      // Calculate if the group is in view or below
+      const groupIsInOrBelowViewport = groupTop < scrollRect.height;
 
-      if (distanceFromOrigin > 5000 && groupTop < scrollTop) {
-        header.style.position = 'absolute';
-        header.style.top = `${scrollTop + (index * this.headerHeight)}px`;
-      } else {
+      // Determine header visibility
+      if (groupIsAboveViewport) {
+        // Hide header when its group is completely scrolled out of view above
+        header.style.opacity = '0';
+        header.style.visibility = 'hidden';
+      } else if (groupIsInOrBelowViewport) {
+        // Show header when its group is visible or below viewport
+        header.style.opacity = '1';
+        header.style.visibility = 'visible';
+        
+        // Keep sticky positioning for visible headers
         header.style.position = 'sticky';
         header.style.top = `${index * this.headerHeight}px`;
       }
 
-      const headerStickyTop = index * this.headerHeight;
+      // Handle overlapping headers when scrolling
+      if (index < this.stickyHeaders.length - 1) {
+        const nextItem = this.stickyHeaders[index + 1];
+        const nextGroupRect = nextItem.group.getBoundingClientRect();
+        const nextGroupTop = nextGroupRect.top - scrollRect.top;
+        
+        // If next group is pushing up current header
+        const headerBottom = (index + 1) * this.headerHeight;
+        if (nextGroupTop < headerBottom) {
+          const pushUpAmount = headerBottom - nextGroupTop;
+          header.style.transform = `translateY(-${pushUpAmount}px)`;
+        } else {
+          header.style.transform = 'none';
+        }
+      }
 
+      // Hide items that are under sticky headers
+      const headerStickyTop = index * this.headerHeight;
       const groupItems = group.querySelectorAll('.combobox-option');
       groupItems.forEach(item => {
         const itemRect = item.getBoundingClientRect();
