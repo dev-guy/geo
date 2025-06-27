@@ -902,9 +902,9 @@ const SearchCombobox = {
       const group = item.group;
 
       // Check if group has visible content (not collapsed)
-      // Look for the content container that would be hidden when collapsed
+      // Look for the content container that would be removed when collapsed (Phoenix :if condition)
       const contentContainer = group.querySelector('.transition-all.duration-200.ease-in-out');
-      const hasVisibleContent = !contentContainer || !contentContainer.hasAttribute('hidden');
+      const hasVisibleContent = !!contentContainer;
       
       if (hasVisibleContent) {
         initialVisibleHeaders++;
@@ -1015,8 +1015,9 @@ const SearchCombobox = {
       const groupBottom = groupRect.bottom - scrollRect.top;
 
       // Check if group is collapsed
+      // In Phoenix LiveView with :if condition, collapsed groups have their content completely removed from DOM
       const contentContainer = group.querySelector('.transition-all.duration-200.ease-in-out');
-      const isCollapsed = contentContainer && contentContainer.hasAttribute('hidden');
+      const isCollapsed = !contentContainer;
       
       // Set sticky positioning for all headers
       header.style.position = 'sticky';
@@ -1041,7 +1042,7 @@ const SearchCombobox = {
           
           // Check if next group is not collapsed
           const nextContentContainer = nextGroup.querySelector('.transition-all.duration-200.ease-in-out');
-          const nextIsCollapsed = nextContentContainer && nextContentContainer.hasAttribute('hidden');
+          const nextIsCollapsed = !nextContentContainer;
           
           if (!nextIsCollapsed) {
             const currentHeaderBottom = (index + 1) * this.headerHeight;
@@ -1074,7 +1075,7 @@ const SearchCombobox = {
           
           // Check if this header's group is not collapsed
           const checkContentContainer = checkGroup.querySelector('.transition-all.duration-200.ease-in-out');
-          const checkIsCollapsed = checkContentContainer && checkContentContainer.hasAttribute('hidden');
+          const checkIsCollapsed = !checkContentContainer;
           
           if (!checkIsCollapsed) {
             const headerBottom = (i + 1) * this.headerHeight;
