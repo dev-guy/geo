@@ -38,6 +38,7 @@
 ## Visual Indicators of Success
 
 - ✅ NO gap between search input and first header
+- ✅ NO vertical lines ABOVE headers - only horizontal lines BELOW headers
 - ✅ First header sticks immediately when scrolling starts
 - ✅ First header scrolls away naturally with its content when the entire group is scrolled out
 - ✅ Headers transition smoothly when groups overlap (push-up effect)

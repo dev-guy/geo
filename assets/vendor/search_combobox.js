@@ -796,6 +796,13 @@ const SearchCombobox = {
         // Remove any gaps in the group structure
         group.style.setProperty('margin', '0', 'important');
         group.style.setProperty('padding', '0', 'important');
+        group.style.setProperty('border-top', 'none', 'important');
+        
+        // Ensure no top margin/padding on the first group
+        if (index === 0) {
+          group.style.setProperty('margin-top', '0', 'important');
+          group.style.setProperty('padding-top', '0', 'important');
+        }
 
         const firstOption = header.nextElementSibling;
         if (firstOption && firstOption.classList.contains('combobox-option')) {
@@ -855,16 +862,20 @@ const SearchCombobox = {
       const firstHeader = this.stickyHeaders[0].header;
 
       firstHeader.style.setProperty('margin', '0', 'important');
+      firstHeader.style.setProperty('margin-top', '0', 'important');
+      firstHeader.style.setProperty('margin-bottom', '0', 'important');
       firstHeader.style.setProperty('padding', '0', 'important');
       firstHeader.style.paddingLeft = '0.75rem';
       firstHeader.style.paddingRight = '2rem';
+      firstHeader.style.paddingTop = '0.5rem';
+      firstHeader.style.paddingBottom = '0.5rem';
       firstHeader.style.display = 'flex';
       firstHeader.style.alignItems = 'center';
       firstHeader.style.justifyContent = 'space-between';
       firstHeader.style.boxSizing = 'border-box';
       firstHeader.style.lineHeight = '1.5';
 
-      firstHeader.style.borderTop = 'none';
+      firstHeader.style.setProperty('border-top', 'none', 'important');
       firstHeader.style.borderBottom = this.getBorderColor();
 
       const rect = firstHeader.getBoundingClientRect();
@@ -932,15 +943,20 @@ const SearchCombobox = {
       header.style.display = 'flex';
 
       header.style.setProperty('margin', '0', 'important');
+      header.style.setProperty('margin-top', '0', 'important');
+      header.style.setProperty('margin-bottom', '0', 'important');
       header.style.setProperty('padding', '0', 'important');
 
       header.style.setProperty('box-shadow', 'none', 'important');
       header.style.setProperty('outline', 'none', 'important');
+      header.style.setProperty('border-top', 'none', 'important');
       header.style.transform = 'none';
       header.style.transition = 'transform 0.15s ease-out, opacity 0.2s ease-in-out';
 
       header.style.paddingLeft = '0.75rem';
       header.style.paddingRight = '0.75rem';
+      header.style.paddingTop = '0.5rem';
+      header.style.paddingBottom = '0.5rem';
 
       header.style.width = '100%';
       header.style.boxSizing = 'border-box';
@@ -951,7 +967,6 @@ const SearchCombobox = {
       header.style.minHeight = `${this.headerHeight}px`;
       header.style.maxHeight = `${this.headerHeight}px`;
 
-      header.style.borderTop = 'none';
       header.style.borderBottom = this.getBorderColor();
 
       if (index === 0) {
@@ -989,12 +1004,7 @@ const SearchCombobox = {
     const scrollRect = this.scrollArea.getBoundingClientRect();
     const scrollTop = this.scrollArea.scrollTop;
 
-    const firstHeader = this.stickyHeaders[0]?.header;
-    if (firstHeader && scrollTop > 0) {
-      firstHeader.style.borderTop = this.getBorderColor();
-    } else if (firstHeader) {
-      firstHeader.style.borderTop = 'none';
-    }
+    // Don't add border-top to headers
 
     this.stickyHeaders.forEach((item, index) => {
       const group = item.group;
