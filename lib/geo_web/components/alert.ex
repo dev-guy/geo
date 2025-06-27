@@ -191,6 +191,8 @@ defmodule GeoWeb.Components.Alert do
         title={gettext("We can't find the internet")}
         phx-disconnected={show_alert(".phx-client-error #client-error")}
         phx-connected={hide_alert("#client-error")}
+        phx-hook="AutoDismiss"
+        data-dismiss-after="5000"
         width="medium"
         hidden
       >
@@ -818,6 +820,37 @@ defmodule GeoWeb.Components.Alert do
         {"transition-all transform ease-in duration-200",
          "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+    )
+  end
+
+  @doc """
+  Hides an alert element with a dissolving animation effect.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    Defaults to a new `%JS{}`.
+    - `selector`: A string representing the CSS selector of the alert element to be hidden.
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with commands to hide the alert element with
+    a smooth dissolving transition effect over 2 seconds.
+
+  ## Example
+
+    ```elixir
+    dissolve_alert(%JS{}, "#alert-box")
+    ```
+  """
+  def dissolve_alert(js \\ %JS{}, selector) do
+    JS.hide(js,
+      to: selector,
+      time: 2000,
+      transition:
+        {"transition-all transform ease-out duration-[2000ms]",
+         "opacity-100 scale-100",
+         "opacity-0 scale-95"}
     )
   end
 end
