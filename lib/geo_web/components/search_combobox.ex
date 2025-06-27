@@ -805,21 +805,23 @@ defmodule GeoWeb.Components.SearchCombobox do
         <span>{@group_label}</span>
       </div>
       <%= if get_in(@group_states, [@group_label, :sort_icon]) do %>
-        <button
-          type="button"
-          phx-click={@toggle_group_sort_event}
-          phx-value-group={@group_label}
-          phx-target={@group_event_target}
-          data-is-header-button="true"
-          class="flex items-center text-sm opacity-80 hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          title={"Toggle #{@group_label} sort order"}
-        >
+        <div class="flex items-center text-sm opacity-80">
           <span class="mr-1">Sort</span>
-          <.icon
-            name={get_in(@group_states, [@group_label, :sort_icon])}
-            class="h-4 w-4"
-          />
-        </button>
+          <button
+            type="button"
+            phx-click={@toggle_group_sort_event}
+            phx-value-group={@group_label}
+            phx-target={@group_event_target}
+            data-is-header-button="true"
+            class="hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            title={"Toggle #{@group_label} sort order"}
+          >
+            <.icon
+              name={get_in(@group_states, [@group_label, :sort_icon])}
+              class="h-4 w-4"
+            />
+          </button>
+        </div>
       <% end %>
     </div>
     """
