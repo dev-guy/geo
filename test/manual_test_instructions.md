@@ -3,41 +3,42 @@
 ## Testing Issue #29 - Header Disappearing on Scroll
 
 1. Start the Phoenix server: `mix phx.server`
-2. Navigate to the application
+2. Navigate to the application (http://localhost:4000)
 3. Open the country combobox
 4. Ensure there are multiple groups visible (e.g., countries grouped by continent)
-5. Use the mouse wheel to scroll down slowly
-6. **Expected Result**: The first group's header should remain visible at the top as a sticky header
-7. Continue scrolling until the first group is completely scrolled out of view
-8. **Expected Result**: The first header should smoothly transition out as the second group's header takes its place
+5. **Critical**: Use the mouse wheel to scroll down slowly
+6. **Expected Result**: 
+   - The FIRST group's header should ALWAYS remain visible at the top as a sticky header
+   - It should NOT disappear when you start scrolling
+7. Continue scrolling until the first group's content is completely scrolled out of view
+8. **Expected Result**: The first header should smoothly transition out (push up) as the second group's header takes its place
 
-## Testing Issue #30 - Large Gap Under Headers
+## Testing Issue #30 - Large Gap Between Search and First Header
 
 1. Open the country combobox
-2. If there's a collapse button for the first group, click it to collapse the group
-3. **Expected Result**: There should be NO large gap between the second header and its first country
-4. The content should flow naturally without unnecessary white space
-5. Try collapsing multiple groups
-6. **Expected Result**: The visible content should adjust smoothly without gaps
+2. **Expected Result**: There should be NO large gap between the search input and the first header
+3. The first header should appear immediately below the search input with normal spacing
+4. If there's a collapse button for groups, try collapsing the first group
+5. **Expected Result**: The second header should move up naturally without leaving gaps
 
-## Additional Tests
+## Additional Regression Tests
 
-1. **Keyboard Navigation**: 
-   - Use arrow keys to navigate through options
-   - Ensure navigation works correctly with collapsed groups
+1. **First Header Behavior**:
+   - The first header must stick to the top when scrolling begins
+   - It should only disappear when its entire group is scrolled out
 
-2. **Search Functionality**:
-   - Type in the search box
-   - Ensure filtering works correctly with sticky headers
+2. **No Padding/Gap Issues**:
+   - Check that there's no extra padding at the top of the content
+   - Headers should not create artificial gaps when sticking
 
-3. **Multiple Collapse/Expand**:
-   - Rapidly collapse and expand groups
-   - Ensure headers and padding adjust correctly each time
+3. **Collapsed Groups**:
+   - When a group is collapsed, its header should hide
+   - The next visible group should take its sticky position without gaps
 
 ## Visual Indicators of Success
 
-- ✅ Headers stick to the top when their group has visible content
-- ✅ Headers disappear when their entire group is scrolled out of view
-- ✅ No large gaps appear when groups are collapsed
-- ✅ Smooth transitions when headers overlap during scrolling
-- ✅ Content fills the available space efficiently
+- ✅ NO gap between search input and first header
+- ✅ First header sticks immediately when scrolling starts
+- ✅ Headers transition smoothly when groups overlap
+- ✅ No artificial padding or gaps in the content area
+- ✅ Collapsed groups don't leave empty space
