@@ -9,7 +9,11 @@ defmodule GeoWeb.Components.MishkaComponents do
           show_alert: 1,
           show_alert: 2,
           hide_alert: 1,
-          hide_alert: 2
+          hide_alert: 2,
+          auto_dismiss_alert: 1,
+          auto_dismiss_alert: 2,
+          auto_dismiss_alert: 3,
+          auto_dismiss_alert: 4
         ]
 
       import GeoWeb.Components.Icon, only: [icon: 1]

@@ -10,7 +10,7 @@ https://geo-demo.fly.dev/
 
 ## Purpose
 
-Geo is the world's most overengineered country combobox. Countries are stored in a Postgres table and cached in memory for fast searches.
+Geo is the world's most over-engineered country combobox. Countries are stored in a Postgres table and cached in memory for fast searches.
 
 ![CleanShot 2025-06-12 at 20 40 52@2x](https://github.com/user-attachments/assets/d477b01d-dece-4fff-ac26-d139cfc8a611)
 **Or:**
@@ -26,7 +26,6 @@ Resources:
 - Implementing manual reads and generic actions
 - Defining reusable attributes via macros
 - Implementing `slug` attributes that are computed via a 'change' when not provided (a change is the primary mechanism for customizing what happens during create, update, and destroy actions)
-- Implementing Ash actions that use a custom supervised GenServer
 - Seeding data via bulk upsert
 
 LiveView:
@@ -38,17 +37,25 @@ LiveView:
   - Not very fun fact: It has complex state and took well over 90% of the development effort. Ash was the easy part, by far!
 - A LiveView component that orchestrates Phoenix components and Ash resources
 
-## Custom Mix Aliases
+## Custom Mix Tasks
 
 - `seed`: Upserts seed data
-- `restart`: Starts/restarts server in background process
+- `start`: Starts the server in a foreground process
+- `restart`: Starts/restarts server in background process, sends STDOUT and STDERR to geo.log
 - `stop`: Stops server running in background process 
 
 ## Running on Fly.io
 
 These tips are only suitable for a hobby project. Real projects should use an alternative Postgres solution.
+### Preparation
 
-### Environment variables (secrets)
+1. Go to fly.io and create an account
+2. Install the fly command aka flyctl
+  - brew install fly
+
+### Environment Variables (secrets)
+
+fly will add these for you:
 
 - `DATABASE_URL`
 - `SECRET_KEY_BASE`
@@ -76,13 +83,14 @@ C) Create the `geo-demo` app
   - Configuration: 1 CPU, 512 MB
 - `fly deploy --strategy immediate --skip-release-command`
 
-D) Add/modify secrets to the `geo-demo` app via the fly.io web app
+D) Modify secrets for `geo-demo`
 
+- Using the the fly.io web app, navigate to the geo-demo app and then to Secrets
 - Set `DATABASE_URL` to `postgresql://geo_demo:<db password >@geo-demo-db.internal:5432/geo_demo?sslmode=disable`
 
 E) Modify Dockerfile
 
-Environment variables
+Environment variables:
 
 ```txt
 ENV MIX_ENV=prod
@@ -90,9 +98,9 @@ ENV PHX_SERVER=true
 ENV ECTO_IPV6=true
 ```
 
-CMD/Run script
+CMD/Run script:
 
-Since I run migrations and seeders on my laptop, I created a `start.sh` that runs `mix phx.server` and can be easily changed for troubleshooting.
+Since I run migrations and seeders on my laptop, I created a `start.sh` that runs `mix phx.server` and can be easily changed when troubleshooting.
 
 ```txt
 RUN echo '#!/bin/sh\n\
@@ -115,7 +123,7 @@ After updating secrets or code, run `mix deploy`
 - **Domain Layer**: `Geo.Geography` - Core business logic and operations
 - **Resource Layer**: `Geo.Geography.Country` - Data models and validations with modular attributes
 - **Web Layer**: Phoenix LiveView components for interactive UI
-- **Caching Layer**: High-performance country lookup and search caching with supervised GenServer
+- **Caching Layer**: High-performance country lookup and search caching with GenServer
 - **Attribute Layer**: Reusable attribute modules (`Geo.Resources.Attributes.*`) for DRY resource definitions
 - **Change Layer**: Custom change modules for automatic data transformations
 
@@ -233,45 +241,30 @@ classDiagram
     }
     
     class Geo.Geography.Country.Cache {
-        <<GenServer>>
-        start_link() ok_pid
-        search!(query) iso_name_results
-        get_by_iso_code!(iso_code) country
-        refresh() ok
-        load_countries() ok_countries
-        do_search() iso_name_results
-    }
-    
-    class Geo.Geography.Country.CacheSupervisor {
-        <<DynamicSupervisor>>
-        start_link() ok_pid
-        start_cache_worker() ok_pid
-        start_cache_with_retry() ok_pid
-        stop_worker(pid) ok
-        list_cache_workers() list
-        count_cache_workers() map
-        restart_cache() ok_pid
-    }
-    
-    class Geo.Geography.Country.Cache {
         <<Module>>
         search!(query) tuple
         get_by_iso_code!(iso_code) country
         refresh() ok
         running?() boolean
-        ensure_running() ok
-        stop() ok
         status() map
+        stop() ok
     }
     
-    class Geo.Geography.Country.CacheGenServer {
+    class Geo.Geography.Country.Cache.Server {
         <<GenServer>>
         start_link() ok_pid
         search!(query) tuple
         get_by_iso_code!(iso_code) country
         refresh() ok
-        handle_info(:inactivity_stop) stop
         handle_info(:refresh) noreply
+    }
+    
+    class Poolboy {
+        <<Pool Manager>>
+        transaction(pool, fun) result
+        status(pool) keyword
+        size 5
+        max_overflow 0
     }
     
     Geo.Geography --> Geo.Geography.Country : uses
@@ -280,10 +273,10 @@ classDiagram
     Geo.Geography.Country --|> Geo.Resources.Attributes.Slug : uses
     Geo.Geography.Country --|> Geo.Resources.Attributes.Timestamps : uses
     Geo.Geography.Country --> Geo.Resources.Changes.SlugifyName : applies
-    Geo.Geography.Country.CacheGenServer --> Geo.Geography : calls for refresh
-    Geo.Geography.Country.CacheSupervisor --> Geo.Geography.Country.CacheGenServer : supervises dynamically
-    Geo.Geography.Country.Cache --> Geo.Geography.Country.CacheSupervisor : starts workers lazily
-    Geo.Geography.Country.Cache --> Geo.Geography.Country.CacheGenServer : calls when running
+    Geo.Geography.Country.Cache.Server --> Geo.Geography : calls for refresh
+    Poolboy --> Geo.Geography.Country.Cache.Server : manages 5 workers
+    Geo.Geography.Country.Cache --> Poolboy : uses pool transactions
+    Geo.Geography.Country.Cache --> Geo.Geography.Country.Cache.Server : calls via pool
 ```
 
 ### Country Search Sequence Diagram
@@ -458,9 +451,9 @@ C4Component
     }
     
     Container_Boundary(cache, "Caching Layer") {
-        Component(cache, "Country.Cache", "Module", "Lazy-loading cache entry point")
-        Component(cache_genserver, "Country.CacheGenServer", "GenServer", "High-performance country caching with auto-stop")
-        Component(cache_supervisor, "Country.CacheSupervisor", "DynamicSupervisor", "Dynamic cache worker management")
+        Component(cache, "Country.Cache", "Module", "Poolboy-based cache API")
+        Component(poolboy, "Poolboy Pool", "Pool Manager", "Manages 5 cache worker processes")
+        Component(cache_genserver, "Country.Cache.GenServer", "GenServer", "High-performance country caching workers")
     }
     
     ContainerDb(postgres, "PostgreSQL", "Database")
@@ -471,8 +464,8 @@ C4Component
     Rel(country_resource, manual_read, "Uses for cached reads")
     Rel(manual_read, cache, "get_by_iso_code!")
     Rel(geography, cache, "search!")
-    Rel(cache, cache_supervisor, "Starts workers via")
-    Rel(cache, cache_genserver, "Calls when running")
+    Rel(cache, poolboy, "Uses pool transactions")
+    Rel(poolboy, cache_genserver, "Manages 5 workers")
     Rel(cache_genserver, geography, "Periodic refresh via")
     Rel(country_resource, postgres, "CRUD operations")
 ```
@@ -530,16 +523,17 @@ Key features:
 ## Performance Features
 
 ### Caching Strategy
-- `Geo.Geography.Country.Cache` provides lazy-loading cache entry point
-- `Geo.Geography.Country.CacheGenServer` provides fast searches and stops after 5 minutes of inactivity
-- Dynamically supervised by `Geo.Geography.Country.CacheSupervisor` with exponential backoff retry logic
-- Cache only starts when first accessed (lazy loading) - no startup overhead
-- Automatic cache refresh every 10 minutes via scheduled messages when running
+- `Geo.Geography.Country.Cache` provides Poolboy-based cache API
+- Pool of 5 `Geo.Geography.Country.Cache.Server` workers managed by Poolboy
+- No race conditions - Poolboy handles worker allocation and load balancing
+- Workers start at application boot - no lazy loading complexity
+- Automatic cache refresh every 30 minutes via scheduled messages in each worker
 - Intelligent search with prioritized results returned as separate lists:
   1. **ISO Code Results**: Exact ISO code matches, then partial ISO code matches (≤3 chars)
   2. **Name Results**: Exact name matches, names starting with query, then names containing query
-- Cache maintains two sorted collections: `countries_by_iso_code` and `countries_by_name`
-- Graceful startup with 1-minute retry delay if database is not available
+- Each worker maintains two sorted collections: `countries_by_iso_code` and `countries_by_name`
+- Graceful startup with retry logic if database is not available
+- Pool transactions ensure worker availability and fault tolerance
 
 ### UI Optimizations
 - Real-time search with debouncing

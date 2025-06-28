@@ -3,9 +3,19 @@ defmodule GeoWeb.HomeLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    selected_country =
+      try do
+        Geo.Geography.get_country_iso_code_cached!("AU")
+      rescue
+        _ ->
+          # Fallback to regular query if cache is not available (e.g., in tests)
+          Geo.Geography.list_countries!(filter: [iso_code: "AU"])
+          |> List.first()
+      end
+
     {:ok,
      socket
-     |> assign(:selected_country, Geo.Geography.get_country_iso_code_cached!("AU"))
+     |> assign(:selected_country, selected_country)
      |> assign(:theme, "system")}
   end
 

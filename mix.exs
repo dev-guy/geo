@@ -4,9 +4,11 @@ defmodule Geo.MixProject do
   def project do
     base_config = [
       app: :geo,
-      version: "0.2.1", # GEO_VERSION
+      # GEO_VERSION
+      version: "0.2.2",
       # See also .tool-versions
-      elixir: "~> 1.18", # Mishka Chelekom requires 1.17
+      # Mishka Chelekom requires 1.17
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -74,10 +76,11 @@ defmodule Geo.MixProject do
       {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.26"},
+      {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:dns_cluster, "~> 0.2"},
+      {:bandit, "~> 1.5"},
+      {:poolboy, "~> 1.5"}
     ]
   end
 
@@ -100,7 +103,8 @@ defmodule Geo.MixProject do
         "esbuild geo --minify",
         "phx.digest"
       ],
-      deploy: ["cmd fly deploy --strategy immediate --skip-release-command"]
+      deploy: ["cmd fly deploy --strategy immediate --skip-release-command"],
+      start: ["cmd mix phx.server"]
     ]
 
     if Mix.env() == :dev do

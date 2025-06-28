@@ -240,10 +240,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         space_class(@space)
       ]}
     >
-      <div
-        :if={@label || @description}
-        class={["combobox-label-wrapper", @description_wrapper_class]}
-      >
+      <div :if={@label || @description} class={["combobox-label-wrapper", @description_wrapper_class]}>
         <.label :if={@label} for={@id} class={@label_class}>{@label}</.label>
         <div :if={@description} class={@description_class}>
           {@description}
@@ -508,10 +505,7 @@ defmodule GeoWeb.Components.SearchCombobox do
         space_class(@space)
       ]}
     >
-      <div
-        :if={@label || @description}
-        class={["combobox-label-wrapper", @description_wrapper_class]}
-      >
+      <div :if={@label || @description} class={["combobox-label-wrapper", @description_wrapper_class]}>
         <.label :if={@label} for={@id} class={@label_class}>{@label}</.label>
         <div :if={@description} class={@description_class}>
           {@description}
@@ -587,7 +581,12 @@ defmodule GeoWeb.Components.SearchCombobox do
             </div>
 
             <div class="flex items-center gap-1">
-              <div class="shrink-0" data-part="clear-combobox-button" role="button" hidden={is_nil(@value) || @value == ""}>
+              <div
+                class="shrink-0"
+                data-part="clear-combobox-button"
+                role="button"
+                hidden={is_nil(@value) || @value == ""}
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -816,10 +815,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             class="hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
             title={"Toggle #{@group_label} sort order"}
           >
-            <.icon
-              name={get_in(@group_states, [@group_label, :sort_icon])}
-              class="h-4 w-4"
-            />
+            <.icon name={get_in(@group_states, [@group_label, :sort_icon])} class="h-4 w-4" />
           </button>
         </div>
       <% end %>
