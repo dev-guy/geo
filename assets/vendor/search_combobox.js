@@ -18,18 +18,24 @@ const SearchCombobox = {
   updated() {
     const dropdownEl = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const wasOpen = dropdownEl && !dropdownEl.hasAttribute('hidden');
+
+    // Preserve the current search value BEFORE init() resets it
     const currentSearchValue = this.searchInput ? this.searchInput.value : '';
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
+    const preservedSearchTerm = this.searchTerm || '';
 
     this.init();
 
-    if (this.dropdownShouldBeOpen || wasSearching) {
-      this.openDropdown();
+    // Restore the search term after init()
+    if (currentSearchValue || preservedSearchTerm) {
+      this.searchTerm = currentSearchValue || preservedSearchTerm;
+      if (this.searchInput) {
+        this.searchInput.value = this.searchTerm;
+      }
     }
 
-    if (this.searchInput && currentSearchValue) {
-      this.searchInput.value = currentSearchValue;
-      this.searchTerm = currentSearchValue;
+    if (this.dropdownShouldBeOpen || wasSearching) {
+      this.openDropdown();
     }
 
     this.initializeSelection();
@@ -49,7 +55,11 @@ const SearchCombobox = {
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
 
-    this.searchTerm = '';
+    // Only reset searchTerm if it doesn't exist (i.e., on initial mount)
+    if (this.searchTerm === undefined) {
+      this.searchTerm = '';
+    }
+
     this.debounceDelay = 500;
     this.debounceTimer = null;
     this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
