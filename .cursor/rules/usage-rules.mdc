@@ -3,7 +3,6 @@ description: All rules from `mix usage_rules.sync`
 globs: 
 alwaysApply: true
 ---
-<-- Overwrite this with .rules after mix deps.get -->
 <-- usage-rules-start -->
 <-- igniter-start -->
 ## igniter usage
@@ -580,9 +579,7 @@ Ash is an opinionated, composable framework for building applications in Elixir.
 
 ## Code Interfaces
 
-Use code interfaces on domains to define the contract for calling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ash/code-interfaces.html).
-
-Define code interfaces on the domain, like this:
+Use code interfaces on domains to define the contract for calling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ashe code interfaces on the domain, like this:
 
 ```elixir
 resource ResourceName do
@@ -1151,7 +1148,7 @@ end
 - `on_missing: :destroy` - Delete records not in input
 - `value_is_key: :name` - Use field as key for simple values
 
-For comprehensive documentation, see the [Managing Relationships](documentation/topics/resources/relationships.md#managing-relationships) section.
+For comprehensive documentation, see the [Managinntation/topics/resources/relationships.md#managing-relationships) section.
 
 #### Examples
 
@@ -3005,7 +3002,7 @@ Ash is an opinionated, composable framework for building applications in Elixir.
 
 ## Code Interfaces
 
-Use code interfaces on domains to define the contract for calling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ash/code-interfaces.html).
+Use code interfaces on domainalling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ash/code-interfaces.html).
 
 Define code interfaces on the domain, like this:
 
@@ -3580,8 +3577,7 @@ end
 - `on_lookup: :relate` - Look up and relate existing records
 - `on_no_match: :create` - Create if no match found
 - `on_match: :update` - Update existing matches
-- `on_missing: :destroy` - Delete records not in input
-- `value_is_key: :name` - Use field as key for simple values
+- `on_missing: :destroy` - Delete records not i: :name` - Use field as key for simple values
 
 For comprehensive documentation, see the [Managing Relationships](https://hexdocs.pm/ash/relationships.html#managing-relationships) section.
 
@@ -4057,4 +4053,3 @@ When testing resources:
 
 <!-- ash-end -->
 <!-- usage-rules-end -->
-
