@@ -16,7 +16,7 @@ defmodule Mix.Tasks.Restart do
 
   @shortdoc "Restarts the Geo service"
 
-    @impl Mix.Task
+  @impl Mix.Task
   def run(_args) do
     log_file = "geo.log"
 
@@ -31,8 +31,7 @@ defmodule Mix.Tasks.Restart do
     File.write!(log_file, "")
 
     # Use System.cmd with a shell command to properly background the process
-    case System.cmd("sh", ["-c", "nohup mix phx.server > #{log_file} 2>&1 &"],
-                   cd: File.cwd!()) do
+    case System.cmd("sh", ["-c", "nohup mix phx.server > #{log_file} 2>&1 &"], cd: File.cwd!()) do
       {_, 0} ->
         # Give it a moment to start
         Process.sleep(2000)
@@ -49,7 +48,9 @@ defmodule Mix.Tasks.Restart do
                 "" -> nil
                 pid -> pid
               end
-            _ -> nil
+
+            _ ->
+              nil
           end
         end
 
@@ -65,7 +66,9 @@ defmodule Mix.Tasks.Restart do
         end
 
       {error, exit_code} ->
-        Mix.shell().error("Failed to start server in background: #{error} (exit code: #{exit_code})")
+        Mix.shell().error(
+          "Failed to start server in background: #{error} (exit code: #{exit_code})"
+        )
     end
   end
 end

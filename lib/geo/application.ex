@@ -32,7 +32,21 @@ defmodule Geo.Application do
           Geo.Repo,
           GeoWeb.Telemetry,
           {Phoenix.PubSub, name: Geo.PubSub},
-          {Geo.Geography.Country.CacheSupervisor, []},
+          %{
+            id: :country_cache_pool,
+            start:
+              {:poolboy, :start_link,
+               [
+                 [
+                   name: {:local, :country_cache_pool},
+                   worker_module: Geo.Geography.Country.Cache.Server,
+                   # 5 permanent workers
+                   size: 5,
+                   # No overflow workers (fixed pool size)
+                   max_overflow: 0
+                 ]
+               ]}
+          },
           # Start the Finch HTTP client for sending emails
           {Finch, name: Geo.Finch},
           # Start to serve requests, typically the last entry

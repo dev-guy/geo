@@ -1,43 +1,40 @@
 defmodule Geo.Geography.Country.Cache do
   @moduledoc """
   API for country cache operations. Only used by the Country resource.
-  Starts the cache GenServer when needed via the dynamic
-  supervisor Geo.Geography.Country.CacheSupervisor.
+  Uses Poolboy to manage a pool of 5 cache GenServer workers for load balancing.
   """
 
   require Logger
 
-  @cache_genserver Geo.Geography.Country.CacheGenServer
-  @cache_supervisor Geo.Geography.Country.CacheSupervisor
+  @pool_name :country_cache_pool
 
   @doc """
-  Search for countries with lazy cache initialization.
-  Starts the cache if it's not running, then performs the search.
+  Search for countries using the pooled cache workers.
   """
   def search!(query \\ nil) do
-    ensure_running()
+    :poolboy.transaction(@pool_name, fn worker ->
+      cond do
+        query == nil ->
+          GenServer.call(worker, :search_all)
 
-    cond do
-      query == nil ->
-        GenServer.call(@cache_genserver, :search_all)
+        String.trim(query) == "" ->
+          GenServer.call(worker, :search_all)
 
-      String.trim(query) == "" ->
-        GenServer.call(@cache_genserver, :search_all)
-
-      true ->
-        trimmed_query = String.trim(query)
-        GenServer.call(@cache_genserver, {:search, trimmed_query})
-    end
+        true ->
+          trimmed_query = String.trim(query)
+          GenServer.call(worker, {:search, trimmed_query})
+      end
+    end)
   end
 
   @doc """
-  Get a country by ISO code with lazy cache initialization.
-  Starts the cache if it's not running, then performs the lookup.
+  Get a country by ISO code using the pooled cache workers.
   """
   def get_by_iso_code!(iso_code) do
-    ensure_running()
-
-    country = GenServer.call(@cache_genserver, {:get_by_iso_code, iso_code})
+    country =
+      :poolboy.transaction(@pool_name, fn worker ->
+        GenServer.call(worker, {:get_by_iso_code, iso_code})
+      end)
 
     if country do
       country
@@ -47,158 +44,84 @@ defmodule Geo.Geography.Country.Cache do
   end
 
   @doc """
-  Refresh the cache if it's running. If not running, does nothing.
+  Refresh all cache workers in the pool.
+  This will update the data in all workers to ensure consistency.
   """
   def refresh do
-    if running?() do
-      GenServer.call(@cache_genserver, :refresh)
-    else
-      Logger.info("Cache worker not running, skipping refresh")
-      :ok
-    end
-  end
+    # Get all workers and refresh them
+    workers = :poolboy.status(@pool_name)
+    worker_count = Keyword.get(workers, :ready, 0) + Keyword.get(workers, :busy, 0)
 
-  @doc """
-  Check if the cache GenServer is currently running.
-  """
-  def running? do
-    case Process.whereis(@cache_genserver) do
-      nil -> false
-      pid when is_pid(pid) -> Process.alive?(pid)
-    end
-  end
+    Logger.info("Refreshing #{worker_count} cache workers")
 
-  @doc """
-  Ensure the cache is running. If not, start it via the dynamic supervisor.
-  Returns :ok if cache is running or successfully started.
-  """
-  def ensure_running do
-    case running?() do
+    # Refresh each worker in the pool
+    refresh_results =
+      for _ <- 1..worker_count do
+        :poolboy.transaction(
+          @pool_name,
+          fn worker ->
+            GenServer.call(worker, :refresh)
+          end,
+          # 30 second timeout for refresh
+          30_000
+        )
+      end
+
+    case Enum.all?(refresh_results, &(&1 == :ok)) do
       true ->
+        Logger.info("All cache workers refreshed successfully")
         :ok
 
       false ->
-        # Use a global lock to prevent race conditions when starting the cache
-        case :global.trans(
-               {__MODULE__, :start_cache},
-               fn ->
-                 # Double-check inside the transaction
-                 case running?() do
-                   true ->
-                     {:ok, :already_running}
-
-                   false ->
-                     Logger.info("Starting cache worker")
-
-                     case @cache_supervisor.start_cache_worker() do
-                       {:ok, _pid} ->
-                         # Wait a bit for the process to register, then verify it's running
-                         :timer.sleep(100)
-
-                         case running?() do
-                           true ->
-                             Logger.info("Cache worker started successfully")
-                             {:ok, :started}
-
-                           false ->
-                             Logger.warning(
-                               "Cache worker started but not yet registered, retrying..."
-                             )
-
-                             {:error, :not_registered}
-                         end
-
-                       {:error, {:already_started, _pid}} ->
-                         # Another process started it between our checks
-                         Logger.info("Cache worker was started by another process")
-                         {:ok, :already_started}
-
-                       {:error, reason} ->
-                         Logger.error("Failed to start cache worker: #{inspect(reason)}")
-                         {:error, reason}
-                     end
-                 end
-               end,
-               [node()],
-               5000
-             ) do
-          {:ok, _} ->
-            :ok
-
-          {:error, reason} ->
-            {:error, reason}
-
-          :aborted ->
-            # Transaction was aborted, likely due to timeout
-            # Check if cache is now running (maybe another process succeeded)
-            case running?() do
-              true -> :ok
-              false -> {:error, :timeout}
-            end
-        end
+        failed_count = Enum.count(refresh_results, &(&1 != :ok))
+        Logger.warning("#{failed_count} cache workers failed to refresh")
+        {:error, :partial_refresh_failure}
     end
   end
 
   @doc """
-  Stop the cache if it's running.
+  Check if the cache pool is running and has workers available.
   """
-  def stop do
-    case Process.whereis(@cache_genserver) do
-      nil ->
-        Logger.info("Cache worker not running, nothing to stop")
-        :ok
-
-      pid when is_pid(pid) ->
-        Logger.info("Stopping cache worker")
-        @cache_supervisor.stop_worker(pid)
+  def running? do
+    try do
+      workers = :poolboy.status(@pool_name)
+      total_workers = Keyword.get(workers, :ready, 0) + Keyword.get(workers, :busy, 0)
+      total_workers > 0
+    rescue
+      _ -> false
     end
   end
 
   @doc """
-  Get cache statistics and status.
+  Get cache pool statistics and status.
   """
   def status do
-    running = running?()
-    worker_count = @cache_supervisor.count_cache_workers()
+    try do
+      pool_status = :poolboy.status(@pool_name)
 
-    %{
-      running: running,
-      worker_count: worker_count,
-      process_info: if(running, do: Process.info(Process.whereis(@cache_genserver)), else: nil)
-    }
+      %{
+        running: true,
+        pool_name: @pool_name,
+        ready_workers: Keyword.get(pool_status, :ready, 0),
+        busy_workers: Keyword.get(pool_status, :busy, 0),
+        overflow_workers: Keyword.get(pool_status, :overflow, 0),
+        monitors: Keyword.get(pool_status, :monitors, 0)
+      }
+    rescue
+      error ->
+        %{
+          running: false,
+          error: inspect(error)
+        }
+    end
   end
 
-  # Alternative simpler approach - uncomment to use direct GenServer startup
-  # def ensure_running_simple do
-  #   case running?() do
-  #     true -> :ok
-  #     false ->
-  #       case :global.trans({__MODULE__, :start_cache}, fn ->
-  #         case running?() do
-  #           true -> {:ok, :already_running}
-  #           false ->
-  #             Logger.info("Starting cache worker directly")
-  #             case @cache_genserver.start_link([]) do
-  #               {:ok, _pid} ->
-  #                 Logger.info("Cache worker started successfully")
-  #                 {:ok, :started}
-  #               {:error, {:already_started, _pid}} ->
-  #                 Logger.info("Cache worker was started by another process")
-  #                 {:ok, :already_started}
-  #               {:error, reason} ->
-  #                 Logger.error("Failed to start cache worker: #{inspect(reason)}")
-  #                 {:error, reason}
-  #             end
-  #         end
-  #       end, [node()], 5000) do
-  #         {:ok, _} -> :ok
-  #         {:error, reason} -> {:error, reason}
-  #         :aborted ->
-  #           case running?() do
-  #             true -> :ok
-  #             false -> {:error, :timeout}
-  #           end
-  #       end
-  #   end
-  # end
+  @doc """
+  Stop the cache pool (for testing/maintenance).
+  Note: This will stop the entire pool supervisor.
+  """
+  def stop do
+    Logger.info("Stopping country cache pool")
+    Supervisor.stop(@pool_name)
+  end
 end
