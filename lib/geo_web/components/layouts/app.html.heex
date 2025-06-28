@@ -1,5 +1,5 @@
 <header class="px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 transition-colors duration-200">
-  <div class="flex items-center justify-between border-b border-zinc-100 dark:border-gray-700 py-3 text-sm">
+  <div class="flex items-center justify-between border-b border-zinc-100 dark:border-gray-700 py-3 text-sm font-semibold leading-6">
     <div class="flex items-center gap-4">
       <a href="/">
         <img src={~p"/images/logo.svg"} width="36" />
@@ -14,14 +14,25 @@
         class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         title="View source on GitHub"
       >
+        <img src={~p"/images/github-mark.png"} alt="GitHub" class="h-5 w-5 dark:invert" />
+      </a>
+      <a
+        href="https://ash-hq.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        title="Built with Ash Framework"
+      >
+        <span>Powered by</span>
         <img
-          src={~p"/images/github-mark.png"}
-          alt="GitHub"
-          class="h-5 w-5 dark:invert"
+          src="https://ash-hq.org/images/ash-logo-cropped.svg"
+          alt="Ash Framework"
+          class="h-4 w-auto"
         />
+        Ash Framework
       </a>
     </div>
-    <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900 dark:text-gray-100">
+    <div class="flex items-center gap-4">
       <a
         href="https://fly.io"
         target="_blank"

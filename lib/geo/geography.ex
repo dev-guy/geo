@@ -82,8 +82,13 @@ defmodule Geo.Geography do
       define :upsert_country, action: :upsert
       define :update_country, action: :update
       define :list_countries, action: :read
-      define :search_countries, action: :search, args: [{:optional, :query}]
       define :get_country_iso_code_cached, action: :read, get_by: [:iso_code]
     end
+
+    resource Geo.Geography.Country.SearchResult do
+      define :search_countries, action: :search, args: [{:optional, :query}]
+    end
   end
+
+
 end
