@@ -8,6 +8,25 @@ const path = require('path');
 module.exports = {
   content: ['./js/**/*.js', '../lib/geo_web.ex', '../lib/geo_web/**/*.*ex'],
   darkMode: 'class',
+  safelist: [
+    // Dissolving effect classes
+    'duration-[2000ms]',
+    'duration-[3000ms]',
+    'duration-[4000ms]',
+    'delay-[2000ms]',
+    'delay-[4000ms]',
+    'delay-[5000ms]',
+    'delay-[6000ms]',
+    'translate-y-12',
+    '-translate-y-8',
+    'scale-50',
+    'scale-75',
+    'scale-90',
+    'scale-95',
+    'scale-98',
+    'rotate-1',
+    'rotate-2',
+  ],
   theme: {
     extend: {
       colors: {
