@@ -5,7 +5,7 @@ defmodule Geo.MixProject do
     base_config = [
       app: :geo,
       # GEO_VERSION
-      version: "0.2.2",
+      version: "0.3.0",
       # See also .tool-versions
       # Mishka Chelekom requires 1.17
       elixir: "~> 1.18",
@@ -78,7 +78,7 @@ defmodule Geo.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1"},
+      {:dns_cluster, "~> 0.2"},
       {:bandit, "~> 1.5"},
       {:poolboy, "~> 1.5"}
     ]

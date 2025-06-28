@@ -2,7 +2,7 @@
  * Search Combobox
  *
  * Intercepts the search input and sends it to the backend.
- * Implements sticy group headers.
+ * Implements sticky group headers.
  * Implements expand/collapse and sorting.
  *
  * This work was derived from Mishka Chelekom Combobox version 0.0.5 in 2025.
@@ -18,18 +18,24 @@ const SearchCombobox = {
   updated() {
     const dropdownEl = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const wasOpen = dropdownEl && !dropdownEl.hasAttribute('hidden');
+
+    // Preserve the current search value BEFORE init() resets it
     const currentSearchValue = this.searchInput ? this.searchInput.value : '';
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
+    const preservedSearchTerm = this.searchTerm || '';
 
     this.init();
 
-    if (this.dropdownShouldBeOpen || wasSearching) {
-      this.openDropdown();
+    // Restore the search term after init()
+    if (currentSearchValue || preservedSearchTerm) {
+      this.searchTerm = currentSearchValue || preservedSearchTerm;
+      if (this.searchInput) {
+        this.searchInput.value = this.searchTerm;
+      }
     }
 
-    if (this.searchInput && currentSearchValue) {
-      this.searchInput.value = currentSearchValue;
-      this.searchTerm = currentSearchValue;
+    if (this.dropdownShouldBeOpen || wasSearching) {
+      this.openDropdown();
     }
 
     this.initializeSelection();
@@ -49,7 +55,11 @@ const SearchCombobox = {
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
 
-    this.searchTerm = '';
+    // Only reset searchTerm if it doesn't exist (i.e., on initial mount)
+    if (this.searchTerm === undefined) {
+      this.searchTerm = '';
+    }
+
     this.debounceDelay = 500;
     this.debounceTimer = null;
     this.searchEventName = this.el.getAttribute('data-search-event') || 'search_countries';
@@ -140,7 +150,6 @@ const SearchCombobox = {
     this.dropdown.removeAttribute('hidden');
     this.trigger.setAttribute('aria-expanded', 'true');
     this.adjustHeight();
-    this.ensureHighlight();
 
     this.lastMouseX = 0;
     this.lastMouseY = 0;
@@ -152,11 +161,16 @@ const SearchCombobox = {
       this.searchInput.focus({ preventScroll: true });
     }
 
+    // Initialize sticky headers first, then ensure highlight
     this.initializeStickyHeaders();
-
-    if (this.handleScroll) {
-      setTimeout(() => this.handleScroll(), 0);
-    }
+    
+    // Use setTimeout to ensure sticky headers are fully set up before highlighting
+    setTimeout(() => {
+      this.ensureHighlight();
+      if (this.handleScroll) {
+        this.handleScroll();
+      }
+    }, 0);
   },
 
   closeDropdown() {
@@ -350,19 +364,35 @@ const SearchCombobox = {
     }
 
     const scrollRect = this.scrollArea.getBoundingClientRect();
+    const scrollTop = this.scrollArea.scrollTop;
     let visibleHeadersCount = 0;
 
+    // Count how many group headers are currently sticky (visible at the top)
     for (let i = 0; i < this.stickyHeaders.length; i++) {
       const item = this.stickyHeaders[i];
       const group = item.group;
       const groupRect = group.getBoundingClientRect();
+      
+      // The group's top position relative to the scroll area's top
       const groupTopRelativeToScroll = groupRect.top - scrollRect.top;
-
-      const headerStickyPosition = i * this.headerHeight;
-
-      if (groupTopRelativeToScroll <= headerStickyPosition) {
-        visibleHeadersCount++;
+      
+      // The position where this header should stick (accounting for previous headers)
+      const headerStickyTop = i * this.headerHeight;
+      
+      // A header is sticky if the group has scrolled up enough that its header
+      // should be at the sticky position
+      if (groupTopRelativeToScroll <= headerStickyTop) {
+        // Also check if the group extends beyond the header position
+        // (i.e., there's still content from this group visible below the header)
+        const groupBottomRelativeToScroll = groupRect.bottom - scrollRect.top;
+        const headerBottomPosition = headerStickyTop + this.headerHeight;
+        
+        if (groupBottomRelativeToScroll > headerBottomPosition) {
+          visibleHeadersCount++;
+        }
       } else {
+        // Once we find a group that hasn't reached its sticky position, 
+        // no subsequent groups will be sticky either
         break;
       }
     }
@@ -842,6 +872,9 @@ const SearchCombobox = {
       firstHeader.style.borderTop = 'none';
       firstHeader.style.borderBottom = this.getBorderColor();
 
+      // Force a reflow to ensure border is applied before measuring
+      void firstHeader.offsetHeight;
+      
       const rect = firstHeader.getBoundingClientRect();
       this.headerHeight = rect.height;
 
