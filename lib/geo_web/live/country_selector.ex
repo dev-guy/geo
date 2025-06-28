@@ -17,10 +17,12 @@ defmodule GeoWeb.CountrySelector do
     if socket.assigns[:original_countries] do
       {:ok, assign(socket, assigns)}
     else
-      %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} =
-        Geo.Geography.search_countries!()
+      search_results = Geo.Geography.search_countries!()
 
-      original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
+      original_countries = %{
+        iso_code_group: search_results.countries_by_iso_code,
+        name_group: search_results.countries_by_name
+      }
 
       socket =
         socket
@@ -33,9 +35,9 @@ defmodule GeoWeb.CountrySelector do
 
       # Determine sort orders for each group
       {iso_code_sort_orders, iso_code_sort_order} =
-        determine_sort_orders(countries_by_iso_code, :iso_code)
+        determine_sort_orders(search_results.countries_by_iso_code, :iso_code)
 
-      {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
+      {name_sort_orders, name_sort_order} = determine_sort_orders(search_results.countries_by_name, :name)
 
       socket =
         socket
@@ -174,16 +176,18 @@ defmodule GeoWeb.CountrySelector do
   @impl true
   def handle_event("search_combobox_search", %{"value" => query}, socket) do
     # Check if trimmed query is empty, but keep original query for search
-    %{by_iso_code: countries_by_iso_code, by_name: countries_by_name} =
-      Geo.Geography.search_countries!(query)
+    search_results = Geo.Geography.search_countries!(query)
 
-    original_countries = %{iso_code_group: countries_by_iso_code, name_group: countries_by_name}
+    original_countries = %{
+      iso_code_group: search_results.countries_by_iso_code,
+      name_group: search_results.countries_by_name
+    }
 
     # Recalculate sort orders based on the search results
     {iso_code_sort_orders, iso_code_sort_order} =
-      determine_sort_orders(countries_by_iso_code, :iso_code)
+      determine_sort_orders(search_results.countries_by_iso_code, :iso_code)
 
-    {name_sort_orders, name_sort_order} = determine_sort_orders(countries_by_name, :name)
+    {name_sort_orders, name_sort_order} = determine_sort_orders(search_results.countries_by_name, :name)
 
     socket =
       socket
