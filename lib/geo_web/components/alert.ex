@@ -183,6 +183,7 @@ defmodule GeoWeb.Components.Alert do
         flash={@flash}
         variant={@variant}
         width="medium"
+        phx-mounted={test_dissolve_alert("#flash-#{@variant}-error", :error)}
       />
       <.flash
         id="client-error"
@@ -205,6 +206,7 @@ defmodule GeoWeb.Components.Alert do
         title={gettext("Something went wrong!")}
         phx-disconnected={show_alert(".phx-server-error #server-error")}
         phx-connected={hide_alert("#server-error")}
+        phx-mounted={test_dissolve_alert("#server-error", :error)}
         width="medium"
         hidden
       >
@@ -773,16 +775,16 @@ defmodule GeoWeb.Components.Alert do
   def show_alert(js \\ %JS{}, selector) do
     JS.show(js,
       to: selector,
-      time: 300,
+      time: 400,
       transition:
         {"transition-all transform ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
-         "opacity-100 translate-y-0 sm:scale-100"}
+         "opacity-0 translate-y-4 scale-95",
+         "opacity-100 translate-y-0 scale-100"}
     )
   end
 
   @doc """
-  Hides an alert element by applying a transition effect.
+  Hides an alert element by applying an enhanced dissolving transition effect.
 
   ## Parameters
 
@@ -793,13 +795,14 @@ defmodule GeoWeb.Components.Alert do
   ## Returns
 
     - A `Phoenix.LiveView.JS` structure with commands to hide the alert element with
-    a smooth transition effect.
+    an enhanced dissolving transition effect.
 
   ## Transition Details
 
-    - The element transitions from full opacity and scale (`opacity-100 translate-y-0 sm:scale-100`)
-    to reduced opacity and scale (`opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95`)
-    over a duration of 200 milliseconds.
+    - The element transitions from full opacity and scale (`opacity-100 translate-y-0 sm:scale-100 blur-0`)
+    to dissolved state (`opacity-0 translate-y-6 sm:translate-y-0 sm:scale-90 blur-sm`)
+    over a duration of 400 milliseconds with a smooth ease-in curve.
+    - Includes blur effect for a more natural dissolving appearance.
 
   ## Example
 
@@ -807,17 +810,231 @@ defmodule GeoWeb.Components.Alert do
     hide_alert(%JS{}, "#alert-box")
     ```
 
-  This example will hide the alert element with the ID `alert-box` using the defined transition effect.
+  This example will hide the alert element with the ID `alert-box` using the enhanced dissolving transition effect.
   """
 
   def hide_alert(js \\ %JS{}, selector) do
     JS.hide(js,
       to: selector,
-      time: 200,
+      time: 600,
       transition:
-        {"transition-all transform ease-in duration-200",
-         "opacity-100 translate-y-0 sm:scale-100",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+        {"transition-all transform ease-in duration-500",
+         "opacity-100 translate-y-0 scale-100",
+         "opacity-0 translate-y-4 scale-95"}
     )
+  end
+
+  @doc """
+  Auto-dismisses an alert element after a delay with an enhanced dissolving animation.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    Defaults to a new `%JS{}`.
+    - `selector`: A string representing the CSS selector of the alert element to be auto-dismissed.
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 5000ms (5 seconds).
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with commands to auto-dismiss the alert element after the specified delay
+    with an enhanced 3-second dissolving animation.
+
+  ## Transition Details
+
+    - After the delay, the element transitions from full opacity and scale (`opacity-100 translate-y-0 sm:scale-100`)
+    to completely dissolved state (`opacity-0 translate-y-8 sm:translate-y-0 sm:scale-75 blur-sm`)
+    over a duration of 3000 milliseconds (3 seconds) with a smooth ease-out curve.
+
+  ## Example
+
+    ```elixir
+    auto_dismiss_alert(%JS{}, "#alert-box")
+    auto_dismiss_alert(%JS{}, "#alert-box", 3000)  # Custom 3-second delay
+    ```
+
+  This example will auto-dismiss the alert element with the ID `alert-box` after 5 seconds (or custom delay)
+  using an enhanced 3-second dissolving animation.
+  """
+
+  def auto_dismiss_alert(selector, delay \\ 5000) do
+    auto_dismiss_alert(%JS{}, selector, :error, delay)
+  end
+
+  def auto_dismiss_alert(js, selector, delay) when is_struct(js, Phoenix.LiveView.JS) and is_integer(delay) do
+    auto_dismiss_alert(js, selector, :error, delay)
+  end
+
+  @doc """
+  Auto-dismisses an alert element after a delay with an enhanced dissolving animation and clears the specified flash key.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    Defaults to a new `%JS{}`.
+    - `selector`: A string representing the CSS selector of the alert element to be auto-dismissed.
+    - `flash_key`: The flash key to clear (e.g., `:error`, `:info`).
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 5000ms (5 seconds).
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with commands to auto-dismiss the alert element after the specified delay
+    with an enhanced 3-second dissolving animation and clear the flash message.
+
+  ## Transition Details
+
+    - Enhanced dissolving effect includes opacity fade, vertical movement, scaling, and blur effects
+    - Uses cubic-bezier easing for a more natural dissolving motion
+    - Animation duration is 3 seconds for a more gradual dissolve
+
+  ## Example
+
+    ```elixir
+    auto_dismiss_alert(%JS{}, "#alert-box", :error, 3000)
+    ```
+  """
+
+  def auto_dismiss_alert(js, selector, flash_key, delay \\ 5000) do
+    dissolve_duration = 2000
+    total_time = delay + dissolve_duration
+
+    js
+    |> JS.hide(
+      to: selector,
+      time: total_time,
+      transition:
+        {"transition-all transform ease-out duration-[#{dissolve_duration}ms] delay-[#{delay}ms]",
+         "opacity-100 translate-y-0 scale-100",
+         "opacity-0 translate-y-6 scale-90"}
+    )
+    |> JS.push("lv:clear-flash", value: %{key: flash_key})
+  end
+
+  @doc """
+  Creates a dramatic dissolving effect with multiple animation phases.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    - `selector`: A string representing the CSS selector of the alert element.
+    - `flash_key`: The flash key to clear (e.g., `:error`, `:info`).
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 4000ms.
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with a dramatic multi-phase dissolving animation.
+
+  ## Animation Phases
+
+    1. Initial fade and blur (first 2 seconds)
+    2. Scale down and move up (final 2 seconds)
+    3. Complete dissolution with rotation effect
+
+  ## Example
+
+    ```elixir
+    dramatic_dissolve_alert(%JS{}, "#alert-box", :error)
+    ```
+  """
+
+  def dramatic_dissolve_alert(js \\ %JS{}, selector, flash_key, delay \\ 4000) do
+    dissolve_duration = 3000
+    total_time = delay + dissolve_duration
+
+    js
+    |> JS.hide(
+      to: selector,
+      time: total_time,
+      transition:
+        {"transition-all transform ease-in-out duration-[#{dissolve_duration}ms] delay-[#{delay}ms]",
+         "opacity-100 translate-y-0 scale-100 rotate-0",
+         "opacity-0 -translate-y-8 scale-75 rotate-1"}
+    )
+    |> JS.push("lv:clear-flash", value: %{key: flash_key})
+  end
+
+  @doc """
+  Creates a gentle fade-out dissolving effect for subtle dismissals.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    - `selector`: A string representing the CSS selector of the alert element.
+    - `flash_key`: The flash key to clear (e.g., `:error`, `:info`).
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 6000ms.
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with a gentle dissolving animation.
+
+  ## Animation Details
+
+    - Very subtle movement and scaling
+    - Longer duration for smooth, barely noticeable dissolution
+    - Perfect for non-intrusive notifications
+
+  ## Example
+
+    ```elixir
+    gentle_dissolve_alert(%JS{}, "#alert-box", :info)
+    ```
+  """
+
+    def gentle_dissolve_alert(js \\ %JS{}, selector, flash_key, delay \\ 6000) do
+    dissolve_duration = 3000
+    total_time = delay + dissolve_duration
+
+    js
+    |> JS.hide(
+      to: selector,
+      time: total_time,
+      transition:
+        {"transition-all transform ease-linear duration-[#{dissolve_duration}ms] delay-[#{delay}ms]",
+         "opacity-100 translate-y-0 scale-100",
+         "opacity-0 translate-y-1 scale-98"}
+    )
+    |> JS.push("lv:clear-flash", value: %{key: flash_key})
+  end
+
+  @doc """
+  Creates a very visible dissolving effect for testing and demonstration purposes.
+
+  ## Parameters
+
+    - `js`: (optional) An existing `Phoenix.LiveView.JS` structure to apply transformations on.
+    - `selector`: A string representing the CSS selector of the alert element.
+    - `flash_key`: The flash key to clear (e.g., `:error`, `:info`).
+    - `delay`: (optional) The delay in milliseconds before starting the dissolving animation. Defaults to 2000ms.
+
+  ## Returns
+
+    - A `Phoenix.LiveView.JS` structure with a very visible dissolving animation.
+
+  ## Animation Details
+
+    - Slow 4-second dissolving animation
+    - Large movement and scaling changes
+    - Easy to see and debug
+
+  ## Example
+
+    ```elixir
+    test_dissolve_alert(%JS{}, "#alert-box", :error)
+    ```
+  """
+
+  def test_dissolve_alert(js \\ %JS{}, selector, flash_key, delay \\ 2000) do
+    dissolve_duration = 4000
+    total_time = delay + dissolve_duration
+
+    js
+    |> JS.hide(
+      to: selector,
+      time: total_time,
+      transition:
+        {"transition-all transform ease-in-out duration-[#{dissolve_duration}ms] delay-[#{delay}ms]",
+         "opacity-100 translate-y-0 scale-100",
+         "opacity-0 translate-y-12 scale-50"}
+    )
+    |> JS.push("lv:clear-flash", value: %{key: flash_key})
   end
 end
