@@ -336,7 +336,7 @@ const SearchCombobox = {
       }
     }
 
-    const { viewportTop, viewportBottom } = this.getEffectiveViewport();
+    const { navigationViewportTop, navigationViewportBottom } = this.getEffectiveViewport();
     const scrollRect = this.scrollArea.getBoundingClientRect();
     const optionRect = option.getBoundingClientRect();
 
@@ -345,14 +345,15 @@ const SearchCombobox = {
 
     const padding = 8;
 
-    if (optionTop < viewportTop + padding) {
-      const scrollUpAmount = (viewportTop + padding) - optionTop;
+    // Use navigation viewport for visibility checks, but preserve scrollbar range
+    if (optionTop < navigationViewportTop + padding) {
+      const scrollUpAmount = (navigationViewportTop + padding) - optionTop;
       const oldScrollTop = this.scrollArea.scrollTop;
       const newScrollTop = Math.max(0, oldScrollTop - scrollUpAmount);
       this.scrollArea.scrollTop = newScrollTop;
     }
-    else if (optionBottom > viewportBottom - padding) {
-      const scrollDownAmount = optionBottom - (viewportBottom - padding);
+    else if (optionBottom > navigationViewportBottom - padding) {
+      const scrollDownAmount = optionBottom - (navigationViewportBottom - padding);
       const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
       const oldScrollTop = this.scrollArea.scrollTop;
       const newScrollTop = Math.min(maxScrollTop, oldScrollTop + scrollDownAmount);
@@ -367,6 +368,9 @@ const SearchCombobox = {
         viewportBottom: 0,
         effectiveHeight: 0,
         maxVisibleRows: 0,
+        navigationViewportTop: 0,
+        navigationViewportBottom: 0,
+        navigationEffectiveHeight: 0,
       };
     }
 
@@ -379,6 +383,9 @@ const SearchCombobox = {
         viewportBottom: totalHeight,
         effectiveHeight: effectiveHeight,
         maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight),
+        navigationViewportTop: 0,
+        navigationViewportBottom: totalHeight,
+        navigationEffectiveHeight: effectiveHeight,
       };
     }
 
@@ -407,13 +414,22 @@ const SearchCombobox = {
     }
 
     const stickyHeadersSpace = visibleHeadersCount * this.headerHeight;
-    const effectiveHeight = totalHeight - stickyHeadersSpace;
+    const navigationEffectiveHeight = totalHeight - stickyHeadersSpace;
 
+    // Return separate viewport calculations:
+    // - Full viewport (for scrollbar range): Always uses full totalHeight
+    // - Navigation viewport (for keyboard navigation): Accounts for sticky headers
     return {
-      viewportTop: stickyHeadersSpace,
+      // Full viewport - used for scrollbar range and scrolling mechanics
+      viewportTop: 0,
       viewportBottom: totalHeight,
-      effectiveHeight: effectiveHeight,
-      maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight),
+      effectiveHeight: totalHeight,
+      maxVisibleRows: this.calculateMaxVisibleRows(totalHeight),
+      
+      // Navigation viewport - used for keyboard navigation and visible area calculations
+      navigationViewportTop: stickyHeadersSpace,
+      navigationViewportBottom: totalHeight,
+      navigationEffectiveHeight: navigationEffectiveHeight,
     };
   },
 
@@ -502,12 +518,16 @@ const SearchCombobox = {
   },
 
   pageScroll(direction) {
-    const { maxVisibleRows } = this.getEffectiveViewport();
+    const { navigationEffectiveHeight } = this.getEffectiveViewport();
+    
+    // Calculate visible rows based on navigation viewport (excluding sticky headers)
+    const rowHeight = this.rowHeight || this.getRowHeight();
+    const maxVisibleRows = rowHeight > 0 ? Math.floor(navigationEffectiveHeight / rowHeight) : 0;
 
     const rowsToScroll = Math.max(3, Math.floor(maxVisibleRows * 0.8));
-    const rowHeight = this.rowHeight || this.getRowHeight();
     const delta = rowsToScroll * rowHeight;
 
+    // Scroll normally - this preserves the scrollbar range
     this.scrollArea.scrollBy({ top: direction === 'down' ? delta : -delta, behavior: 'smooth' });
   },
 
@@ -598,13 +618,13 @@ const SearchCombobox = {
       return elements[0];
     }
 
-    const { viewportTop } = this.getEffectiveViewport();
+    const { navigationViewportTop } = this.getEffectiveViewport();
     const scrollRect = this.scrollArea.getBoundingClientRect();
 
     for (const element of elements) {
       const elementRect = element.getBoundingClientRect();
 
-      if (elementRect.bottom - scrollRect.top > viewportTop + 1) {
+      if (elementRect.bottom - scrollRect.top > navigationViewportTop + 1) {
         return element;
       }
     }
