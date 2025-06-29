@@ -12,14 +12,6 @@ test.describe('Country Combobox', () => {
   });
 
   test('refined reproduction of mouse scrolling issue', async ({ page }) => {
-    // Monitor for any unexpected scrolling
-    const consoleLogs = [];
-    page.on('console', msg => {
-      if (msg.text().includes('scrollToOption') || msg.text().includes('SETTING SCROLL TO 0') || msg.text().includes('SCROLL EVENT DETECTED') || msg.text().includes('Setting scrollTop')) {
-        consoleLogs.push(msg.text());
-      }
-    });
-    
     // Get the scroll area for monitoring scroll position throughout
     const scrollArea = page.locator('.scroll-viewport');
     
@@ -62,31 +54,10 @@ test.describe('Country Combobox', () => {
     
     // 6. Hover over the first country in the second group
     const firstCountryInSecondGroup = page.locator('.option-group').nth(1).locator('.combobox-option').first();
-    
-    // Log the scroll position immediately before the hover
-    const scrollBeforeStep6 = await scrollArea.evaluate(el => el.scrollTop);
-    console.log(`6a. Scroll before hovering over first country: ${scrollBeforeStep6}`);
-    
-    // Add a listener to detect any scroll changes
-    await page.evaluate(() => {
-      const scrollArea = document.querySelector('.scroll-viewport');
-      if (scrollArea) {
-        scrollArea.addEventListener('scroll', () => {
-          console.log('SCROLL EVENT DETECTED, new scrollTop:', scrollArea.scrollTop);
-        });
-      }
-    });
-    
     await firstCountryInSecondGroup.hover();
     
-    // Log the scroll position immediately after the hover
-    const scrollImmediatelyAfter = await scrollArea.evaluate(el => el.scrollTop);
-    console.log(`6b. Scroll immediately after hovering: ${scrollImmediatelyAfter}`);
-    
-    // Wait a bit to see if there's any delayed scrolling
-    await page.waitForTimeout(100);
     const scrollAfterHoverFirstCountry = await scrollArea.evaluate(el => el.scrollTop);
-    console.log(`6c. Scroll after hovering over first country in second group (final): ${scrollAfterHoverFirstCountry}`);
+    console.log(`6. Scroll after hovering over first country in second group: ${scrollAfterHoverFirstCountry}`);
     
     // 7. Hover over the second group's header again
     await secondGroupHeader.hover();
@@ -94,10 +65,7 @@ test.describe('Country Combobox', () => {
     const scrollAfterHoverHeaderAgain = await scrollArea.evaluate(el => el.scrollTop);
     console.log(`7. Scroll after hovering over second group header again: ${scrollAfterHoverHeaderAgain}`);
     
-    // Print console logs
     // Analysis of scroll behavior
-    console.log('\\n=== ScrollToOption Calls ===');
-    consoleLogs.forEach(log => console.log(log));
     
     // Analysis
     console.log('\\n=== Analysis ===');
