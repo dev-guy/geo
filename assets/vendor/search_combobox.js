@@ -337,7 +337,6 @@ const SearchCombobox = {
   },
 
   scrollToOption(option) {
-    console.log('scrollToOption called for:', option.textContent?.trim());
     if (!this.scrollArea || !option) return;
 
     const isHeader = option.classList.contains('group-label');
@@ -348,7 +347,6 @@ const SearchCombobox = {
         if (firstOption) {
           option = firstOption;
         } else {
-          console.log('SETTING SCROLL TO 0 - group header with no options');
           this.scrollArea.scrollTop = 0;
           return;
         }
@@ -368,7 +366,6 @@ const SearchCombobox = {
       const scrollUpAmount = (viewportTop + padding) - optionTop;
       const oldScrollTop = this.scrollArea.scrollTop;
       const newScrollTop = Math.max(0, oldScrollTop - scrollUpAmount);
-      console.log('Setting scrollTop in scrollToOption (scroll up):', newScrollTop);
       this.scrollArea.scrollTop = newScrollTop;
     }
     else if (optionBottom > viewportBottom - padding) {
@@ -376,7 +373,6 @@ const SearchCombobox = {
       const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
       const oldScrollTop = this.scrollArea.scrollTop;
       const newScrollTop = Math.min(maxScrollTop, oldScrollTop + scrollDownAmount);
-      console.log('Setting scrollTop in scrollToOption (scroll down):', newScrollTop);
       this.scrollArea.scrollTop = newScrollTop;
     }
   },
@@ -922,9 +918,7 @@ const SearchCombobox = {
 
     // Setup the one sticky header
     stickyHeader.style.setProperty('margin', '0', 'important');
-    stickyHeader.style.setProperty('padding', '0', 'important');
-    stickyHeader.style.paddingLeft = '0.75rem';
-    stickyHeader.style.paddingRight = '2rem';
+    // Don't override padding - let CSS handle it for consistency with collapsed headers
     stickyHeader.style.display = 'flex';
     stickyHeader.style.alignItems = 'center';
     stickyHeader.style.justifyContent = 'space-between';
