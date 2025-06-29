@@ -168,8 +168,10 @@ const SearchCombobox = {
     this.trigger.setAttribute('aria-expanded', 'true');
     this.adjustHeight();
 
-    this.lastMouseX = 0;
-    this.lastMouseY = 0;
+    // Initialize mouse coordinates to current position instead of 0,0
+    // This helps prevent false mouse movement detection
+    this.lastMouseX = window.event ? window.event.clientX : 0;
+    this.lastMouseY = window.event ? window.event.clientY : 0;
     this.isKeyboardNavigating = false;
 
     if (this.scrollArea) {
@@ -302,6 +304,14 @@ const SearchCombobox = {
       } else {
         this.highlight(visibleOpts[visibleOpts.length - 1]);
       }
+      // Ensure scroll area maintains focus after navigation
+      if (this.scrollArea) {
+        this.scrollArea.focus({ preventScroll: true });
+      }
+      // Reset keyboard navigation flag after a short delay
+      setTimeout(() => {
+        this.isKeyboardNavigating = false;
+      }, 100);
       return;
     }
 
@@ -309,6 +319,16 @@ const SearchCombobox = {
       ? visibleOpts[(idx + 1) % visibleOpts.length]
       : visibleOpts[(idx - 1 + visibleOpts.length) % visibleOpts.length];
     this.highlight(next);
+    
+    // Ensure scroll area maintains focus after navigation
+    if (this.scrollArea) {
+      this.scrollArea.focus({ preventScroll: true });
+    }
+    
+    // Reset keyboard navigation flag after a short delay
+    setTimeout(() => {
+      this.isKeyboardNavigating = false;
+    }, 100);
   },
 
   highlight(element) {
@@ -359,9 +379,8 @@ const SearchCombobox = {
     }
     else if (optionBottom > viewportBottom - padding) {
       const scrollDownAmount = optionBottom - (viewportBottom - padding);
-      const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
       const oldScrollTop = this.scrollArea.scrollTop;
-      const newScrollTop = Math.min(maxScrollTop, oldScrollTop + scrollDownAmount);
+      const newScrollTop = oldScrollTop + scrollDownAmount;
       this.scrollArea.scrollTop = newScrollTop;
     }
   },
@@ -460,7 +479,17 @@ const SearchCombobox = {
     if (this.isKeyboardNavigating) {
       const currentX = event.clientX;
       const currentY = event.clientY;
-      const mouseMoved = Math.abs(currentX - this.lastMouseX) > 2 || Math.abs(currentY - this.lastMouseY) > 2;
+      
+      // During keyboard navigation, be more strict about mouse movement detection
+      // If mouse coordinates weren't properly initialized or if movement is minimal, ignore the event
+      if (this.lastMouseX === 0 && this.lastMouseY === 0) {
+        // Mouse coordinates not initialized, update them but don't highlight
+        this.lastMouseX = currentX;
+        this.lastMouseY = currentY;
+        return;
+      }
+      
+      const mouseMoved = Math.abs(currentX - this.lastMouseX) > 5 || Math.abs(currentY - this.lastMouseY) > 5;
 
       if (!mouseMoved) {
         return;
@@ -581,6 +610,9 @@ const SearchCombobox = {
   ensureHighlight() {
     const curr = this.el.querySelector('[data-combobox-navigate]');
     if (curr) return;
+
+    // Don't auto-highlight during keyboard navigation
+    if (this.isKeyboardNavigating) return;
 
     const selected = this.el.querySelector('.combobox-option[data-combobox-selected]');
     if (selected) {
@@ -996,6 +1028,17 @@ const SearchCombobox = {
     const scrollRect = this.scrollArea.getBoundingClientRect();
     const scrollTop = this.scrollArea.scrollTop;
 
+    // Always update scroll-positioned headers, even during keyboard navigation
+    this.stickyHeaders.forEach((item, index) => {
+      const header = item.header;
+      if (header.hasAttribute('data-scroll-positioned')) {
+        header.style.top = `${scrollTop}px`;
+      }
+    });
+
+    // Don't interfere with highlighting during keyboard navigation
+    if (this.isKeyboardNavigating) return;
+
     const firstHeader = this.stickyHeaders[0]?.header;
     if (firstHeader) {
       const firstGroup = this.stickyHeaders[0]?.group;
@@ -1019,6 +1062,9 @@ const SearchCombobox = {
       }
     }
 
+    // Get the currently highlighted element to avoid hiding it
+    const highlightedElement = this.el.querySelector('[data-combobox-navigate]');
+
     this.stickyHeaders.forEach((item, index) => {
       const group = item.group;
       const header = item.header;
@@ -1027,23 +1073,45 @@ const SearchCombobox = {
       header.style.setProperty('display', 'flex', 'important');
       header.style.setProperty('opacity', '1', 'important');
 
-      const groupRect = group.getBoundingClientRect();
-      const groupTop = groupRect.top - scrollRect.top + scrollTop;
+      // Check if this group is collapsed by looking for visible options
+      const groupItems = group.querySelectorAll('.combobox-option');
+      const hasVisibleOptions = Array.from(groupItems).some(item => {
+        const itemStyle = window.getComputedStyle(item);
+        return itemStyle.display !== 'none';
+      });
 
-      const distanceFromOrigin = scrollTop - groupTop;
-
-      if (distanceFromOrigin > 5000 && groupTop < scrollTop) {
-        header.style.position = 'absolute';
-        header.style.top = `${scrollTop + (index * this.headerHeight)}px`;
-      } else {
-        header.style.position = 'sticky';
-        header.style.top = `${index * this.headerHeight}px`;
-      }
+             if (index === 0 && !hasVisibleOptions) {
+         // For the first header when its group is collapsed, use absolute positioning
+         // relative to the scroll area to ensure it stays at the top of the visible area
+         header.style.position = 'absolute';
+         header.style.top = `${scrollTop}px`;
+         header.style.left = '0';
+         header.style.right = '0';
+         header.style.width = '100%';
+         header.style.zIndex = '1001'; // Higher than other headers
+         
+         // Mark this header as needing scroll-based positioning
+         header.setAttribute('data-scroll-positioned', 'true');
+       } else {
+         // Use sticky positioning for other headers or when group has visible options
+         header.style.position = 'sticky';
+         header.style.top = `${index * this.headerHeight}px`;
+         header.style.left = 'auto';
+         header.style.width = '100%';
+         
+         // Remove scroll positioning marker
+         header.removeAttribute('data-scroll-positioned');
+       }
 
       const headerStickyTop = index * this.headerHeight;
 
-      const groupItems = group.querySelectorAll('.combobox-option');
       groupItems.forEach(item => {
+        // Don't hide the currently highlighted element
+        if (item === highlightedElement) {
+          item.style.visibility = 'visible';
+          return;
+        }
+
         const itemRect = item.getBoundingClientRect();
         const itemBottom = itemRect.bottom - scrollRect.top;
 
@@ -1052,6 +1120,14 @@ const SearchCombobox = {
 
         item.style.visibility = shouldHide ? 'hidden' : 'visible';
       });
+    });
+
+    // Update position of any headers that need scroll-based positioning
+    this.stickyHeaders.forEach((item, index) => {
+      const header = item.header;
+      if (header.hasAttribute('data-scroll-positioned')) {
+        header.style.top = `${scrollTop}px`;
+      }
     });
   },
 };
