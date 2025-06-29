@@ -77,6 +77,14 @@ const SearchCombobox = {
       this.justCleared = false;
     }
 
+    if (this.groupHighlightInProgress === undefined) {
+      this.groupHighlightInProgress = false;
+    }
+
+    if (this.mouseHoverInProgress === undefined) {
+      this.mouseHoverInProgress = false;
+    }
+
     this.isKeyboardNavigating = false;
     this.lastMouseX = 0;
     this.lastMouseY = 0;
@@ -91,6 +99,7 @@ const SearchCombobox = {
     }
 
     this.setupClearButton();
+    this.setupGroupEventListeners();
 
     this.boundToggle = event => this.toggleDropdown(event);
     this.boundSearchInput = event => this.onSearchInput(event);
@@ -128,7 +137,138 @@ const SearchCombobox = {
       if (this.scrollArea && this.scrollHandlerBound) {
         this.scrollArea.removeEventListener('scroll', this.scrollHandlerBound);
       }
+      if (this.groupHighlightTimeout) {
+        clearTimeout(this.groupHighlightTimeout);
+        this.groupHighlightTimeout = null;
+      }
+      this.cleanupGroupEventListeners();
     };
+  },
+
+  setupGroupEventListeners() {
+    // These will be called by Phoenix LiveView events
+    // No setup needed here since Phoenix handles the event binding
+  },
+
+  cleanupGroupEventListeners() {
+    // No cleanup needed since Phoenix handles the event lifecycle
+  },
+
+  // Phoenix LiveView event handlers - these are called directly by Phoenix LiveView
+  'group-collapsed'(payload) {
+    console.log('Phoenix group-collapsed event received:', payload);
+    this.handleGroupCollapsed(payload.group_name);
+  },
+
+  'group-expanded'(payload) {
+    console.log('Phoenix group-expanded event received:', payload);
+    this.handleGroupExpanded(payload.group_name);
+  },
+
+  'group-sorted'(payload) {
+    console.log('Phoenix group-sorted event received:', payload);
+    this.handleGroupSorted(payload.group_name, payload.is_collapsed);
+  },
+
+  handleGroupSorted(groupName, isCollapsed) {
+    // After sorting, if group is not collapsed, highlight first item
+    if (!isCollapsed) {
+      this.scheduleGroupHighlight(() => {
+        this.highlightFirstItemInGroup(groupName);
+      });
+    }
+  },
+
+  handleGroupCollapsed(collapsedGroupName) {
+    this.scheduleGroupHighlight(() => {
+      // Find the first uncollapsed group below the collapsed one
+      const groups = this.getAllGroups();
+      const collapsedGroupIndex = groups.findIndex(group => group.name === collapsedGroupName);
+      
+      if (collapsedGroupIndex === -1) return;
+      
+      // Look for the first uncollapsed group after the collapsed one
+      for (let i = collapsedGroupIndex + 1; i < groups.length; i++) {
+        const group = groups[i];
+        if (!this.isGroupCollapsed(group.name)) {
+          this.highlightFirstItemInGroup(group.name);
+          return;
+        }
+      }
+      
+      // If no uncollapsed group found after, do nothing (as specified)
+    });
+  },
+
+  handleGroupExpanded(expandedGroupName) {
+    console.log('handleGroupExpanded called with group:', expandedGroupName);
+    this.scheduleGroupHighlight(() => {
+      console.log('scheduleGroupHighlight callback executing for group:', expandedGroupName);
+      // Highlight the first item in the expanded group
+      this.highlightFirstItemInGroup(expandedGroupName);
+    });
+  },
+
+  scheduleGroupHighlight(highlightFn) {
+    console.log('scheduleGroupHighlight called');
+    // Cancel any pending group highlight to prevent race conditions
+    if (this.groupHighlightTimeout) {
+      clearTimeout(this.groupHighlightTimeout);
+    }
+    
+    // Set flag to prevent mouse hover interference
+    this.groupHighlightInProgress = true;
+    
+    this.groupHighlightTimeout = setTimeout(() => {
+      console.log('scheduleGroupHighlight timeout executing');
+      highlightFn();
+      this.groupHighlightTimeout = null;
+      
+      // Keep the flag for a short time to prevent immediate mouse interference
+      setTimeout(() => {
+        this.groupHighlightInProgress = false;
+      }, 100);
+    }, 20); // Reduced delay for better responsiveness
+  },
+
+  getAllGroups() {
+    const groupElements = Array.from(this.el.querySelectorAll('.option-group'));
+    return groupElements.map(groupEl => {
+      // Find the span that contains the group name (sibling to the button)
+      const labelEl = groupEl.querySelector('.group-label .flex.items-center.gap-2 span');
+      const name = labelEl ? labelEl.textContent.trim() : '';
+      return { element: groupEl, name };
+    }).filter(group => group.name);
+  },
+
+  isGroupCollapsed(groupName) {
+    const groups = this.getAllGroups();
+    const group = groups.find(g => g.name === groupName);
+    if (!group) return false;
+    
+    // A group is collapsed if it doesn't have an options container after the header
+    const optionsContainer = group.element.querySelector('.group-label + div');
+    return !optionsContainer;
+  },
+
+  highlightFirstItemInGroup(groupName) {
+    const groups = this.getAllGroups();
+    const group = groups.find(g => g.name === groupName);
+    if (!group) {
+      console.log('Group not found:', groupName, 'Available groups:', groups.map(g => g.name));
+      return;
+    }
+    
+    // Find the first option in this group
+    const firstOption = group.element.querySelector('.combobox-option');
+    if (firstOption) {
+      console.log('Found first option in group', groupName, ':', firstOption.textContent.trim());
+      this.highlight(firstOption, true); // true = should scroll
+    } else {
+      console.log('No option found in group', groupName);
+      console.log('Group element:', group.element);
+      console.log('All options in group:', group.element.querySelectorAll('.combobox-option'));
+    }
   },
 
   toggleDropdown(event) {
@@ -331,13 +471,28 @@ const SearchCombobox = {
       element.focus({ preventScroll: true });
     }
 
-    if (shouldScroll) {
+    // Don't scroll during mouse hover to prevent unwanted scrolling
+    if (shouldScroll && !this.mouseHoverInProgress) {
       this.scrollToOption(element);
     }
   },
 
+  highlightWithoutFocus(element) {
+    // Highlight element without focusing or scrolling - used for mouse hover
+    this.el.querySelectorAll('[data-combobox-navigate]').forEach(o => {
+      o.removeAttribute('data-combobox-navigate');
+    });
+    element.setAttribute('data-combobox-navigate', '');
+    // Don't call focus() or scrollToOption() to prevent unwanted scrolling
+  },
+
   scrollToOption(option) {
     if (!this.scrollArea || !option) return;
+
+    // Don't scroll during mouse hover to prevent unwanted scrolling
+    if (this.mouseHoverInProgress) {
+      return;
+    }
 
     const isHeader = option.classList.contains('group-label');
     if (isHeader) {
@@ -447,6 +602,11 @@ const SearchCombobox = {
   },
 
   onOptionMouseEnter(event) {
+    // Don't interfere with group operations
+    if (this.groupHighlightInProgress) {
+      return;
+    }
+
     if (this.isKeyboardNavigating) {
       const currentX = event.clientX;
       const currentY = event.clientY;
@@ -466,11 +626,23 @@ const SearchCombobox = {
     const groupHeader = event.target.closest('.group-label');
     
     if (opt) {
-      this.scrollArea && this.scrollArea.focus({ preventScroll: true });
-      this.highlight(opt, false); // Don't scroll on mouse hover
+      // Set flag to prevent any scrolling during mouse hover
+      this.mouseHoverInProgress = true;
+      // Only highlight without scrolling or focusing on mouse hover
+      this.highlightWithoutFocus(opt);
+      // Clear flag after a short delay
+      setTimeout(() => {
+        this.mouseHoverInProgress = false;
+      }, 50);
     } else if (groupHeader) {
-      this.scrollArea && this.scrollArea.focus({ preventScroll: true });
-      this.highlight(groupHeader, false); // Don't scroll on mouse hover
+      // Set flag to prevent any scrolling during mouse hover
+      this.mouseHoverInProgress = true;
+      // Only highlight without scrolling or focusing on mouse hover
+      this.highlightWithoutFocus(groupHeader);
+      // Clear flag after a short delay
+      setTimeout(() => {
+        this.mouseHoverInProgress = false;
+      }, 50);
     }
   },
 
@@ -576,7 +748,27 @@ const SearchCombobox = {
   },
 
   ensureHighlight(shouldScroll = true) {
+    // Don't interfere with group operations
+    if (this.groupHighlightInProgress) {
+      return;
+    }
+
     const curr = this.el.querySelector('[data-combobox-navigate]');
+    
+    // If a group header is currently highlighted, try to highlight the first option in that group
+    if (curr && curr.classList.contains('group-label')) {
+      console.log('Group header is highlighted, trying to find first option in group');
+      const group = curr.closest('.option-group');
+      if (group) {
+        const firstOption = group.querySelector('.combobox-option');
+        if (firstOption) {
+          console.log('Found first option in group, highlighting it:', firstOption.textContent.trim());
+          this.highlight(firstOption, shouldScroll);
+          return;
+        }
+      }
+    }
+    
     if (curr) {
       return;
     }

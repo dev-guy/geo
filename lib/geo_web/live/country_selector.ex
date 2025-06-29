@@ -223,6 +223,13 @@ defmodule GeoWeb.CountrySelector do
             Map.put(socket.assigns.current_countries, :iso_code_group, updated)
           )
 
+        # Dispatch JavaScript event for group sorting
+        is_collapsed = socket.assigns.iso_code_group_collapsed
+        socket = push_event(socket, "group-sorted", %{
+          group_name: group_name,
+          is_collapsed: is_collapsed
+        })
+
         {:noreply, socket}
 
       "By Name" ->
@@ -245,6 +252,13 @@ defmodule GeoWeb.CountrySelector do
             Map.put(socket.assigns.current_countries, :name_group, updated)
           )
 
+        # Dispatch JavaScript event for group sorting
+        is_collapsed = socket.assigns.name_group_collapsed
+        socket = push_event(socket, "group-sorted", %{
+          group_name: group_name,
+          is_collapsed: is_collapsed
+        })
+
         {:noreply, socket}
 
       _ ->
@@ -255,11 +269,33 @@ defmodule GeoWeb.CountrySelector do
   def handle_event("search_combobox_toggle_group_collapse", %{"group" => group_name}, socket) do
     case group_name do
       "By Country Code" ->
-        {:noreply,
-         assign(socket, :iso_code_group_collapsed, !socket.assigns.iso_code_group_collapsed)}
+        new_collapsed_state = !socket.assigns.iso_code_group_collapsed
+
+        socket = assign(socket, :iso_code_group_collapsed, new_collapsed_state)
+
+        # Dispatch JavaScript event for group collapse/expand
+        event_name = if new_collapsed_state, do: "group-collapsed", else: "group-expanded"
+        socket = push_event(socket, event_name, %{
+          group_name: group_name,
+          is_collapsed: new_collapsed_state
+        })
+
+        {:noreply, socket}
 
       "By Name" ->
-        {:noreply, assign(socket, :name_group_collapsed, !socket.assigns.name_group_collapsed)}
+        new_collapsed_state = !socket.assigns.name_group_collapsed
+
+        socket = assign(socket, :name_group_collapsed, new_collapsed_state)
+
+        # Dispatch JavaScript event for group collapse/expand
+        event_name = if new_collapsed_state, do: "group-collapsed", else: "group-expanded"
+        IO.puts("Dispatching Phoenix event: #{event_name} for group: #{group_name}, is_collapsed: #{new_collapsed_state}")
+        socket = push_event(socket, event_name, %{
+          group_name: group_name,
+          is_collapsed: new_collapsed_state
+        })
+
+        {:noreply, socket}
 
       _ ->
         {:noreply, socket}

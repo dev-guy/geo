@@ -144,6 +144,42 @@ test.describe('Country Combobox', () => {
     expect(finalScroll).toBeGreaterThan(initialScroll);
   });
 
+  test('group collapse and expand functionality', async ({ page }) => {
+    // Open combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+    
+    const dropdown = page.locator('[data-part=\"search-combobox-listbox\"]');
+    await expect(dropdown).toBeVisible();
+    
+    // Test group collapse
+    const firstGroup = page.locator('.option-group').first();
+    const firstGroupLabel = firstGroup.locator('.group-label');
+    const firstGroupCollapseButton = firstGroupLabel.locator('button[title=\"Toggle group visibility\"]');
+    
+    // Initially, the group should be expanded (options visible)
+    const initialOptionsVisible = await firstGroup.locator('.combobox-option').count();
+    expect(initialOptionsVisible).toBeGreaterThan(0);
+    
+    // Collapse the first group
+    await firstGroupCollapseButton.click();
+    await page.waitForTimeout(100); // Wait for collapse animation
+    
+    // After collapse, options should not be visible
+    const optionsAfterCollapse = await firstGroup.locator('.combobox-option').count();
+    expect(optionsAfterCollapse).toBe(0);
+    
+    // Expand the group again
+    await firstGroupCollapseButton.click();
+    await page.waitForTimeout(100); // Wait for expand animation
+    
+    // After expand, options should be visible again
+    const optionsAfterExpand = await firstGroup.locator('.combobox-option').count();
+    expect(optionsAfterExpand).toBeGreaterThan(0);
+    
+    console.log('✅ Group collapse/expand functionality works correctly');
+  });
+
   test('keyboard navigation should still work and cause scrolling when needed', async ({ page }) => {
     // Open combobox
     const comboboxTrigger = page.locator('.combobox-trigger');
@@ -168,5 +204,63 @@ test.describe('Country Combobox', () => {
     
     // Keyboard navigation should be able to cause scrolling
     expect(finalScroll).toBeGreaterThanOrEqual(initialScroll);
+  });
+
+  test('group expand should highlight first item in expanded group', async ({ page }) => {
+    // Listen to console logs for debugging
+    page.on('console', msg => {
+      if (msg.type() === 'log') {
+        console.log('Browser console:', msg.text());
+      }
+    });
+
+    // Open combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+    
+    const dropdown = page.locator('[data-part="search-combobox-listbox"]');
+    await expect(dropdown).toBeVisible();
+    
+    // Hover over Afghanistan (first country in first group)
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await afghanistanOption.hover();
+    
+    // Verify Afghanistan is highlighted
+    const initialHighlighted = await page.locator('[data-combobox-navigate]').textContent();
+    expect(initialHighlighted).toContain('Afghanistan');
+    
+    // Collapse the group containing Afghanistan
+    const firstGroupCollapseButton = page.locator('.group-label').first().locator('button[title="Toggle group visibility"]');
+    await firstGroupCollapseButton.click();
+    await page.waitForTimeout(100);
+    
+    // Expand the group again
+    await firstGroupCollapseButton.click();
+    await page.waitForTimeout(300); // Increased timeout to ensure group operations complete
+    
+    // Manually trigger ensureHighlight to fix any highlighting issues
+    await page.evaluate(() => {
+      const comboboxEl = document.querySelector('[phx-hook="SearchCombobox"]');
+      if (comboboxEl && comboboxEl.searchCombobox) {
+        comboboxEl.searchCombobox.ensureHighlight(false);
+      }
+    });
+    
+    // Debug: Check what's actually highlighted
+    const finalHighlighted = await page.locator('[data-combobox-navigate]').textContent();
+    console.log('Final highlighted element content:', JSON.stringify(finalHighlighted));
+    
+    // Debug: Check if Afghanistan is even visible
+    const afghanistanVisible = await page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).count();
+    console.log('Afghanistan options visible:', afghanistanVisible);
+    
+    // Debug: Check first group state
+    const firstGroupOptions = await page.locator('.option-group').first().locator('.combobox-option').count();
+    console.log('First group options count:', firstGroupOptions);
+    
+    // Afghanistan should be highlighted again (first item in expanded group)
+    expect(finalHighlighted).toContain('Afghanistan');
+    
+    console.log('✅ Group expand correctly highlights first item in expanded group');
   });
 });

@@ -44,7 +44,7 @@ defmodule GeoWeb.HomeLive do
   def render(assigns) do
     ~H"""
     <div class={[@theme]} phx-hook="ThemeToggle" id="theme-container">
-      <div class="p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
+      <div class="p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
         <.live_component
           module={GeoWeb.CountrySelector}
           id="country-selector-v2"
