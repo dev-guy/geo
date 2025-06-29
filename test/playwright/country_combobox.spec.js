@@ -727,19 +727,86 @@ test.describe('Country Combobox Navigation', () => {
     // Find and click the first collapse button (should be in the first group header)
     const firstCollapseButton = page.locator('button[data-is-header-button="true"]').first();
     await expect(firstCollapseButton).toBeVisible();
+    
+    // Debug: Check the initial state
+    const initialState = await page.evaluate(() => {
+      const afghanistan = document.querySelector('.combobox-option[data-combobox-value="AF"]');
+      const groups = Array.from(document.querySelectorAll('.option-group'));
+      const groupInfo = groups.map(group => {
+        const header = group.querySelector('.group-label');
+        const optionsContainer = group.querySelector('.group-label + div');
+        const options = group.querySelectorAll('.combobox-option');
+        return {
+          headerText: header?.textContent?.trim(),
+          hasOptionsContainer: !!optionsContainer,
+          optionsCount: options.length,
+          groupHTML: group.outerHTML.substring(0, 200) + '...'
+        };
+      });
+      return {
+        afghanistanExists: !!afghanistan,
+        groupsCount: groups.length,
+        groupInfo: groupInfo
+      };
+    });
+    console.log('Initial state:', JSON.stringify(initialState, null, 2));
+    
     await firstCollapseButton.click();
+    
+    // Wait a bit for the event to be processed
+    await page.waitForTimeout(1000);
+    
+    // Debug: Check the state after clicking collapse
+    const afterCollapseState = await page.evaluate(() => {
+      const afghanistan = document.querySelector('.combobox-option[data-combobox-value="AF"]');
+      const groups = Array.from(document.querySelectorAll('.option-group'));
+      const groupInfo = groups.map(group => {
+        const header = group.querySelector('.group-label');
+        const optionsContainer = group.querySelector('.group-label + div');
+        const options = group.querySelectorAll('.combobox-option');
+        const chevronIcon = header?.querySelector('svg');
+        return {
+          headerText: header?.textContent?.trim(),
+          hasOptionsContainer: !!optionsContainer,
+          optionsCount: options.length,
+          chevronClass: chevronIcon?.getAttribute('class'),
+          groupHTML: group.outerHTML.substring(0, 300) + '...'
+        };
+      });
+      return {
+        afghanistanExists: !!afghanistan,
+        groupsCount: groups.length,
+        groupInfo: groupInfo
+      };
+    });
+    console.log('After collapse state:', JSON.stringify(afterCollapseState, null, 2));
 
-    // Wait for collapse animation
-    await page.waitForTimeout(300);
-
-    // Verify the first group is collapsed by checking that Afghanistan is not visible
+    // Wait for the LiveView to process the collapse event and re-render
+    // Afghanistan should still be visible because it's in the second group ("By Country Code")
+    // The first group ("By Name") is what gets collapsed
     const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
-    await expect(afghanistanOption).not.toBeVisible();
+    
+    // Afghanistan should still be visible since it's in the second group
+    await expect(afghanistanOption).toBeVisible();
+    
+    // But verify that options from the first group are no longer visible
+    // Let's check for a country that should be in the "By Name" group
+    const firstGroupOptions = await page.evaluate(() => {
+      const groups = Array.from(document.querySelectorAll('.option-group'));
+      const firstGroup = groups[0];
+      const optionsContainer = firstGroup?.querySelector('.group-label + div');
+      return {
+        isCollapsed: !optionsContainer,
+        remainingOptionsCount: firstGroup?.querySelectorAll('.combobox-option').length || 0
+      };
+    });
+    
+    // Verify the first group is actually collapsed
+    expect(firstGroupOptions.isCollapsed).toBe(true);
+    expect(firstGroupOptions.remainingOptionsCount).toBe(0);
 
-    // Navigate to the first visible option to have a starting point
-    await page.keyboard.press('ArrowDown');
-
-    // Press up arrow 10 times
+    // Test the exact scenario from the bug description:
+    // Press up arrow 10 times directly (without ArrowDown first)
     for (let i = 0; i < 10; i++) {
       await page.keyboard.press('ArrowUp');
       await page.waitForTimeout(50); // Small delay between key presses
@@ -749,15 +816,244 @@ test.describe('Country Combobox Navigation', () => {
     const highlightedOption = page.locator('[data-combobox-navigate]');
     await expect(highlightedOption).toBeVisible();
 
-    // It should be Zimbabwe (last country), not Uruguay
+    // It should be Zimbabwe (last country in the visible groups), not some other country
     const highlightedText = await highlightedOption.textContent();
-    console.log('Highlighted option after 10 up arrows:', highlightedText?.trim());
+    console.log('Highlighted option after 10 up arrows (no initial ArrowDown):', highlightedText?.trim());
     
-    // Verify it's Zimbabwe
+    // Verify it's Zimbabwe - the last option in the visible (non-collapsed) groups
     await expect(highlightedOption).toContainText('Zimbabwe');
+  });
+
+  test('No line above first header after mouse wheel scroll', async ({ page }) => {
+    // This test reproduces the bug where a line appears above the first header
+    // Steps to reproduce:
+    // 1. open the combobox
+    // 2. hover over Afghanistan
+    // 3. mouse wheel down two times
+    // Expected: there should be no line above the first header
+
+    // Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+
+    // Wait for the dropdown and options to be visible
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    await page.waitForTimeout(100);
+
+    // Hover over Afghanistan (first option)
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await expect(afghanistanOption).toBeVisible();
+    await afghanistanOption.hover();
+
+    // Wait a moment for hover to register
+    await page.waitForTimeout(50);
+
+    // Get the scroll area for mouse wheel events
+    const scrollArea = page.locator('.scroll-viewport');
+    await expect(scrollArea).toBeVisible();
+
+    // Perform mouse wheel down two times
+    await scrollArea.hover(); // Make sure we're over the scroll area
+    await page.mouse.wheel(0, 100); // First wheel down
+    await page.waitForTimeout(50);
+    await page.mouse.wheel(0, 100); // Second wheel down
+    await page.waitForTimeout(100); // Wait for scroll to settle
+
+    // Check the first header for any unwanted border/line
+    const firstHeader = page.locator('.group-label').first();
+    await expect(firstHeader).toBeVisible();
+
+    // Analyze the border styles of the first header
+    const borderAnalysis = await firstHeader.evaluate(el => {
+      const styles = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      const scrollViewport = el.closest('.scroll-viewport');
+      const viewportRect = scrollViewport ? scrollViewport.getBoundingClientRect() : null;
+      
+      return {
+        borderTop: styles.borderTop,
+        borderTopWidth: styles.borderTopWidth,
+        borderTopStyle: styles.borderTopStyle,
+        borderTopColor: styles.borderTopColor,
+        boxShadow: styles.boxShadow,
+        outline: styles.outline,
+        headerText: el.textContent?.trim(),
+        headerTop: rect.top,
+        viewportTop: viewportRect ? viewportRect.top : null,
+        isAtViewportTop: viewportRect ? Math.abs(rect.top - viewportRect.top) < 2 : false,
+        // Check for any pseudo-elements that might create lines
+        beforeContent: window.getComputedStyle(el, '::before').content,
+        afterContent: window.getComputedStyle(el, '::after').content,
+        beforeBorder: window.getComputedStyle(el, '::before').borderTop,
+        afterBorder: window.getComputedStyle(el, '::after').borderTop,
+      };
+    });
+
+    console.log('First header border analysis after mouse wheel:', JSON.stringify(borderAnalysis, null, 2));
+
+    // The first header should not have a visible top border
+    // Check for various ways a line could appear
+    const hasVisibleTopBorder = 
+      borderAnalysis.borderTop && 
+      borderAnalysis.borderTop !== 'none' && 
+      borderAnalysis.borderTop !== '0px none' && 
+      !borderAnalysis.borderTop.includes('0px') &&
+      borderAnalysis.borderTopWidth !== '0px';
+
+    const hasVisibleBoxShadowTop = 
+      borderAnalysis.boxShadow && 
+      borderAnalysis.boxShadow !== 'none' &&
+      borderAnalysis.boxShadow.includes('inset') &&
+      borderAnalysis.boxShadow.includes('0px 1px'); // Common pattern for top shadow/line
+
+    const hasPseudoElementBorder = 
+      (borderAnalysis.beforeBorder && borderAnalysis.beforeBorder !== 'none' && !borderAnalysis.beforeBorder.includes('0px')) ||
+      (borderAnalysis.afterBorder && borderAnalysis.afterBorder !== 'none' && !borderAnalysis.afterBorder.includes('0px'));
+
+    // Verify no unwanted line appears above the first header
+    expect(hasVisibleTopBorder).toBeFalsy();
+    expect(hasVisibleBoxShadowTop).toBeFalsy();
+    expect(hasPseudoElementBorder).toBeFalsy();
+
+    // Additional visual check - take a screenshot for manual verification if needed
+    // (commented out to avoid cluttering CI, but useful for debugging)
+    // await page.screenshot({ path: 'first-header-after-scroll.png', clip: await firstHeader.boundingBox() });
+
+    // Also verify that the first header is properly positioned at the top of the viewport
+    // when it becomes sticky (this is related to the border issue)
+    if (borderAnalysis.isAtViewportTop) {
+      // If the header is at the viewport top (sticky), it definitely shouldn't have a top border
+      expect(hasVisibleTopBorder).toBeFalsy();
+    }
+  });
+
+  test('First group header visibility after collapse and scroll - Issue reproduction', async ({ page }) => {
+    // Step 1: Open the combobox
+    await page.click('.combobox-trigger');
+    await page.waitForSelector('[data-part="search-combobox-listbox"]:not([hidden])', { timeout: 5000 });
+
+    // Get initial state
+    const initialState = await page.evaluate(() => {
+      const firstGroup = document.querySelector('.option-group');
+      const firstHeader = firstGroup?.querySelector('.group-label');
+      const optionsContainer = firstGroup?.querySelector('.group-label + div');
+      
+      return {
+        firstGroupExists: !!firstGroup,
+        firstHeaderExists: !!firstHeader,
+        firstHeaderText: firstHeader?.textContent?.trim(),
+        optionsContainerExists: !!optionsContainer,
+        firstHeaderRect: firstHeader?.getBoundingClientRect(),
+        isGroupExpanded: !!optionsContainer
+      };
+    });
+
+    console.log('Initial state:', initialState);
+    expect(initialState.firstGroupExists).toBe(true);
+    expect(initialState.firstHeaderExists).toBe(true);
+    expect(initialState.isGroupExpanded).toBe(true);
+
+    // Step 2: Collapse the first group by clicking the collapse button
+    await page.click('.option-group:first-child .group-label button[data-is-header-button="true"]');
     
-    // Also verify Uruguay is NOT highlighted
-    const uruguayOption = page.locator('.combobox-option').filter({ hasText: 'Uruguay' });
-    await expect(uruguayOption).not.toHaveAttribute('data-combobox-navigate', '');
+    // Wait for the collapse to take effect
+    await page.waitForTimeout(100);
+
+    // Verify the group is collapsed
+    const afterCollapseState = await page.evaluate(() => {
+      const firstGroup = document.querySelector('.option-group');
+      const firstHeader = firstGroup?.querySelector('.group-label');
+      const optionsContainer = firstGroup?.querySelector('.group-label + div');
+      
+      return {
+        firstGroupExists: !!firstGroup,
+        firstHeaderExists: !!firstHeader,
+        firstHeaderText: firstHeader?.textContent?.trim(),
+        optionsContainerExists: !!optionsContainer,
+        firstHeaderRect: firstHeader?.getBoundingClientRect(),
+        isGroupCollapsed: !optionsContainer,
+        firstHeaderVisible: firstHeader ? !firstHeader.hidden && firstHeader.style.display !== 'none' : false,
+        firstHeaderOpacity: firstHeader ? window.getComputedStyle(firstHeader).opacity : null,
+        firstHeaderVisibility: firstHeader ? window.getComputedStyle(firstHeader).visibility : null
+      };
+    });
+
+    console.log('After collapse state:', afterCollapseState);
+    expect(afterCollapseState.firstGroupExists).toBe(true);
+    expect(afterCollapseState.firstHeaderExists).toBe(true);
+    expect(afterCollapseState.isGroupCollapsed).toBe(true);
+    expect(afterCollapseState.firstHeaderVisible).toBe(true);
+
+    // Step 3: Mouse wheel down two times
+    const scrollArea = page.locator('.scroll-viewport');
+    await scrollArea.hover();
+    
+    // First wheel down
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(50);
+    
+    // Second wheel down
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(50);
+
+    // Step 4: Check if the first group's header is still visible
+    const afterScrollState = await page.evaluate(() => {
+      const firstGroup = document.querySelector('.option-group');
+      const firstHeader = firstGroup?.querySelector('.group-label');
+      const scrollArea = document.querySelector('.scroll-viewport');
+      const dropdown = document.querySelector('[data-part="search-combobox-listbox"]');
+      
+      const firstHeaderRect = firstHeader?.getBoundingClientRect();
+      const scrollAreaRect = scrollArea?.getBoundingClientRect();
+      const dropdownRect = dropdown?.getBoundingClientRect();
+      
+      return {
+        firstGroupExists: !!firstGroup,
+        firstHeaderExists: !!firstHeader,
+        firstHeaderText: firstHeader?.textContent?.trim(),
+        firstHeaderRect: firstHeaderRect,
+        scrollAreaRect: scrollAreaRect,
+        dropdownRect: dropdownRect,
+        scrollTop: scrollArea?.scrollTop,
+        firstHeaderVisible: firstHeader ? !firstHeader.hidden && firstHeader.style.display !== 'none' : false,
+        firstHeaderOpacity: firstHeader ? window.getComputedStyle(firstHeader).opacity : null,
+        firstHeaderVisibility: firstHeader ? window.getComputedStyle(firstHeader).visibility : null,
+        firstHeaderPosition: firstHeader ? window.getComputedStyle(firstHeader).position : null,
+        firstHeaderTop: firstHeader ? window.getComputedStyle(firstHeader).top : null,
+        firstHeaderZIndex: firstHeader ? window.getComputedStyle(firstHeader).zIndex : null,
+        // More detailed positioning info
+        firstHeaderOffsetTop: firstHeader ? firstHeader.offsetTop : null,
+        firstHeaderOffsetParent: firstHeader ? firstHeader.offsetParent?.tagName : null,
+        scrollAreaOffsetTop: scrollArea ? scrollArea.offsetTop : null,
+        dropdownOffsetTop: dropdown ? dropdown.offsetTop : null,
+        // Check if header is within scroll area bounds
+        isHeaderInViewport: firstHeaderRect && scrollAreaRect ? 
+          (firstHeaderRect.top >= scrollAreaRect.top && firstHeaderRect.bottom <= scrollAreaRect.bottom) : false,
+        isHeaderAtTop: firstHeaderRect && scrollAreaRect ? 
+          Math.abs(firstHeaderRect.top - scrollAreaRect.top) < 5 : false,
+        // Additional debugging info
+        headerDistanceFromScrollTop: firstHeaderRect && scrollAreaRect ? 
+          firstHeaderRect.top - scrollAreaRect.top : null,
+        isHeaderAboveScrollArea: firstHeaderRect && scrollAreaRect ? 
+          firstHeaderRect.bottom < scrollAreaRect.top : false,
+        isHeaderBelowScrollArea: firstHeaderRect && scrollAreaRect ? 
+          firstHeaderRect.top > scrollAreaRect.bottom : false
+      };
+    });
+
+    console.log('After scroll state:', afterScrollState);
+
+    // The first group's header should still be visible and positioned at the top
+    expect(afterScrollState.firstHeaderExists).toBe(true);
+    expect(afterScrollState.firstHeaderVisible).toBe(true);
+    expect(afterScrollState.firstHeaderOpacity).toBe('1');
+    expect(afterScrollState.firstHeaderVisibility).toBe('visible');
+    expect(afterScrollState.firstHeaderPosition).toBe('sticky');
+    
+    // The header should be positioned and visible at the top of the scroll area
+    expect(afterScrollState.isHeaderInViewport).toBe(true);
+    expect(afterScrollState.isHeaderAtTop).toBe(true);
+    expect(afterScrollState.isHeaderAboveScrollArea).toBe(false);
+    expect(afterScrollState.isHeaderBelowScrollArea).toBe(false);
   });
 });

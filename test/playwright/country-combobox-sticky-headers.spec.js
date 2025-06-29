@@ -209,7 +209,7 @@ test.describe('Country Combobox Sticky Header Bug', () => {
     
     // When collapsed, header should be visible
     expect(headerStyles.visibility).toBe('visible');
-    expect(headerStyles.opacity).toBe('0');
+    expect(headerStyles.opacity).toBe('1');
     
     // Expand the group again
     await collapseButton.click();
