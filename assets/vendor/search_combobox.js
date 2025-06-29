@@ -19,14 +19,14 @@ const SearchCombobox = {
     const dropdownEl = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const wasOpen = dropdownEl && !dropdownEl.hasAttribute('hidden');
 
-    // Preserve the current search value BEFORE init() resets it
     const currentSearchValue = this.searchInput ? this.searchInput.value : '';
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
     const preservedSearchTerm = this.searchTerm || '';
 
+    const wasDropdownShouldBeOpen = this.dropdownShouldBeOpen;
+
     this.init();
 
-    // Restore the search term after init()
     if (currentSearchValue || preservedSearchTerm) {
       this.searchTerm = currentSearchValue || preservedSearchTerm;
       if (this.searchInput) {
@@ -34,7 +34,8 @@ const SearchCombobox = {
       }
     }
 
-    if (this.dropdownShouldBeOpen || wasSearching) {
+    if (wasDropdownShouldBeOpen || wasOpen || wasSearching) {
+      this.dropdownShouldBeOpen = false;
       this.openDropdown();
     }
 
@@ -55,7 +56,10 @@ const SearchCombobox = {
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
 
-    // Only reset searchTerm if it doesn't exist (i.e., on initial mount)
+    if (this.dropdown) {
+      this.dropdown.searchCombobox = this;
+    }
+
     if (this.searchTerm === undefined) {
       this.searchTerm = '';
     }
@@ -146,11 +150,10 @@ const SearchCombobox = {
   },
 
   openDropdown() {
-    // Prevent multiple simultaneous openings
     if (this.dropdownShouldBeOpen) {
       return;
     }
-    
+
     this.dropdownShouldBeOpen = true;
     this.dropdown.removeAttribute('hidden');
     this.trigger.setAttribute('aria-expanded', 'true');
@@ -166,15 +169,12 @@ const SearchCombobox = {
       this.searchInput.focus({ preventScroll: true });
     }
 
-    // Initialize sticky headers first, then ensure highlight
     this.initializeStickyHeaders();
-    
-    // Clear any existing highlight timeout to prevent race conditions
+
     if (this.highlightTimeout) {
       clearTimeout(this.highlightTimeout);
     }
-    
-    // Use setTimeout to ensure sticky headers are fully set up before highlighting
+
     this.highlightTimeout = setTimeout(() => {
       this.ensureHighlight();
       if (this.handleScroll) {
@@ -188,8 +188,7 @@ const SearchCombobox = {
     this.dropdownShouldBeOpen = false;
     this.dropdown.setAttribute('hidden', 'true');
     this.trigger.setAttribute('aria-expanded', 'false');
-    
-    // Clear any pending highlight timeout
+
     if (this.highlightTimeout) {
       clearTimeout(this.highlightTimeout);
       this.highlightTimeout = null;
@@ -275,7 +274,6 @@ const SearchCombobox = {
   navigateOptions(direction) {
     this.isKeyboardNavigating = true;
 
-    // Only navigate between actual options, not group headers
     const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option')).filter(el => {
       const style = window.getComputedStyle(el);
       return style.display !== 'none';
@@ -382,35 +380,25 @@ const SearchCombobox = {
     }
 
     const scrollRect = this.scrollArea.getBoundingClientRect();
-    const scrollTop = this.scrollArea.scrollTop;
     let visibleHeadersCount = 0;
 
-    // Count how many group headers are currently sticky (visible at the top)
     for (let i = 0; i < this.stickyHeaders.length; i++) {
       const item = this.stickyHeaders[i];
       const group = item.group;
       const groupRect = group.getBoundingClientRect();
-      
-      // The group's top position relative to the scroll area's top
+
       const groupTopRelativeToScroll = groupRect.top - scrollRect.top;
-      
-      // The position where this header should stick (accounting for previous headers)
+
       const headerStickyTop = i * this.headerHeight;
-      
-      // A header is sticky if the group has scrolled up enough that its header
-      // should be at the sticky position
+
       if (groupTopRelativeToScroll <= headerStickyTop) {
-        // Also check if the group extends beyond the header position
-        // (i.e., there's still content from this group visible below the header)
         const groupBottomRelativeToScroll = groupRect.bottom - scrollRect.top;
         const headerBottomPosition = headerStickyTop + this.headerHeight;
-        
+
         if (groupBottomRelativeToScroll > headerBottomPosition) {
           visibleHeadersCount++;
         }
       } else {
-        // Once we find a group that hasn't reached its sticky position, 
-        // no subsequent groups will be sticky either
         break;
       }
     }
@@ -613,7 +601,6 @@ const SearchCombobox = {
     for (const element of elements) {
       const elementRect = element.getBoundingClientRect();
 
-      // Add a small buffer (1px) to avoid edge cases where elements are exactly at the boundary
       if (elementRect.bottom - scrollRect.top > viewportTop + 1) {
         return element;
       }
@@ -891,9 +878,8 @@ const SearchCombobox = {
       firstHeader.style.borderTop = 'none';
       firstHeader.style.borderBottom = this.getBorderColor();
 
-      // Force a reflow to ensure border is applied before measuring
       void firstHeader.offsetHeight;
-      
+
       const rect = firstHeader.getBoundingClientRect();
       this.headerHeight = rect.height;
 
@@ -938,6 +924,10 @@ const SearchCombobox = {
       header.style.opacity = '1';
       header.style.visibility = 'visible';
       header.style.display = 'flex';
+
+      header.style.setProperty('visibility', 'visible', 'important');
+      header.style.setProperty('display', 'flex', 'important');
+      header.style.setProperty('opacity', '1', 'important');
 
       header.style.setProperty('margin', '0', 'important');
       header.style.setProperty('padding', '0', 'important');
@@ -991,19 +981,41 @@ const SearchCombobox = {
   handleScroll() {
     if (!this.scrollArea || this.stickyHeaders.length === 0) return;
 
+    if (this.headerHeight === 0) return;
+
     const scrollRect = this.scrollArea.getBoundingClientRect();
     const scrollTop = this.scrollArea.scrollTop;
 
     const firstHeader = this.stickyHeaders[0]?.header;
-    if (firstHeader && scrollTop > 0) {
-      firstHeader.style.borderTop = this.getBorderColor();
-    } else if (firstHeader) {
-      firstHeader.style.borderTop = 'none';
+    if (firstHeader) {
+      const firstGroup = this.stickyHeaders[0]?.group;
+      if (firstGroup) {
+        const firstGroupRect = firstGroup.getBoundingClientRect();
+        const firstGroupTop = firstGroupRect.top - scrollRect.top;
+
+        const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
+        const isNearTop = scrollTop <= this.headerHeight;
+        const isNearBottom = scrollTop >= maxScrollTop - this.headerHeight;
+
+        const shouldShowBorder = firstGroupTop < -this.headerHeight / 2 && !isNearTop && !isNearBottom;
+
+        if (shouldShowBorder) {
+          firstHeader.style.borderTop = this.getBorderColor();
+        } else {
+          firstHeader.style.borderTop = 'none';
+        }
+      } else {
+        firstHeader.style.borderTop = 'none';
+      }
     }
 
     this.stickyHeaders.forEach((item, index) => {
       const group = item.group;
       const header = item.header;
+
+      header.style.setProperty('visibility', 'visible', 'important');
+      header.style.setProperty('display', 'flex', 'important');
+      header.style.setProperty('opacity', '1', 'important');
 
       const groupRect = group.getBoundingClientRect();
       const groupTop = groupRect.top - scrollRect.top + scrollTop;
@@ -1023,9 +1035,11 @@ const SearchCombobox = {
       const groupItems = group.querySelectorAll('.combobox-option');
       groupItems.forEach(item => {
         const itemRect = item.getBoundingClientRect();
-        const itemTop = itemRect.top - scrollRect.top;
+        const itemBottom = itemRect.bottom - scrollRect.top;
 
-        const shouldHide = itemTop < headerStickyTop + this.headerHeight;
+        const headerBottom = headerStickyTop + this.headerHeight;
+        const shouldHide = itemBottom < headerBottom - 2;
+
         item.style.visibility = shouldHide ? 'hidden' : 'visible';
       });
     });
