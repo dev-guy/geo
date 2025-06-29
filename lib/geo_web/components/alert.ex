@@ -185,19 +185,7 @@ defmodule GeoWeb.Components.Alert do
         width="medium"
         phx-mounted={test_dissolve_alert("#flash-#{@variant}-error", :error)}
       />
-      <.flash
-        id="client-error"
-        kind={:error}
-        variant={@variant}
-        title={gettext("We can't find the internet")}
-        phx-disconnected={show_alert(".phx-client-error #client-error")}
-        phx-connected={hide_alert("#client-error")}
-        width="medium"
-        hidden
-      >
-        {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ms-1 h-3 w-3 animate-spin" />
-      </.flash>
+
 
       <.flash
         id="server-error"
