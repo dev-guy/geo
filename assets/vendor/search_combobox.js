@@ -146,6 +146,11 @@ const SearchCombobox = {
   },
 
   openDropdown() {
+    // Prevent multiple simultaneous openings
+    if (this.dropdownShouldBeOpen) {
+      return;
+    }
+    
     this.dropdownShouldBeOpen = true;
     this.dropdown.removeAttribute('hidden');
     this.trigger.setAttribute('aria-expanded', 'true');
@@ -164,12 +169,18 @@ const SearchCombobox = {
     // Initialize sticky headers first, then ensure highlight
     this.initializeStickyHeaders();
     
+    // Clear any existing highlight timeout to prevent race conditions
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+    }
+    
     // Use setTimeout to ensure sticky headers are fully set up before highlighting
-    setTimeout(() => {
+    this.highlightTimeout = setTimeout(() => {
       this.ensureHighlight();
       if (this.handleScroll) {
         this.handleScroll();
       }
+      this.highlightTimeout = null;
     }, 0);
   },
 
@@ -177,6 +188,12 @@ const SearchCombobox = {
     this.dropdownShouldBeOpen = false;
     this.dropdown.setAttribute('hidden', 'true');
     this.trigger.setAttribute('aria-expanded', 'false');
+    
+    // Clear any pending highlight timeout
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+      this.highlightTimeout = null;
+    }
   },
 
   onSearchInput(event) {
@@ -596,7 +613,8 @@ const SearchCombobox = {
     for (const element of elements) {
       const elementRect = element.getBoundingClientRect();
 
-      if (elementRect.bottom - scrollRect.top > viewportTop) {
+      // Add a small buffer (1px) to avoid edge cases where elements are exactly at the boundary
+      if (elementRect.bottom - scrollRect.top > viewportTop + 1) {
         return element;
       }
     }
