@@ -48,3 +48,32 @@ node_modules/
 /test-results/
 playwright-report/
 test_output.txt
+
+# Git merge/rebase files
+*.orig
+*.rej
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
+
+# Backup files
+*.bak
+*.backup
+*~
+.#*
+#*#
+
+# Mac files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
