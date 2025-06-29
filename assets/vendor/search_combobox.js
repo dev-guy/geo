@@ -26,6 +26,12 @@ const SearchCombobox = {
 
     const wasDropdownShouldBeOpen = this.dropdownShouldBeOpen;
 
+    // Clear any existing navigation highlight before re-initializing
+    // This prevents issues when the highlighted option was in a collapsed group
+    this.el.querySelectorAll('[data-combobox-navigate]').forEach(o => {
+      o.removeAttribute('data-combobox-navigate');
+    });
+
     this.init();
 
     // Restore the search term after init()
@@ -587,7 +593,8 @@ const SearchCombobox = {
   },
 
   getFirstVisibleOption() {
-    const elements = Array.from(this.el.querySelectorAll('.combobox-option, .group-label')).filter(el => {
+    // Only look for actual options, not group labels
+    const elements = Array.from(this.el.querySelectorAll('.combobox-option')).filter(el => {
       const style = window.getComputedStyle(el);
       return style.display !== 'none';
     });

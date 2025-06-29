@@ -707,4 +707,57 @@ test.describe('Country Combobox Navigation', () => {
 
     expect(hasVisibleBorder).toBeFalsy();
   });
+
+  test('Collapse, then up arrow bug - Issue #60', async ({ page }) => {
+    // This test reproduces the bug from https://github.com/dev-guy/geo/issues/60
+    // 1. open combobox
+    // 2. collapse the first header
+    // 3. up arrow 10 times
+    // Expected: Zimbabwe is highlighted
+    // Actual: Uruguay is highlighted (but is not visible)
+
+    // Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+
+    // Wait for the dropdown and options
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    await page.waitForTimeout(100);
+
+    // Find and click the first collapse button (should be in the first group header)
+    const firstCollapseButton = page.locator('button[data-is-header-button="true"]').first();
+    await expect(firstCollapseButton).toBeVisible();
+    await firstCollapseButton.click();
+
+    // Wait for collapse animation
+    await page.waitForTimeout(300);
+
+    // Verify the first group is collapsed by checking that Afghanistan is not visible
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await expect(afghanistanOption).not.toBeVisible();
+
+    // Navigate to the first visible option to have a starting point
+    await page.keyboard.press('ArrowDown');
+
+    // Press up arrow 10 times
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press('ArrowUp');
+      await page.waitForTimeout(50); // Small delay between key presses
+    }
+
+    // Check what's highlighted
+    const highlightedOption = page.locator('[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+
+    // It should be Zimbabwe (last country), not Uruguay
+    const highlightedText = await highlightedOption.textContent();
+    console.log('Highlighted option after 10 up arrows:', highlightedText?.trim());
+    
+    // Verify it's Zimbabwe
+    await expect(highlightedOption).toContainText('Zimbabwe');
+    
+    // Also verify Uruguay is NOT highlighted
+    const uruguayOption = page.locator('.combobox-option').filter({ hasText: 'Uruguay' });
+    await expect(uruguayOption).not.toHaveAttribute('data-combobox-navigate', '');
+  });
 });
