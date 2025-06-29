@@ -19,6 +19,7 @@ const SearchCombobox = {
     const dropdownEl = this.el.querySelector('[data-part="search-combobox-listbox"]');
     const wasOpen = dropdownEl && !dropdownEl.hasAttribute('hidden');
 
+    // Preserve the current search value BEFORE init() resets it
     const currentSearchValue = this.searchInput ? this.searchInput.value : '';
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
     const preservedSearchTerm = this.searchTerm || '';
@@ -27,6 +28,7 @@ const SearchCombobox = {
 
     this.init();
 
+    // Restore the search term after init()
     if (currentSearchValue || preservedSearchTerm) {
       this.searchTerm = currentSearchValue || preservedSearchTerm;
       if (this.searchInput) {
@@ -55,11 +57,12 @@ const SearchCombobox = {
     this.scrollArea = this.el.querySelector('.scroll-viewport');
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
-
+    
     if (this.dropdown) {
       this.dropdown.searchCombobox = this;
     }
 
+    // Only reset searchTerm if it doesn't exist (i.e., on initial mount)
     if (this.searchTerm === undefined) {
       this.searchTerm = '';
     }
