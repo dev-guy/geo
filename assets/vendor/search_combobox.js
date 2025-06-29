@@ -156,17 +156,14 @@ const SearchCombobox = {
 
   // Phoenix LiveView event handlers - these are called directly by Phoenix LiveView
   'group-collapsed'(payload) {
-    console.log('Phoenix group-collapsed event received:', payload);
     this.handleGroupCollapsed(payload.group_name);
   },
 
   'group-expanded'(payload) {
-    console.log('Phoenix group-expanded event received:', payload);
     this.handleGroupExpanded(payload.group_name);
   },
 
   'group-sorted'(payload) {
-    console.log('Phoenix group-sorted event received:', payload);
     this.handleGroupSorted(payload.group_name, payload.is_collapsed);
   },
 
@@ -201,16 +198,13 @@ const SearchCombobox = {
   },
 
   handleGroupExpanded(expandedGroupName) {
-    console.log('handleGroupExpanded called with group:', expandedGroupName);
     this.scheduleGroupHighlight(() => {
-      console.log('scheduleGroupHighlight callback executing for group:', expandedGroupName);
       // Highlight the first item in the expanded group
       this.highlightFirstItemInGroup(expandedGroupName);
     });
   },
 
   scheduleGroupHighlight(highlightFn) {
-    console.log('scheduleGroupHighlight called');
     // Cancel any pending group highlight to prevent race conditions
     if (this.groupHighlightTimeout) {
       clearTimeout(this.groupHighlightTimeout);
@@ -220,7 +214,6 @@ const SearchCombobox = {
     this.groupHighlightInProgress = true;
     
     this.groupHighlightTimeout = setTimeout(() => {
-      console.log('scheduleGroupHighlight timeout executing');
       highlightFn();
       this.groupHighlightTimeout = null;
       
@@ -255,19 +248,13 @@ const SearchCombobox = {
     const groups = this.getAllGroups();
     const group = groups.find(g => g.name === groupName);
     if (!group) {
-      console.log('Group not found:', groupName, 'Available groups:', groups.map(g => g.name));
       return;
     }
     
     // Find the first option in this group
     const firstOption = group.element.querySelector('.combobox-option');
     if (firstOption) {
-      console.log('Found first option in group', groupName, ':', firstOption.textContent.trim());
       this.highlight(firstOption, true); // true = should scroll
-    } else {
-      console.log('No option found in group', groupName);
-      console.log('Group element:', group.element);
-      console.log('All options in group:', group.element.querySelectorAll('.combobox-option'));
     }
   },
 
@@ -544,9 +531,14 @@ const SearchCombobox = {
 
     const totalHeight = this.scrollArea.clientHeight;
 
-    // Check if we have a sticky header (first uncollapsed group)
-    const stickyGroup = this.getFirstUncollapedGroup();
-    if (!stickyGroup) {
+    // Check if we have any sticky headers
+    const currentStickyHeader = this.stickyHeaders.find(item => {
+      const header = item.header;
+      const computedStyle = window.getComputedStyle(header);
+      return computedStyle.position === 'sticky';
+    });
+
+    if (!currentStickyHeader) {
       // No sticky header
       return {
         viewportTop: 0,
@@ -556,7 +548,7 @@ const SearchCombobox = {
       };
     }
 
-    // We have one sticky header, so account for its space
+    // We have a sticky header, so account for its space
     const stickyHeaderSpace = this.headerHeight || 0;
     const effectiveHeight = totalHeight - stickyHeaderSpace;
 
@@ -757,20 +749,31 @@ const SearchCombobox = {
     
     // If a group header is currently highlighted, try to highlight the first option in that group
     if (curr && curr.classList.contains('group-label')) {
-      console.log('Group header is highlighted, trying to find first option in group');
       const group = curr.closest('.option-group');
       if (group) {
         const firstOption = group.querySelector('.combobox-option');
         if (firstOption) {
-          console.log('Found first option in group, highlighting it:', firstOption.textContent.trim());
           this.highlight(firstOption, shouldScroll);
           return;
         }
       }
     }
     
-    if (curr) {
-      return;
+    // If there's already a valid highlighted option, don't change it unless it's not visible
+    if (curr && curr.classList.contains('combobox-option')) {
+      // Check if the currently highlighted option is still visible (not in a collapsed group)
+      const group = curr.closest('.option-group');
+      if (group) {
+        const optionsContainer = group.querySelector('.group-label + div');
+        const isGroupCollapsed = !optionsContainer;
+        if (!isGroupCollapsed) {
+          // The currently highlighted option is still valid and visible, keep it
+          return;
+        }
+      } else {
+        // Option is not in a group, so it's valid
+        return;
+      }
     }
 
     const selected = this.el.querySelector('.combobox-option[data-combobox-selected]');
@@ -882,6 +885,10 @@ const SearchCombobox = {
 
     if (this.selectEl) {
       this.selectEl.value = value;
+      
+      // Track that the user manually selected this value
+      this.selectEl.setAttribute('data-user-selected-value', value);
+      
       this.selectEl.dispatchEvent(new window.Event('change', { bubbles: true }));
       this.selectEl.dispatchEvent(new window.Event('input', { bubbles: true }));
     }
@@ -919,26 +926,53 @@ const SearchCombobox = {
   },
 
   initializeSelection() {
-    if (!this.selectEl) return;
-
-    if (this.justCleared) {
-      this.updateSingleDisplay(null);
-      this.justCleared = false;
+    const selectEl = this.selectEl;
+    if (!selectEl) {
       return;
     }
 
-    const currentValue = this.selectEl.value;
+    // Check if user has made a selection by looking at the last clicked option
+    const lastClickedValue = selectEl.getAttribute('data-user-selected-value');
+    const justCleared = selectEl.hasAttribute('data-just-cleared');
+    
+    let currentValue = selectEl.value;
 
-    if (currentValue && currentValue !== '') {
-      const option = this.el.querySelector(`.combobox-option[data-combobox-value="${currentValue}"]`);
-      if (option) {
-        option.setAttribute('data-combobox-selected', '');
-        this.updateSingleDisplay(option);
-      } else {
-        this.updateSingleDisplay({value: currentValue});
+    // If user has manually selected a country and the form value is trying to revert to AU,
+    // preserve the user's selection instead
+    if (lastClickedValue && lastClickedValue !== 'AU' && currentValue === 'AU' && !justCleared) {
+      selectEl.value = lastClickedValue;
+      currentValue = lastClickedValue;
+    }
+
+    // Clear the just-cleared flag
+    selectEl.removeAttribute('data-just-cleared');
+
+    // Look for wrapper with data-current-value (for server-side rendering)
+    const wrapper = this.el.closest('[data-current-value]');
+    if (wrapper) {
+      const serverValue = wrapper.getAttribute('data-current-value');
+      if (serverValue && serverValue !== currentValue) {
+        selectEl.value = serverValue;
+        currentValue = serverValue;
       }
-    } else {
-      this.updateSingleDisplay(null);
+    }
+
+    // Find and mark the selected option
+    const options = this.el.querySelectorAll('[data-combobox-value]');
+    let selectedOption = null;
+
+    options.forEach(option => {
+      option.removeAttribute('data-combobox-selected');
+      if (option.getAttribute('data-combobox-value') === currentValue) {
+        selectedOption = option;
+      }
+    });
+
+    if (selectedOption) {
+      selectedOption.setAttribute('data-combobox-selected', 'true');
+      
+      // Update the display to show the correct selection
+      this.updateSingleDisplay(selectedOption);
     }
   },
 
@@ -1102,53 +1136,28 @@ const SearchCombobox = {
       void this.scrollArea.offsetHeight;
     }
 
-    // Find the first uncollapsed group
-    const firstUncollapedGroup = this.getFirstUncollapedGroup();
-    if (!firstUncollapedGroup) return;
-
-    const stickyHeader = firstUncollapedGroup.header;
-
-    // Setup the one sticky header
-    stickyHeader.style.setProperty('margin', '0', 'important');
-    // Don't override padding - let CSS handle it for consistency with collapsed headers
-    stickyHeader.style.display = 'flex';
-    stickyHeader.style.alignItems = 'center';
-    stickyHeader.style.justifyContent = 'space-between';
-    stickyHeader.style.boxSizing = 'border-box';
-    stickyHeader.style.lineHeight = '1.5';
-    stickyHeader.style.borderTop = 'none';
-    stickyHeader.style.borderBottom = this.getBorderColor();
-
-    void stickyHeader.offsetHeight;
-    const rect = stickyHeader.getBoundingClientRect();
-    this.headerHeight = rect.height;
-
-    // Make only this header sticky
-    stickyHeader.style.position = 'sticky';
-    stickyHeader.style.top = '0px';
-    stickyHeader.style.left = '0';
-    stickyHeader.style.right = '0';
-    stickyHeader.style.width = '100%';
-    stickyHeader.style.zIndex = '1000';
-
-    const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
-    stickyHeader.style.backgroundColor = dropdownBg || 'rgb(255, 255, 255)';
-
-    stickyHeader.style.setProperty('visibility', 'visible', 'important');
-    stickyHeader.style.setProperty('display', 'flex', 'important');
-    stickyHeader.style.setProperty('opacity', '1', 'important');
-    stickyHeader.style.height = `${this.headerHeight}px`;
-    stickyHeader.style.minHeight = `${this.headerHeight}px`;
-    stickyHeader.style.maxHeight = `${this.headerHeight}px`;
-
-    // Ensure all other headers are NOT sticky
+    // Setup all headers for potential sticky behavior
     this.stickyHeaders.forEach(item => {
-      if (item !== firstUncollapedGroup) {
-        const header = item.header;
-        header.style.position = 'static'; // Remove sticky positioning
-        header.style.zIndex = 'auto';
+      const header = item.header;
+      
+      // Setup basic header styles
+      header.style.setProperty('margin', '0', 'important');
+      header.style.display = 'flex';
+      header.style.alignItems = 'center';
+      header.style.justifyContent = 'space-between';
+      header.style.boxSizing = 'border-box';
+      header.style.lineHeight = '1.5';
+      
+      // Calculate header height if not already done
+      if (this.headerHeight === 0) {
+        void header.offsetHeight;
+        const rect = header.getBoundingClientRect();
+        this.headerHeight = rect.height;
       }
     });
+
+    // Initialize the first sticky header by triggering handleScroll
+    this.handleScroll();
   },
 
   getBackgroundColor() {
@@ -1170,16 +1179,87 @@ const SearchCombobox = {
   handleScroll() {
     if (!this.scrollArea || this.stickyHeaders.length === 0) return;
 
-    // Find the current sticky header (first uncollapsed group)
-    const stickyGroup = this.getFirstUncollapedGroup();
-    if (stickyGroup) {
-      const stickyHeader = stickyGroup.header;
-      // Ensure the sticky header never has a top border
-      stickyHeader.style.borderTop = 'none';
-      stickyHeader.style.setProperty('visibility', 'visible', 'important');
-      stickyHeader.style.setProperty('display', 'flex', 'important');
-      stickyHeader.style.setProperty('opacity', '1', 'important');
+    // Find which group should have the sticky header based on scroll position
+    const scrollTop = this.scrollArea.scrollTop;
+    const scrollAreaRect = this.scrollArea.getBoundingClientRect();
+    
+    let currentStickyGroup = null;
+    
+    // Find the group that should be sticky based on what's currently visible
+    for (let i = 0; i < this.stickyHeaders.length; i++) {
+      const item = this.stickyHeaders[i];
+      const group = item.group;
+      
+      // Skip collapsed groups
+      const optionsContainer = group.querySelector('.group-label ~ div');
+      if (!optionsContainer) continue;
+      
+      const groupRect = group.getBoundingClientRect();
+      const groupTop = groupRect.top - scrollAreaRect.top + scrollTop;
+      const groupBottom = groupTop + groupRect.height;
+      
+      // If this group contains the current scroll position, or if we're past all groups, use the last visible group
+      if (scrollTop >= groupTop && scrollTop < groupBottom) {
+        currentStickyGroup = item;
+        break;
+      } else if (scrollTop >= groupTop && i === this.stickyHeaders.length - 1) {
+        // If we're past the last group, keep it sticky
+        currentStickyGroup = item;
+        break;
+      } else if (i === 0 && scrollTop < groupTop) {
+        // If we're before the first group, use the first group
+        currentStickyGroup = item;
+        break;
+      }
     }
+    
+    // If no group found by position, find the first uncollapsed group as fallback
+    if (!currentStickyGroup) {
+      currentStickyGroup = this.getFirstUncollapedGroup();
+    }
+    
+    if (!currentStickyGroup) return;
+
+    // Update which header is sticky
+    this.stickyHeaders.forEach(item => {
+      const header = item.header;
+      if (item === currentStickyGroup) {
+        // Make this header sticky
+        header.style.position = 'sticky';
+        header.style.top = '0px';
+        header.style.left = '0';
+        header.style.right = '0';
+        header.style.width = '100%';
+        header.style.zIndex = '1000';
+        header.style.backgroundColor = this.getBackgroundColor();
+        header.style.borderTop = 'none';
+        header.style.borderBottom = this.getBorderColor();
+        header.style.setProperty('visibility', 'visible', 'important');
+        header.style.setProperty('display', 'flex', 'important');
+        header.style.setProperty('opacity', '1', 'important');
+        
+        // Ensure consistent height
+        if (this.headerHeight > 0) {
+          header.style.height = `${this.headerHeight}px`;
+          header.style.minHeight = `${this.headerHeight}px`;
+          header.style.maxHeight = `${this.headerHeight}px`;
+        }
+      } else {
+        // Remove sticky positioning from other headers
+        header.style.position = 'static';
+        header.style.zIndex = 'auto';
+        header.style.top = 'auto';
+        header.style.left = 'auto';
+        header.style.right = 'auto';
+        header.style.width = 'auto';
+        header.style.backgroundColor = '';
+        header.style.borderTop = '';
+        header.style.borderBottom = '';
+        header.style.height = '';
+        header.style.minHeight = '';
+        header.style.maxHeight = '';
+      }
+    });
   },
 };
 

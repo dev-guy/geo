@@ -182,7 +182,7 @@ classDiagram
         <<Domain>>
         list_countries()
         search_countries!(query)
-        get_country_iso_code_cached!(iso_code)
+        get_country_by_iso_code!(iso_code)
         create_country(attrs)
         update_country(country, attrs)
         upsert_country(attrs)
@@ -498,7 +498,7 @@ The main domain provides these key operations:
 
 - `list_countries/0` - Lists all countries
 - `search_countries/1` - Intelligent search for UI components
-- `get_country_iso_code_cached/1` - High-performance country search by ISO code
+- `get_country_by_iso_code/1` - High-performance country search by ISO code
 - `create_country/1`, `update_country/1`, `upsert_country/1` - Country management
 
 ### Geo.Geography.Country Resource

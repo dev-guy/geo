@@ -263,4 +263,114 @@ test.describe('Country Combobox', () => {
     
     console.log('✅ Group expand correctly highlights first item in expanded group');
   });
+
+  test('Belarus highlighting issue reproduction', async ({ page }) => {
+    // Listen to console logs for debugging
+    page.on('console', msg => {
+      if (msg.type() === 'log') {
+        console.log('Browser console:', msg.text());
+      }
+    });
+
+    // 1. Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+    
+    const dropdown = page.locator('[data-part="search-combobox-listbox"]');
+    await expect(dropdown).toBeVisible();
+    
+    // 2. Click on Belarus
+    const belarusOption = page.locator('.combobox-option').filter({ hasText: 'Belarus' }).first();
+    
+    // Debug: Check what options are available
+    const allOptions = await page.locator('.combobox-option').allTextContents();
+    console.log('Available options:', allOptions.slice(0, 10)); // Show first 10
+    
+    // Debug: Check Belarus option specifically
+    const belarusCount = await belarusOption.count();
+    console.log('Belarus options found:', belarusCount);
+    
+    if (belarusCount > 0) {
+      const belarusText = await belarusOption.textContent();
+      console.log('Belarus option text:', JSON.stringify(belarusText));
+      
+      await belarusOption.click();
+      
+      // Wait for the selection to process
+      await page.waitForTimeout(100);
+      
+      // Check what was actually selected
+      const selectedText = await page.locator('.combobox-trigger').textContent();
+      console.log('Selected text after clicking Belarus:', JSON.stringify(selectedText));
+      
+      // The bug: clicking Belarus actually selects something else (likely Australia)
+      if (!selectedText.includes('Belarus')) {
+        console.log('🐛 BUG CONFIRMED: Clicking Belarus selected something else!');
+        console.log('Expected: Belarus, Actual:', selectedText.trim());
+        
+        // Continue with the test to show the highlighting issue
+        // 3. Open the combobox again
+        await comboboxTrigger.click();
+        await expect(dropdown).toBeVisible();
+        
+        // Wait for highlighting to be established
+        await page.waitForTimeout(100);
+        
+        // Debug: Check what's actually highlighted
+        const highlightedElement = page.locator('[data-combobox-navigate]');
+        const highlightedText = await highlightedElement.textContent();
+        console.log('Highlighted element content:', JSON.stringify(highlightedText));
+        
+        // Debug: Check if Belarus is selected (it shouldn't be due to the bug)
+        const belarusSelected = page.locator('.combobox-option[data-combobox-selected]').filter({ hasText: 'Belarus' });
+        const belarusSelectedCount = await belarusSelected.count();
+        console.log('Belarus selected elements count:', belarusSelectedCount);
+        
+        // Show what's actually selected
+        const actualSelected = page.locator('.combobox-option[data-combobox-selected]');
+        const actualSelectedCount = await actualSelected.count();
+        console.log('Actually selected elements count:', actualSelectedCount);
+        
+        if (actualSelectedCount > 0) {
+          const actualSelectedText = await actualSelected.textContent();
+          console.log('Actually selected element content:', JSON.stringify(actualSelectedText));
+        }
+        
+        // The issue: Belarus should be highlighted when reopening, but it's not selected due to the bug
+        // So something else (probably Australia) is highlighted instead
+        
+        // For now, let's document the expected vs actual behavior
+        console.log('EXPECTED: Belarus should be selected and highlighted');
+        console.log('ACTUAL: Wrong country is selected and highlighted');
+        
+        // This test will fail until the bug is fixed
+        expect(selectedText).toContain('Belarus');
+      } else {
+        console.log('✅ Belarus was correctly selected');
+        
+        // Verify Belarus is selected
+        await expect(dropdown).toBeHidden();
+        
+        // 3. Open the combobox again
+        await comboboxTrigger.click();
+        await expect(dropdown).toBeVisible();
+        
+        // Wait for highlighting to be established
+        await page.waitForTimeout(100);
+        
+        // Debug: Check what's actually highlighted
+        const highlightedElement = page.locator('[data-combobox-navigate]');
+        const highlightedText = await highlightedElement.textContent();
+        console.log('Highlighted element content:', JSON.stringify(highlightedText));
+        
+        // Expected: Belarus should be highlighted
+        expect(highlightedText).toContain('Belarus');
+        
+        console.log('✅ Belarus highlighting works correctly');
+      }
+    } else {
+      console.log('❌ Belarus option not found in the list');
+      expect(belarusCount).toBeGreaterThan(0);
+    }
+  });
 });

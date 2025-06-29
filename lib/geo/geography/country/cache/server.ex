@@ -67,7 +67,7 @@ defmodule Geo.Geography.Country.Cache.Server do
 
   @impl true
   def handle_call({:get_by_iso_code, iso_code}, _from, state) do
-    country = Map.get(state.countries_map_by_iso_code, String.upcase(iso_code))
+    country = Map.get(state.countries_map_by_iso_code, String.downcase(iso_code))
     {:reply, country, state}
   end
 

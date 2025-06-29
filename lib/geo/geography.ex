@@ -14,7 +14,7 @@ defmodule Geo.Geography do
 
   - `list_countries/0` - Lists all countries
   - `search_countries/1` - Searches countries for use in UI selectors
-  - `get_country_iso_code_cached/1` - Efficiently retrieves a country by ISO code using caching
+  - `get_country_by_iso_code/1` - Efficiently retrieves a country by ISO code using caching
   - `create_country/1`, `update_country/1`, `upsert_country/1` - Country management operations
 
   ## Caching
@@ -64,7 +64,7 @@ defmodule Geo.Geography do
   This function uses `Geo.Geography.Country.Cache` for high-performance lookups and is optimized for
   real-time search in user interfaces.
 
-  ### get_country_iso_code_cached/1
+  ### get_country_by_iso_code/1
   Retrieves a country by its ISO code using high-performance caching.
 
   This function provides the fastest way to lookup a country by ISO code, utilizing the
@@ -82,7 +82,7 @@ defmodule Geo.Geography do
       define :upsert_country, action: :upsert
       define :update_country, action: :update
       define :list_countries, action: :read
-      define :get_country_iso_code_cached, action: :read, get_by: [:iso_code]
+      define :get_country_by_iso_code, action: :get_by_iso_code
     end
 
     resource Geo.Geography.Country.SearchResult do

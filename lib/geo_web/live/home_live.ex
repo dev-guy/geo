@@ -3,25 +3,34 @@ defmodule GeoWeb.HomeLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    selected_country =
+    # Get default country (Australia)
+    default_country = Geo.Geography.get_country_by_iso_code!(%{iso_code: "AU"})
+
+    {:ok, assign(socket,
+      page_title: "Home",
+      selected_country: default_country
+    )}
+  end
+
+  @impl true
+  def handle_info({:country_selected, country}, socket) do
+    new_socket = assign(socket, selected_country: country)
+    {:noreply, new_socket}
+  end
+
+  @impl true
+  def handle_event("country_selected", %{"country" => iso_code}, socket) do
+    # Find the country by iso_code
+    country =
       try do
-        Geo.Geography.get_country_iso_code_cached!("AU")
+        Geo.Geography.get_country_by_iso_code!(iso_code)
       rescue
         _ ->
           # Fallback to regular query if cache is not available (e.g., in tests)
-          Geo.Geography.list_countries!(filter: [iso_code: "AU"])
+          Geo.Geography.list_countries!(filter: [iso_code: iso_code])
           |> List.first()
       end
 
-    {:ok,
-     socket
-     |> assign(:selected_country, selected_country)
-     |> assign(:theme, "system")}
-  end
-
-  # Forward group toggle events to the country selector component
-  @impl true
-  def handle_info({:country_selected, country}, socket) do
     {:noreply, assign(socket, :selected_country, country)}
   end
 
@@ -43,32 +52,34 @@ defmodule GeoWeb.HomeLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class={[@theme]} phx-hook="ThemeToggle" id="theme-container">
-      <div class="p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
+    <div class="max-w-4xl mx-auto p-6">
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">
+          Welcome to Geo
+        </h1>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Country Selector</h2>
         <.live_component
           module={GeoWeb.CountrySelector}
-          id="country-selector-v2"
+          id="country-selector"
           selected_country={@selected_country}
         />
+      </div>
 
-        <%= if @selected_country do %>
-          <div class="mt-6 p-4 bg-blue-50 dark:bg-gray-800 rounded-lg">
-            <h2 class="text-lg font-semibold mb-2">Selected Country:</h2>
-            <div class="flex items-center">
-              <span class="text-2xl mr-3">{to_string(@selected_country.flag)}</span>
-              <div>
-                <div class="font-semibold">{to_string(@selected_country.name)}</div>
-                <div class="text-sm text-gray-600 dark:text-gray-300">
-                  {to_string(@selected_country.iso_code)}
-                </div>
-              </div>
-            </div>
-            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              ID: {@selected_country.id} | Slug: {@selected_country.slug}
+      <%= if @selected_country do %>
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-2xl font-semibold text-gray-800 mb-4">Selected Country</h2>
+          <div class="flex items-center space-x-4">
+            <span class="text-6xl"><%= @selected_country.flag %></span>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900"><%= @selected_country.name %></h3>
+              <p class="text-gray-600">ISO Code: <span class="font-mono bg-gray-100 px-2 py-1 rounded"><%= @selected_country.iso_code %></span></p>
             </div>
           </div>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
     </div>
     """
   end
