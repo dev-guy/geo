@@ -760,4 +760,166 @@ test.describe('Country Combobox Navigation', () => {
     const uruguayOption = page.locator('.combobox-option').filter({ hasText: 'Uruguay' });
     await expect(uruguayOption).not.toHaveAttribute('data-combobox-navigate', '');
   });
+
+  test('Clear button functionality with mouse click', async ({ page }) => {
+    // Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+
+    // Wait for options to load
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    await page.waitForTimeout(100);
+
+    // Select Afghanistan
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await afghanistanOption.click();
+
+    // Wait for selection to be processed
+    await page.waitForTimeout(100);
+
+    // Verify Afghanistan is selected and displayed
+    await expect(page.locator('.selected-value')).toContainText('Afghanistan');
+
+    // Verify clear button is now visible
+    const clearButton = page.locator('[data-part="clear-combobox-button"]');
+    await expect(clearButton).toBeVisible();
+
+    // Click the clear button
+    await clearButton.click();
+
+    // Wait for clear action to be processed
+    await page.waitForTimeout(100);
+
+    // Verify the selection has been cleared
+    await expect(page.locator('.selected-value')).toBeEmpty();
+    
+    // Verify clear button is now hidden
+    await expect(clearButton).toBeHidden();
+
+    // Verify placeholder is shown again
+    await expect(page.locator('.combobox-placeholder')).toBeVisible();
+  });
+
+  test('Clear button functionality with keyboard navigation', async ({ page }) => {
+    // Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+
+    // Wait for options to load
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    await page.waitForTimeout(100);
+
+    // Select Afghanistan
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await afghanistanOption.click();
+
+    // Wait for selection to be processed
+    await page.waitForTimeout(100);
+
+    // Focus the clear button
+    const clearButton = page.locator('[data-part="clear-combobox-button"]');
+    await clearButton.focus();
+
+    // Press Enter to clear
+    await page.keyboard.press('Enter');
+
+    // Wait for clear action to be processed
+    await page.waitForTimeout(100);
+
+    // Verify the selection has been cleared
+    await expect(page.locator('.selected-value')).toBeEmpty();
+    
+    // Verify clear button is now hidden
+    await expect(clearButton).toBeHidden();
+  });
+
+  test('Clear button functionality with Space key', async ({ page }) => {
+    // Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+
+    // Wait for options to load
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    await page.waitForTimeout(100);
+
+    // Select a country by typing and selecting
+    const searchInput = page.locator('.combobox-search-input');
+    await searchInput.fill('Canada');
+    await page.waitForTimeout(300);
+
+    // Select Canada
+    const canadaOption = page.locator('.combobox-option').filter({ hasText: 'Canada' }).first();
+    await canadaOption.click();
+
+    // Wait for selection to be processed
+    await page.waitForTimeout(100);
+
+    // Focus the clear button
+    const clearButton = page.locator('[data-part="clear-combobox-button"]');
+    await clearButton.focus();
+
+    // Press Space to clear
+    await page.keyboard.press(' ');
+
+    // Wait for clear action to be processed
+    await page.waitForTimeout(100);
+
+    // Verify the selection has been cleared
+    await expect(page.locator('.selected-value')).toBeEmpty();
+    
+    // Verify clear button is now hidden
+    await expect(clearButton).toBeHidden();
+  });
+
+  test('Clear button visibility states', async ({ page }) => {
+    // Initially, clear button should be hidden (no selection)
+    const clearButton = page.locator('[data-part="clear-combobox-button"]');
+    await expect(clearButton).toBeHidden();
+
+    // Open the combobox and select a country
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await afghanistanOption.click();
+    await page.waitForTimeout(100);
+
+    // Clear button should now be visible
+    await expect(clearButton).toBeVisible();
+
+    // Clear the selection
+    await clearButton.click();
+    await page.waitForTimeout(100);
+
+    // Clear button should be hidden again
+    await expect(clearButton).toBeHidden();
+  });
+
+  test('Clear button hover and focus styles', async ({ page }) => {
+    // Open combobox and select a country
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await afghanistanOption.click();
+    await page.waitForTimeout(100);
+
+    const clearButton = page.locator('[data-part="clear-combobox-button"]');
+    
+    // Test hover effect
+    await clearButton.hover();
+    
+    // Check that the button has proper cursor style
+    const cursorStyle = await clearButton.evaluate(el => window.getComputedStyle(el).cursor);
+    expect(cursorStyle).toBe('pointer');
+
+    // Test focus
+    await clearButton.focus();
+    
+    // Verify the button can receive focus
+    const isFocused = await clearButton.evaluate(el => document.activeElement === el);
+    expect(isFocused).toBe(true);
+  });
 });

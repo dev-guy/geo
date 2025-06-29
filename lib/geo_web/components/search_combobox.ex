@@ -323,7 +323,15 @@ defmodule GeoWeb.Components.SearchCombobox do
             </div>
 
             <div class="flex items-center gap-1">
-              <div class="shrink-0" data-part="clear-combobox-button" role="button" hidden>
+              <div
+                class="shrink-0 cursor-pointer hover:opacity-100 transition-opacity duration-200 p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                data-part="clear-combobox-button"
+                role="button"
+                aria-label="Clear selection"
+                title="Clear selection"
+                tabindex="0"
+                hidden={is_nil(@value) || @value == ""}
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -334,7 +342,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  class="size-3.5 opacity-60"
+                  class="size-4 opacity-70 hover:opacity-100 transition-opacity duration-200"
                 >
                   <path d="M18 6 6 18" /><path d="m6 6 12 12" />
                 </svg>
@@ -582,9 +590,12 @@ defmodule GeoWeb.Components.SearchCombobox do
 
             <div class="flex items-center gap-1">
               <div
-                class="shrink-0"
+                class="shrink-0 cursor-pointer hover:opacity-100 transition-opacity duration-200 p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                 data-part="clear-combobox-button"
                 role="button"
+                aria-label="Clear selection"
+                title="Clear selection"
+                tabindex="0"
                 hidden={is_nil(@value) || @value == ""}
               >
                 <svg
@@ -597,7 +608,7 @@ defmodule GeoWeb.Components.SearchCombobox do
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  class="size-3.5 opacity-60"
+                  class="size-4 opacity-70 hover:opacity-100 transition-opacity duration-200"
                 >
                   <path d="M18 6 6 18" /><path d="m6 6 12 12" />
                 </svg>

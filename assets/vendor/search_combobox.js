@@ -124,6 +124,9 @@ const SearchCombobox = {
       if (this.clearButton && this.boundClearClick) {
         this.clearButton.removeEventListener('click', this.boundClearClick);
       }
+      if (this.clearButton && this.boundClearKeydown) {
+        this.clearButton.removeEventListener('keydown', this.boundClearKeydown);
+      }
       if (this.scrollArea && this.scrollHandlerBound) {
         this.scrollArea.removeEventListener('scroll', this.scrollHandlerBound);
       }
@@ -757,8 +760,15 @@ const SearchCombobox = {
       this.clearButton.removeEventListener('click', this.boundClearClick);
     }
 
+    if (this.boundClearKeydown) {
+      this.clearButton.removeEventListener('keydown', this.boundClearKeydown);
+    }
+
     this.boundClearClick = (event) => this.handleClearClick(event);
+    this.boundClearKeydown = (event) => this.handleClearKeydown(event);
+    
     this.clearButton.addEventListener('click', this.boundClearClick);
+    this.clearButton.addEventListener('keydown', this.boundClearKeydown);
   },
 
   handleClearClick(event) {
@@ -784,6 +794,15 @@ const SearchCombobox = {
     this.updateSingleDisplay(null);
 
     this.searchInput?.focus({ preventScroll: true });
+  },
+
+  handleClearKeydown(event) {
+    // Handle Enter and Space keys for accessibility
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.handleClearClick(event);
+    }
   },
 
   enablePhxClickHandlers() {
