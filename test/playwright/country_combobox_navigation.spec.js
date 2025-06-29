@@ -177,11 +177,46 @@ test.describe('Country Combobox Navigation', () => {
     // Press up arrow - should go to Zimbabwe (last option)
     await page.keyboard.press('ArrowUp');
     
-    // Check that Zimbabwe is now highlighted
-    const zimbabweOption = page.locator('.combobox-option').filter({ hasText: 'Zimbabwe' }).first();
-    await expect(zimbabweOption).toHaveAttribute('data-combobox-navigate', '');
+    // Wait a moment for navigation to complete
+    await page.waitForTimeout(50);
+    
+    // Check that some option is highlighted (the navigation worked)
+    const highlightedOption = page.locator('[data-combobox-navigate]');
+    await expect(highlightedOption).toBeVisible();
+    
+    // Check that the highlighted option contains Zimbabwe text
+    await expect(highlightedOption).toContainText('Zimbabwe');
     
     // Verify that Afghanistan is no longer highlighted
     await expect(afghanistanOption).not.toHaveAttribute('data-combobox-navigate', '');
+  });
+
+  test('Up arrow navigation wraps correctly between first and last options', async ({ page }) => {
+    // Open the combobox
+    const comboboxTrigger = page.locator('.combobox-trigger');
+    await comboboxTrigger.click();
+    
+    // Wait for options to load
+    await page.waitForSelector('.combobox-option', { state: 'visible' });
+    await page.waitForTimeout(100);
+    
+    // Hover over Afghanistan to highlight it
+    const afghanistanOption = page.locator('.combobox-option').filter({ hasText: 'Afghanistan' }).first();
+    await afghanistanOption.hover();
+    
+    // Press up arrow - this should wrap around to Zimbabwe
+    await page.keyboard.press('ArrowUp');
+    await page.waitForTimeout(50);
+    
+    // Verify Zimbabwe is now highlighted
+    const highlightedOption = page.locator('[data-combobox-navigate]');
+    await expect(highlightedOption).toContainText('Zimbabwe');
+    
+    // Press down arrow should go back to Afghanistan
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(50);
+    
+    const newHighlighted = page.locator('[data-combobox-navigate]');
+    await expect(newHighlighted).toContainText('Afghanistan');
   });
 });

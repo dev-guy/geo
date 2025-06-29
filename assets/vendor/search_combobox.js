@@ -258,7 +258,8 @@ const SearchCombobox = {
   navigateOptions(direction) {
     this.isKeyboardNavigating = true;
 
-    const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option, .group-label')).filter(el => {
+    // Only navigate between actual options, not group headers
+    const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option')).filter(el => {
       const style = window.getComputedStyle(el);
       return style.display !== 'none';
     });
