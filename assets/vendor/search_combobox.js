@@ -2,7 +2,7 @@
  * Search Combobox
  *
  * Intercepts the search input and sends it to the backend.
- * Implements sticy group headers.
+ * Implements sticky group headers.
  * Implements expand/collapse and sorting.
  *
  * This work was derived from Mishka Chelekom Combobox version 0.0.5 in 2025.
@@ -24,6 +24,8 @@ const SearchCombobox = {
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
     const preservedSearchTerm = this.searchTerm || '';
 
+    const wasDropdownShouldBeOpen = this.dropdownShouldBeOpen;
+
     this.init();
 
     // Restore the search term after init()
@@ -34,7 +36,8 @@ const SearchCombobox = {
       }
     }
 
-    if (this.dropdownShouldBeOpen || wasSearching) {
+    if (wasDropdownShouldBeOpen || wasOpen || wasSearching) {
+      this.dropdownShouldBeOpen = false;
       this.openDropdown();
     }
 
@@ -54,6 +57,10 @@ const SearchCombobox = {
     this.scrollArea = this.el.querySelector('.scroll-viewport');
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
+    
+    if (this.dropdown) {
+      this.dropdown.searchCombobox = this;
+    }
 
     // Only reset searchTerm if it doesn't exist (i.e., on initial mount)
     if (this.searchTerm === undefined) {
@@ -146,11 +153,14 @@ const SearchCombobox = {
   },
 
   openDropdown() {
+    if (this.dropdownShouldBeOpen) {
+      return;
+    }
+
     this.dropdownShouldBeOpen = true;
     this.dropdown.removeAttribute('hidden');
     this.trigger.setAttribute('aria-expanded', 'true');
     this.adjustHeight();
-    this.ensureHighlight();
 
     this.lastMouseX = 0;
     this.lastMouseY = 0;
@@ -164,15 +174,28 @@ const SearchCombobox = {
 
     this.initializeStickyHeaders();
 
-    if (this.handleScroll) {
-      setTimeout(() => this.handleScroll(), 0);
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
     }
+
+    this.highlightTimeout = setTimeout(() => {
+      this.ensureHighlight();
+      if (this.handleScroll) {
+        this.handleScroll();
+      }
+      this.highlightTimeout = null;
+    }, 0);
   },
 
   closeDropdown() {
     this.dropdownShouldBeOpen = false;
     this.dropdown.setAttribute('hidden', 'true');
     this.trigger.setAttribute('aria-expanded', 'false');
+
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+      this.highlightTimeout = null;
+    }
   },
 
   onSearchInput(event) {
@@ -254,7 +277,7 @@ const SearchCombobox = {
   navigateOptions(direction) {
     this.isKeyboardNavigating = true;
 
-    const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option, .group-label')).filter(el => {
+    const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option')).filter(el => {
       const style = window.getComputedStyle(el);
       return style.display !== 'none';
     });
@@ -366,12 +389,18 @@ const SearchCombobox = {
       const item = this.stickyHeaders[i];
       const group = item.group;
       const groupRect = group.getBoundingClientRect();
+
       const groupTopRelativeToScroll = groupRect.top - scrollRect.top;
 
-      const headerStickyPosition = i * this.headerHeight;
+      const headerStickyTop = i * this.headerHeight;
 
-      if (groupTopRelativeToScroll <= headerStickyPosition) {
-        visibleHeadersCount++;
+      if (groupTopRelativeToScroll <= headerStickyTop) {
+        const groupBottomRelativeToScroll = groupRect.bottom - scrollRect.top;
+        const headerBottomPosition = headerStickyTop + this.headerHeight;
+
+        if (groupBottomRelativeToScroll > headerBottomPosition) {
+          visibleHeadersCount++;
+        }
       } else {
         break;
       }
@@ -575,7 +604,7 @@ const SearchCombobox = {
     for (const element of elements) {
       const elementRect = element.getBoundingClientRect();
 
-      if (elementRect.bottom - scrollRect.top > viewportTop) {
+      if (elementRect.bottom - scrollRect.top > viewportTop + 1) {
         return element;
       }
     }
@@ -852,6 +881,8 @@ const SearchCombobox = {
       firstHeader.style.borderTop = 'none';
       firstHeader.style.borderBottom = this.getBorderColor();
 
+      void firstHeader.offsetHeight;
+
       const rect = firstHeader.getBoundingClientRect();
       this.headerHeight = rect.height;
 
@@ -896,6 +927,10 @@ const SearchCombobox = {
       header.style.opacity = '1';
       header.style.visibility = 'visible';
       header.style.display = 'flex';
+
+      header.style.setProperty('visibility', 'visible', 'important');
+      header.style.setProperty('display', 'flex', 'important');
+      header.style.setProperty('opacity', '1', 'important');
 
       header.style.setProperty('margin', '0', 'important');
       header.style.setProperty('padding', '0', 'important');
@@ -949,19 +984,41 @@ const SearchCombobox = {
   handleScroll() {
     if (!this.scrollArea || this.stickyHeaders.length === 0) return;
 
+    if (this.headerHeight === 0) return;
+
     const scrollRect = this.scrollArea.getBoundingClientRect();
     const scrollTop = this.scrollArea.scrollTop;
 
     const firstHeader = this.stickyHeaders[0]?.header;
-    if (firstHeader && scrollTop > 0) {
-      firstHeader.style.borderTop = this.getBorderColor();
-    } else if (firstHeader) {
-      firstHeader.style.borderTop = 'none';
+    if (firstHeader) {
+      const firstGroup = this.stickyHeaders[0]?.group;
+      if (firstGroup) {
+        const firstGroupRect = firstGroup.getBoundingClientRect();
+        const firstGroupTop = firstGroupRect.top - scrollRect.top;
+
+        const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
+        const isNearTop = scrollTop <= this.headerHeight;
+        const isNearBottom = scrollTop >= maxScrollTop - this.headerHeight;
+
+        const shouldShowBorder = firstGroupTop < -this.headerHeight / 2 && !isNearTop && !isNearBottom;
+
+        if (shouldShowBorder) {
+          firstHeader.style.borderTop = this.getBorderColor();
+        } else {
+          firstHeader.style.borderTop = 'none';
+        }
+      } else {
+        firstHeader.style.borderTop = 'none';
+      }
     }
 
     this.stickyHeaders.forEach((item, index) => {
       const group = item.group;
       const header = item.header;
+
+      header.style.setProperty('visibility', 'visible', 'important');
+      header.style.setProperty('display', 'flex', 'important');
+      header.style.setProperty('opacity', '1', 'important');
 
       const groupRect = group.getBoundingClientRect();
       const groupTop = groupRect.top - scrollRect.top + scrollTop;
@@ -981,9 +1038,11 @@ const SearchCombobox = {
       const groupItems = group.querySelectorAll('.combobox-option');
       groupItems.forEach(item => {
         const itemRect = item.getBoundingClientRect();
-        const itemTop = itemRect.top - scrollRect.top;
+        const itemBottom = itemRect.bottom - scrollRect.top;
 
-        const shouldHide = itemTop < headerStickyTop + this.headerHeight;
+        const headerBottom = headerStickyTop + this.headerHeight;
+        const shouldHide = itemBottom < headerBottom - 2;
+
         item.style.visibility = shouldHide ? 'hidden' : 'visible';
       });
     });

@@ -5,7 +5,7 @@ defmodule Geo.MixProject do
     base_config = [
       app: :geo,
       # GEO_VERSION
-      version: "0.2.2",
+      version: "0.3.0",
       # See also .tool-versions
       # Mishka Chelekom requires 1.17
       elixir: "~> 1.18",
