@@ -1,6 +1,7 @@
 geo.log
 .rules
 .claude
+/*.png
 
 # dialyzer
 priv/plts
