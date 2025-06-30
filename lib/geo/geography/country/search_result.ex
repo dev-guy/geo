@@ -44,6 +44,7 @@ defmodule Geo.Geography.Country.SearchResult do
     defmodule Search do
       use Ash.Resource.ManualRead
 
+      @impl true
       def read(ash_query, _ecto_query, _opts, _context) do
         query = ash_query.arguments[:query]
         cache_results = Geo.Geography.Country.Cache.search!(query)

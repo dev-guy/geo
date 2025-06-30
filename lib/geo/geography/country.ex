@@ -32,18 +32,6 @@ defmodule Geo.Geography.Country do
     table "countries"
   end
 
-  # === Manual Actions ===
-  defmodule Manual do
-    defmodule GetByIsoCode do
-      use Ash.Resource.ManualRead
-
-      def read(ash_query, _ecto_query, _opts, _context) do
-        iso_code = ash_query.arguments[:iso_code]
-        {:ok, [Geo.Geography.Country.Cache.get_by_iso_code!(iso_code)]}
-      end
-    end
-  end
-
   actions do
     defaults [:destroy]
 
@@ -76,9 +64,23 @@ defmodule Geo.Geography.Country do
       argument :iso_code, :string, allow_nil?: false
       get? true
 
-      manual Manual.GetByIsoCode
+      manual Geo.Geography.Country.Manual.GetByIsoCode
     end
   end
+
+  # === Manual Actions ===
+  defmodule Manual do
+    defmodule GetByIsoCode do
+      use Ash.Resource.ManualRead
+
+      @impl true
+      def read(ash_query, _ecto_query, _opts, _context) do
+        iso_code = ash_query.arguments[:iso_code]
+        {:ok, [Geo.Geography.Country.Cache.get_by_iso_code!(iso_code)]}
+      end
+    end
+  end
+
 
   # Default sort order when listing countries
   preparations do
