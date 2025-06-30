@@ -207,7 +207,7 @@ const SearchCombobox = {
 
   handleGroupExpanded(expandedGroupName) {
     this.scheduleGroupHighlight(() => {
-      // Highlight the first item in the expanded group
+      // Highlight the first item
       this.highlightFirstItemInGroup(expandedGroupName);
     });
   },
@@ -240,6 +240,12 @@ const SearchCombobox = {
       const name = labelEl ? labelEl.textContent.trim() : '';
       return { element: groupEl, name };
     }).filter(group => group.name);
+  },
+
+  getGroupByName(groupName) {
+    const groups = this.getAllGroups();
+    const group = groups.find(g => g.name === groupName);
+    return group ? group.element : null;
   },
 
   isGroupCollapsed(groupName) {
@@ -756,6 +762,13 @@ const SearchCombobox = {
       return;
     }
 
+    // Always prioritize the selected option first
+    const selected = this.findSelectedOptionInFirstVisibleGroup();
+    if (selected) {
+      this.highlight(selected, shouldScroll);
+      return;
+    }
+
     const curr = this.el.querySelector('[data-combobox-navigate]');
     
     // If a group header is currently highlighted, try to highlight the first option in that group
@@ -785,13 +798,6 @@ const SearchCombobox = {
         // Option is not in a group, so it's valid
         return;
       }
-    }
-
-    // Find the selected option, prioritizing the first visible group
-    const selected = this.findSelectedOptionInFirstVisibleGroup();
-    if (selected) {
-      this.highlight(selected, shouldScroll);
-      return;
     }
 
     const first = this.getFirstVisibleOption();
