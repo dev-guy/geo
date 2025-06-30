@@ -401,14 +401,22 @@ const SearchCombobox = {
 
     const printable = event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
     if (printable || ['Backspace', 'Delete'].includes(event.key)) {
+      // Check if the search input is already focused - if so, let the browser handle it naturally
+      if (document.activeElement === this.searchInput) {
+        // Don't prevent default - let the browser handle text selection and deletion naturally
+        return;
+      }
+      
       event.preventDefault();
       this.searchInput.focus();
       if (printable) {
         this.searchInput.value += event.key;
+        this.onSearchInput({ target: this.searchInput });
       } else {
+        // For backspace/delete when focusing from elsewhere, remove last character
         this.searchInput.value = this.searchInput.value.slice(0, -1);
+        this.onSearchInput({ target: this.searchInput });
       }
-      this.onSearchInput({ target: this.searchInput });
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       this.navigateOptions(event.key === 'ArrowDown' ? 'down' : 'up');
