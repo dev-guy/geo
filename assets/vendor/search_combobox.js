@@ -38,10 +38,14 @@ const SearchCombobox = {
 
     if (wasDropdownShouldBeOpen || wasOpen || wasSearching) {
       this.dropdownShouldBeOpen = false;
+      this.isReopeningAfterUpdate = true;
       this.openDropdown();
     }
 
-    this.initializeSelection();
+    // Delay initialization to ensure LiveView updates are complete
+    setTimeout(() => {
+      this.initializeSelection();
+    }, 0);
 
     if (wasOpen || wasSearching) {
       setTimeout(() => this.initializeStickyHeaders(), 0);
@@ -57,6 +61,7 @@ const SearchCombobox = {
     this.scrollArea = this.el.querySelector('.scroll-viewport');
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
+    this.searchClearButton = this.el.querySelector('[data-part="clear-search-button"]');
     
     if (this.dropdown) {
       this.dropdown.searchCombobox = this;
@@ -76,6 +81,14 @@ const SearchCombobox = {
       this.justCleared = false;
     }
 
+    if (this.groupHighlightInProgress === undefined) {
+      this.groupHighlightInProgress = false;
+    }
+
+    if (this.mouseHoverInProgress === undefined) {
+      this.mouseHoverInProgress = false;
+    }
+
     this.isKeyboardNavigating = false;
     this.lastMouseX = 0;
     this.lastMouseY = 0;
@@ -90,6 +103,8 @@ const SearchCombobox = {
     }
 
     this.setupClearButton();
+    this.setupSearchClearButton();
+    this.setupGroupEventListeners();
 
     this.boundToggle = event => this.toggleDropdown(event);
     this.boundSearchInput = event => this.onSearchInput(event);
@@ -124,10 +139,137 @@ const SearchCombobox = {
       if (this.clearButton && this.boundClearClick) {
         this.clearButton.removeEventListener('click', this.boundClearClick);
       }
+      if (this.searchClearButton && this.boundSearchClearClick) {
+        this.searchClearButton.removeEventListener('click', this.boundSearchClearClick);
+      }
       if (this.scrollArea && this.scrollHandlerBound) {
         this.scrollArea.removeEventListener('scroll', this.scrollHandlerBound);
       }
+      if (this.groupHighlightTimeout) {
+        clearTimeout(this.groupHighlightTimeout);
+        this.groupHighlightTimeout = null;
+      }
+      this.cleanupGroupEventListeners();
     };
+  },
+
+  setupGroupEventListeners() {
+    // These will be called by Phoenix LiveView events
+    // No setup needed here since Phoenix handles the event binding
+  },
+
+  cleanupGroupEventListeners() {
+    // No cleanup needed since Phoenix handles the event lifecycle
+  },
+
+  // Phoenix LiveView event handlers - these are called directly by Phoenix LiveView
+  'group-collapsed'(payload) {
+    this.handleGroupCollapsed(payload.group_name);
+  },
+
+  'group-expanded'(payload) {
+    this.handleGroupExpanded(payload.group_name);
+  },
+
+  'group-sorted'(payload) {
+    this.handleGroupSorted(payload.group_name, payload.is_collapsed);
+  },
+
+  handleGroupSorted(groupName, isCollapsed) {
+    // After sorting, if group is not collapsed, highlight first item
+    if (!isCollapsed) {
+      this.scheduleGroupHighlight(() => {
+        this.highlightFirstItemInGroup(groupName);
+      });
+    }
+  },
+
+  handleGroupCollapsed(collapsedGroupName) {
+    this.scheduleGroupHighlight(() => {
+      // Find the first uncollapsed group below the collapsed one
+      const groups = this.getAllGroups();
+      const collapsedGroupIndex = groups.findIndex(group => group.name === collapsedGroupName);
+      
+      if (collapsedGroupIndex === -1) return;
+      
+      // Look for the first uncollapsed group after the collapsed one
+      for (let i = collapsedGroupIndex + 1; i < groups.length; i++) {
+        const group = groups[i];
+        if (!this.isGroupCollapsed(group.name)) {
+          this.highlightFirstItemInGroup(group.name);
+          return;
+        }
+      }
+      
+      // If no uncollapsed group found after, do nothing (as specified)
+    });
+  },
+
+  handleGroupExpanded(expandedGroupName) {
+    this.scheduleGroupHighlight(() => {
+      // Highlight the first item
+      this.highlightFirstItemInGroup(expandedGroupName);
+    });
+  },
+
+  scheduleGroupHighlight(highlightFn) {
+    // Cancel any pending group highlight to prevent race conditions
+    if (this.groupHighlightTimeout) {
+      clearTimeout(this.groupHighlightTimeout);
+    }
+    
+    // Set flag to prevent mouse hover interference
+    this.groupHighlightInProgress = true;
+    
+    this.groupHighlightTimeout = setTimeout(() => {
+      highlightFn();
+      this.groupHighlightTimeout = null;
+      
+      // Keep the flag for a short time to prevent immediate mouse interference
+      setTimeout(() => {
+        this.groupHighlightInProgress = false;
+      }, 100);
+    }, 20); // Reduced delay for better responsiveness
+  },
+
+  getAllGroups() {
+    const groupElements = Array.from(this.el.querySelectorAll('.option-group'));
+    return groupElements.map(groupEl => {
+      // Find the span that contains the group name (sibling to the button)
+      const labelEl = groupEl.querySelector('.group-label .flex.items-center.gap-2 span');
+      const name = labelEl ? labelEl.textContent.trim() : '';
+      return { element: groupEl, name };
+    }).filter(group => group.name);
+  },
+
+  getGroupByName(groupName) {
+    const groups = this.getAllGroups();
+    const group = groups.find(g => g.name === groupName);
+    return group ? group.element : null;
+  },
+
+  isGroupCollapsed(groupName) {
+    const groups = this.getAllGroups();
+    const group = groups.find(g => g.name === groupName);
+    if (!group) return false;
+    
+    // A group is collapsed if it doesn't have an options container after the header
+    const optionsContainer = group.element.querySelector('.group-label + div');
+    return !optionsContainer;
+  },
+
+  highlightFirstItemInGroup(groupName) {
+    const groups = this.getAllGroups();
+    const group = groups.find(g => g.name === groupName);
+    if (!group) {
+      return;
+    }
+    
+    // Find the first option in this group
+    const firstOption = group.element.querySelector('.combobox-option');
+    if (firstOption) {
+      this.highlight(firstOption, true); // true = should scroll
+    }
   },
 
   toggleDropdown(event) {
@@ -179,7 +321,9 @@ const SearchCombobox = {
     }
 
     this.highlightTimeout = setTimeout(() => {
-      this.ensureHighlight();
+      const shouldScroll = !this.isReopeningAfterUpdate;
+      this.ensureHighlight(shouldScroll);
+      this.isReopeningAfterUpdate = false; // Reset the flag
       if (this.handleScroll) {
         this.handleScroll();
       }
@@ -201,6 +345,9 @@ const SearchCombobox = {
   onSearchInput(event) {
     const value = event.target.value;
     this.searchTerm = value;
+
+    // Update search clear button visibility
+    this.updateSearchClearButtonVisibility();
 
     if (this.dropdown.hasAttribute('hidden')) {
       this.openDropdown();
@@ -277,9 +424,20 @@ const SearchCombobox = {
   navigateOptions(direction) {
     this.isKeyboardNavigating = true;
 
+    // Get all visible options, excluding those in collapsed groups
     const visibleOpts = Array.from(this.el.querySelectorAll('.combobox-option')).filter(el => {
       const style = window.getComputedStyle(el);
-      return style.display !== 'none';
+      if (style.display === 'none') return false;
+      
+      // Check if this option is in a collapsed group
+      const group = el.closest('.option-group');
+      if (group) {
+        const optionsContainer = group.querySelector('.group-label + div');
+        const isGroupCollapsed = !optionsContainer;
+        if (isGroupCollapsed) return false;
+      }
+      
+      return true;
     });
 
     if (!visibleOpts.length) return;
@@ -302,10 +460,11 @@ const SearchCombobox = {
     let next = direction === 'down'
       ? visibleOpts[(idx + 1) % visibleOpts.length]
       : visibleOpts[(idx - 1 + visibleOpts.length) % visibleOpts.length];
+    
     this.highlight(next);
   },
 
-  highlight(element) {
+  highlight(element, shouldScroll = true) {
     this.el.querySelectorAll('[data-combobox-navigate]').forEach(o => {
       o.removeAttribute('data-combobox-navigate');
       o.blur();
@@ -316,11 +475,28 @@ const SearchCombobox = {
       element.focus({ preventScroll: true });
     }
 
-    this.scrollToOption(element);
+    // Don't scroll during mouse hover to prevent unwanted scrolling
+    if (shouldScroll && !this.mouseHoverInProgress) {
+      this.scrollToOption(element);
+    }
+  },
+
+  highlightWithoutFocus(element) {
+    // Highlight element without focusing or scrolling - used for mouse hover
+    this.el.querySelectorAll('[data-combobox-navigate]').forEach(o => {
+      o.removeAttribute('data-combobox-navigate');
+    });
+    element.setAttribute('data-combobox-navigate', '');
+    // Don't call focus() or scrollToOption() to prevent unwanted scrolling
   },
 
   scrollToOption(option) {
     if (!this.scrollArea || !option) return;
+
+    // Don't scroll during mouse hover to prevent unwanted scrolling
+    if (this.mouseHoverInProgress) {
+      return;
+    }
 
     const isHeader = option.classList.contains('group-label');
     if (isHeader) {
@@ -372,45 +548,29 @@ const SearchCombobox = {
 
     const totalHeight = this.scrollArea.clientHeight;
 
-    if (!this.stickyHeaders.length) {
-      const effectiveHeight = totalHeight;
+    // Check if we have any sticky headers
+    const currentStickyHeader = this.stickyHeaders.find(item => {
+      const header = item.header;
+      const computedStyle = window.getComputedStyle(header);
+      return computedStyle.position === 'sticky';
+    });
+
+    if (!currentStickyHeader) {
+      // No sticky header
       return {
         viewportTop: 0,
         viewportBottom: totalHeight,
-        effectiveHeight: effectiveHeight,
-        maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight),
+        effectiveHeight: totalHeight,
+        maxVisibleRows: this.calculateMaxVisibleRows(totalHeight),
       };
     }
 
-    const scrollRect = this.scrollArea.getBoundingClientRect();
-    let visibleHeadersCount = 0;
-
-    for (let i = 0; i < this.stickyHeaders.length; i++) {
-      const item = this.stickyHeaders[i];
-      const group = item.group;
-      const groupRect = group.getBoundingClientRect();
-
-      const groupTopRelativeToScroll = groupRect.top - scrollRect.top;
-
-      const headerStickyTop = i * this.headerHeight;
-
-      if (groupTopRelativeToScroll <= headerStickyTop) {
-        const groupBottomRelativeToScroll = groupRect.bottom - scrollRect.top;
-        const headerBottomPosition = headerStickyTop + this.headerHeight;
-
-        if (groupBottomRelativeToScroll > headerBottomPosition) {
-          visibleHeadersCount++;
-        }
-      } else {
-        break;
-      }
-    }
-
-    const stickyHeadersSpace = visibleHeadersCount * this.headerHeight;
-    const effectiveHeight = totalHeight - stickyHeadersSpace;
+    // We have a sticky header, so account for its space
+    const stickyHeaderSpace = this.headerHeight || 0;
+    const effectiveHeight = totalHeight - stickyHeaderSpace;
 
     return {
-      viewportTop: stickyHeadersSpace,
+      viewportTop: stickyHeaderSpace,
       viewportBottom: totalHeight,
       effectiveHeight: effectiveHeight,
       maxVisibleRows: this.calculateMaxVisibleRows(effectiveHeight),
@@ -451,6 +611,11 @@ const SearchCombobox = {
   },
 
   onOptionMouseEnter(event) {
+    // Don't interfere with group operations
+    if (this.groupHighlightInProgress) {
+      return;
+    }
+
     if (this.isKeyboardNavigating) {
       const currentX = event.clientX;
       const currentY = event.clientY;
@@ -465,10 +630,29 @@ const SearchCombobox = {
       opts.forEach(opt => opt.classList.remove('no-hover'));
     }
 
+    // Check for both options and group headers
     const opt = event.target.closest('.combobox-option');
-    if (!opt) return;
-    this.scrollArea && this.scrollArea.focus({ preventScroll: true });
-    this.highlight(opt);
+    const groupHeader = event.target.closest('.group-label');
+    
+    if (opt) {
+      // Set flag to prevent any scrolling during mouse hover
+      this.mouseHoverInProgress = true;
+      // Only highlight without scrolling or focusing on mouse hover
+      this.highlightWithoutFocus(opt);
+      // Clear flag after a short delay
+      setTimeout(() => {
+        this.mouseHoverInProgress = false;
+      }, 50);
+    } else if (groupHeader) {
+      // Set flag to prevent any scrolling during mouse hover
+      this.mouseHoverInProgress = true;
+      // Only highlight without scrolling or focusing on mouse hover
+      this.highlightWithoutFocus(groupHeader);
+      // Clear flag after a short delay
+      setTimeout(() => {
+        this.mouseHoverInProgress = false;
+      }, 50);
+    }
   },
 
   onMouseMove(event) {
@@ -572,36 +756,118 @@ const SearchCombobox = {
     return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
   },
 
-  ensureHighlight() {
-    const curr = this.el.querySelector('[data-combobox-navigate]');
-    if (curr) return;
-
-    const selected = this.el.querySelector('.combobox-option[data-combobox-selected]');
-    if (selected) {
-      this.highlight(selected);
+  ensureHighlight(shouldScroll = true) {
+    // Don't interfere with group operations
+    if (this.groupHighlightInProgress) {
       return;
     }
 
+    // Always prioritize the selected option first
+    const selected = this.findSelectedOptionInFirstVisibleGroup();
+    if (selected) {
+      this.highlight(selected, shouldScroll);
+      return;
+    }
+
+    const curr = this.el.querySelector('[data-combobox-navigate]');
+    
+    // If a group header is currently highlighted, try to highlight the first option in that group
+    if (curr && curr.classList.contains('group-label')) {
+      const group = curr.closest('.option-group');
+      if (group) {
+        const firstOption = group.querySelector('.combobox-option');
+        if (firstOption) {
+          this.highlight(firstOption, shouldScroll);
+          return;
+        }
+      }
+    }
+    
+    // If there's already a valid highlighted option, don't change it unless it's not visible
+    if (curr && curr.classList.contains('combobox-option')) {
+      // Check if the currently highlighted option is still visible (not in a collapsed group)
+      const group = curr.closest('.option-group');
+      if (group) {
+        const optionsContainer = group.querySelector('.group-label + div');
+        const isGroupCollapsed = !optionsContainer;
+        if (!isGroupCollapsed) {
+          // The currently highlighted option is still valid and visible, keep it
+          return;
+        }
+      } else {
+        // Option is not in a group, so it's valid
+        return;
+      }
+    }
+
     const first = this.getFirstVisibleOption();
-    first && this.highlight(first);
+    if (first) {
+      this.highlight(first, shouldScroll);
+    }
+  },
+
+  findSelectedOptionInFirstVisibleGroup() {
+    // Get all selected options
+    const selectedOptions = Array.from(this.el.querySelectorAll('.combobox-option[data-combobox-selected]'));
+    if (!selectedOptions.length) return null;
+
+    // If there's only one selected option, return it
+    if (selectedOptions.length === 1) return selectedOptions[0];
+
+    // Multiple selected options found - prioritize the one in the first visible group
+    const visibleGroups = Array.from(this.el.querySelectorAll('.option-group')).filter(group => {
+      const optionsContainer = group.querySelector('.group-label + div');
+      return optionsContainer; // Group is not collapsed
+    });
+
+    // Find the selected option in the first visible group
+    for (const group of visibleGroups) {
+      const selectedInGroup = group.querySelector('.combobox-option[data-combobox-selected]');
+      if (selectedInGroup) {
+        return selectedInGroup;
+      }
+    }
+
+    // Fallback to the first selected option if none found in visible groups
+    return selectedOptions[0];
   },
 
   getFirstVisibleOption() {
+    // Get all elements (options and headers) that are displayed
     const elements = Array.from(this.el.querySelectorAll('.combobox-option, .group-label')).filter(el => {
       const style = window.getComputedStyle(el);
-      return style.display !== 'none';
+      if (style.display === 'none') return false;
+      
+      // For options, check if they're in a collapsed group
+      if (el.classList.contains('combobox-option')) {
+        const group = el.closest('.option-group');
+        if (group) {
+          const optionsContainer = group.querySelector('.group-label + div');
+          const isGroupCollapsed = !optionsContainer;
+          if (isGroupCollapsed) return false;
+        }
+      }
+      
+      return true;
     });
 
     if (!elements.length) return null;
 
+    // Find the first visible option (not header)
+    const firstOption = elements.find(el => el.classList.contains('combobox-option'));
+    if (!firstOption) return null;
+
     if (!this.stickyHeaders.length) {
-      return elements[0];
+      return firstOption;
     }
 
     const { viewportTop } = this.getEffectiveViewport();
     const scrollRect = this.scrollArea.getBoundingClientRect();
 
+    // Find the first option that's visible below the sticky headers
     for (const element of elements) {
+      if (!element.classList.contains('combobox-option')) continue;
+      
       const elementRect = element.getBoundingClientRect();
 
       if (elementRect.bottom - scrollRect.top > viewportTop + 1) {
@@ -609,7 +875,7 @@ const SearchCombobox = {
       }
     }
 
-    return elements[0];
+    return firstOption;
   },
 
   onOptionClick(event) {
@@ -663,6 +929,7 @@ const SearchCombobox = {
 
     if (this.selectEl) {
       this.selectEl.value = value;
+      
       this.selectEl.dispatchEvent(new window.Event('change', { bubbles: true }));
       this.selectEl.dispatchEvent(new window.Event('input', { bubbles: true }));
     }
@@ -700,26 +967,70 @@ const SearchCombobox = {
   },
 
   initializeSelection() {
-    if (!this.selectEl) return;
-
-    if (this.justCleared) {
-      this.updateSingleDisplay(null);
-      this.justCleared = false;
+    const selectEl = this.selectEl;
+    if (!selectEl) {
       return;
     }
 
-    const currentValue = this.selectEl.value;
+    // Check if user has made a selection by looking at the last clicked option
+    const justCleared = selectEl.hasAttribute('data-just-cleared');
+    
+    let currentValue = selectEl.value;
+    
+    // Clear the just-cleared flag
+    selectEl.removeAttribute('data-just-cleared');
 
-    if (currentValue && currentValue !== '') {
-      const option = this.el.querySelector(`.combobox-option[data-combobox-value="${currentValue}"]`);
-      if (option) {
-        option.setAttribute('data-combobox-selected', '');
-        this.updateSingleDisplay(option);
-      } else {
-        this.updateSingleDisplay({value: currentValue});
+    // Look for wrapper with data-current-value (for server-side rendering)
+    const wrapper = this.el.closest('[data-current-value]');
+    if (wrapper) {
+      const serverValue = wrapper.getAttribute('data-current-value');
+      if (serverValue && serverValue !== currentValue) {
+        selectEl.value = serverValue;
+        currentValue = serverValue;
       }
-    } else {
-      this.updateSingleDisplay(null);
+    }
+
+    // Find and mark the selected option
+    const options = this.el.querySelectorAll('[data-combobox-value]');
+    let selectedOption = null;
+    const matchingOptions = [];
+
+    options.forEach(option => {
+      option.removeAttribute('data-combobox-selected');
+      if (option.getAttribute('data-combobox-value') === currentValue) {
+        matchingOptions.push(option);
+      }
+    });
+
+    if (matchingOptions.length > 0) {
+      // If multiple options match (same value in different groups), prioritize the first visible group
+      if (matchingOptions.length === 1) {
+        selectedOption = matchingOptions[0];
+      } else {
+        // Find the option in the first visible group
+        const visibleGroups = Array.from(this.el.querySelectorAll('.option-group')).filter(group => {
+          const optionsContainer = group.querySelector('.group-label + div');
+          return optionsContainer; // Group is not collapsed
+        });
+
+        for (const group of visibleGroups) {
+          const optionInGroup = matchingOptions.find(option => group.contains(option));
+          if (optionInGroup) {
+            selectedOption = optionInGroup;
+            break;
+          }
+        }
+
+        // Fallback to the first matching option if none found in visible groups
+        if (!selectedOption) {
+          selectedOption = matchingOptions[0];
+        }
+      }
+
+      selectedOption.setAttribute('data-combobox-selected', 'true');
+      
+      // Update the display to show the correct selection
+      this.updateSingleDisplay(selectedOption);
     }
   },
 
@@ -786,6 +1097,48 @@ const SearchCombobox = {
     this.searchInput?.focus({ preventScroll: true });
   },
 
+  setupSearchClearButton() {
+    if (!this.searchClearButton) return;
+
+    if (this.boundSearchClearClick) {
+      this.searchClearButton.removeEventListener('click', this.boundSearchClearClick);
+    }
+
+    this.boundSearchClearClick = (event) => this.handleSearchClearClick(event);
+    this.searchClearButton.addEventListener('click', this.boundSearchClearClick);
+  },
+
+  handleSearchClearClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.searchInput) {
+      this.searchInput.value = '';
+      this.searchTerm = '';
+      
+      // Hide the clear button
+      this.updateSearchClearButtonVisibility();
+      
+      // Trigger search to show all options again
+      this.onSearchInput({ target: this.searchInput });
+      
+      // Focus back on the search input
+      this.searchInput.focus({ preventScroll: true });
+    }
+  },
+
+  updateSearchClearButtonVisibility() {
+    if (!this.searchClearButton) return;
+    
+    const hasSearchText = this.searchInput && this.searchInput.value.trim().length > 0;
+    
+    if (hasSearchText) {
+      this.searchClearButton.classList.remove('hidden');
+    } else {
+      this.searchClearButton.classList.add('hidden');
+    }
+  },
+
   enablePhxClickHandlers() {
     const phxButtons = this.el.querySelectorAll('button[phx-click]');
     phxButtons.forEach(button => {
@@ -843,7 +1196,14 @@ const SearchCombobox = {
       contentWrapper.style.setProperty('gap', '0', 'important');
       contentWrapper.style.setProperty('row-gap', '0', 'important');
       contentWrapper.style.setProperty('column-gap', '0', 'important');
+      
+      // Keep content wrapper positioned so we can move headers out of it
+      contentWrapper.style.setProperty('position', 'relative', 'important');
     }
+
+    // Make sure the scroll area is the sticky container
+    this.scrollArea.style.setProperty('position', 'relative', 'important');
+    this.scrollArea.style.setProperty('overflow', 'auto', 'important');
 
     if (this.stickyHeaders.length > 0) {
       this.setupStickyHeaders();
@@ -853,116 +1213,51 @@ const SearchCombobox = {
     }
   },
 
+  getFirstUncollapedGroup() {
+    return this.stickyHeaders.find(item => {
+      const group = item.group;
+      const optionsContainer = group.querySelector('.group-label ~ div');
+      return !!optionsContainer; // Group is uncollapsed if options container exists
+    });
+  },
+
   setupStickyHeaders() {
     if (this.scrollArea) {
       const contentWrapper = this.scrollArea.querySelector('.px-1\\.5');
       if (contentWrapper) {
         contentWrapper.style.position = 'relative';
       }
+      
+      this.scrollArea.style.position = 'relative';
+      this.scrollArea.style.overflow = 'auto';
     }
 
     if (this.scrollArea) {
       void this.scrollArea.offsetHeight;
     }
 
-    if (this.stickyHeaders.length > 0) {
-      const firstHeader = this.stickyHeaders[0].header;
-
-      firstHeader.style.setProperty('margin', '0', 'important');
-      firstHeader.style.setProperty('padding', '0', 'important');
-      firstHeader.style.paddingLeft = '0.75rem';
-      firstHeader.style.paddingRight = '2rem';
-      firstHeader.style.display = 'flex';
-      firstHeader.style.alignItems = 'center';
-      firstHeader.style.justifyContent = 'space-between';
-      firstHeader.style.boxSizing = 'border-box';
-      firstHeader.style.lineHeight = '1.5';
-
-      firstHeader.style.borderTop = 'none';
-      firstHeader.style.borderBottom = this.getBorderColor();
-
-      void firstHeader.offsetHeight;
-
-      const rect = firstHeader.getBoundingClientRect();
-      this.headerHeight = rect.height;
-
-      if (this.stickyHeaders.length > 1) {
-        const secondHeader = this.stickyHeaders[1].header;
-
-        void this.scrollArea.offsetHeight;
-
-        const firstGroupBottom = this.stickyHeaders[0].group.getBoundingClientRect().bottom;
-        const secondHeaderTop = secondHeader.getBoundingClientRect().top;
-        this.headerGap = Math.max(0, secondHeaderTop - firstGroupBottom);
-      } else {
-        this.headerGap = 0;
-      }
-    }
-
-    this.stickyHeaders.forEach((item, index) => {
+    // Setup all headers for potential sticky behavior
+    this.stickyHeaders.forEach(item => {
       const header = item.header;
-
-      header.style.position = 'sticky';
-
-      let topPosition;
-      if (index === 0) {
-        topPosition = 0;
-      } else {
-        const basePosition = index * this.headerHeight;
-        const gapAdjustment = index * this.headerGap;
-        topPosition = basePosition - gapAdjustment;
-
-        if (this.headerGap < 1) {
-          topPosition -= index;
-        }
-      }
-
-      header.style.top = `${topPosition}px`;
-      header.style.zIndex = `${1000 - index}`;
-
-      const dropdownBg = window.getComputedStyle(this.dropdown).backgroundColor;
-      header.style.backgroundColor = dropdownBg || 'rgb(255, 255, 255)';
-      header.style.transition = 'opacity 0.2s ease-in-out';
-
-      header.style.opacity = '1';
-      header.style.visibility = 'visible';
-      header.style.display = 'flex';
-
-      header.style.setProperty('visibility', 'visible', 'important');
-      header.style.setProperty('display', 'flex', 'important');
-      header.style.setProperty('opacity', '1', 'important');
-
+      
+      // Setup basic header styles
       header.style.setProperty('margin', '0', 'important');
-      header.style.setProperty('padding', '0', 'important');
-
-      header.style.setProperty('box-shadow', 'none', 'important');
-      header.style.setProperty('outline', 'none', 'important');
-      header.style.setProperty('transform', 'none', 'important');
-
-      header.style.paddingLeft = '0.75rem';
-      header.style.paddingRight = '0.75rem';
-
-      header.style.width = '100%';
+      header.style.display = 'flex';
+      header.style.alignItems = 'center';
+      header.style.justifyContent = 'space-between';
       header.style.boxSizing = 'border-box';
-
       header.style.lineHeight = '1.5';
-
-      header.style.height = `${this.headerHeight}px`;
-      header.style.minHeight = `${this.headerHeight}px`;
-      header.style.maxHeight = `${this.headerHeight}px`;
-
-      header.style.borderTop = 'none';
-      header.style.borderBottom = this.getBorderColor();
-
-      if (index === 0) {
-        header.setAttribute('data-first-header', 'true');
+      
+      // Calculate header height if not already done
+      if (this.headerHeight === 0) {
+        void header.offsetHeight;
+        const rect = header.getBoundingClientRect();
+        this.headerHeight = rect.height;
       }
-
-      const rect = item.group.getBoundingClientRect();
-      const scrollRect = this.scrollArea.getBoundingClientRect();
-      item.originalTop = rect.top - scrollRect.top;
-      item.height = this.headerHeight;
     });
+
+    // Initialize the first sticky header by triggering handleScroll
+    this.handleScroll();
   },
 
   getBackgroundColor() {
@@ -984,69 +1279,89 @@ const SearchCombobox = {
   handleScroll() {
     if (!this.scrollArea || this.stickyHeaders.length === 0) return;
 
-    if (this.headerHeight === 0) return;
-
-    const scrollRect = this.scrollArea.getBoundingClientRect();
+    // Find which group should have the sticky header based on scroll position
     const scrollTop = this.scrollArea.scrollTop;
-
-    const firstHeader = this.stickyHeaders[0]?.header;
-    if (firstHeader) {
-      const firstGroup = this.stickyHeaders[0]?.group;
-      if (firstGroup) {
-        const firstGroupRect = firstGroup.getBoundingClientRect();
-        const firstGroupTop = firstGroupRect.top - scrollRect.top;
-
-        const maxScrollTop = this.scrollArea.scrollHeight - this.scrollArea.clientHeight;
-        const isNearTop = scrollTop <= this.headerHeight;
-        const isNearBottom = scrollTop >= maxScrollTop - this.headerHeight;
-
-        const shouldShowBorder = firstGroupTop < -this.headerHeight / 2 && !isNearTop && !isNearBottom;
-
-        if (shouldShowBorder) {
-          firstHeader.style.borderTop = this.getBorderColor();
-        } else {
-          firstHeader.style.borderTop = 'none';
-        }
-      } else {
-        firstHeader.style.borderTop = 'none';
+    const scrollAreaRect = this.scrollArea.getBoundingClientRect();
+    
+    let currentStickyGroup = null;
+    
+    // Find the group that should be sticky based on what's currently visible
+    for (let i = 0; i < this.stickyHeaders.length; i++) {
+      const item = this.stickyHeaders[i];
+      const group = item.group;
+      
+      // Skip collapsed groups
+      const optionsContainer = group.querySelector('.group-label ~ div');
+      if (!optionsContainer) continue;
+      
+      const groupRect = group.getBoundingClientRect();
+      const groupTop = groupRect.top - scrollAreaRect.top + scrollTop;
+      const groupBottom = groupTop + groupRect.height;
+      
+      // If this group contains the current scroll position, or if we're past all groups, use the last visible group
+      if (scrollTop >= groupTop && scrollTop < groupBottom) {
+        currentStickyGroup = item;
+        break;
+      } else if (scrollTop >= groupTop && i === this.stickyHeaders.length - 1) {
+        // If we're past the last group, keep it sticky
+        currentStickyGroup = item;
+        break;
+      } else if (i === 0 && scrollTop < groupTop) {
+        // If we're before the first group, use the first group
+        currentStickyGroup = item;
+        break;
       }
     }
+    
+    // If no group found by position, find the first uncollapsed group as fallback
+    if (!currentStickyGroup) {
+      currentStickyGroup = this.getFirstUncollapedGroup();
+    }
+    
+    if (!currentStickyGroup) return;
 
-    this.stickyHeaders.forEach((item, index) => {
-      const group = item.group;
+    // Update which header is sticky
+    this.stickyHeaders.forEach(item => {
       const header = item.header;
-
-      header.style.setProperty('visibility', 'visible', 'important');
-      header.style.setProperty('display', 'flex', 'important');
-      header.style.setProperty('opacity', '1', 'important');
-
-      const groupRect = group.getBoundingClientRect();
-      const groupTop = groupRect.top - scrollRect.top + scrollTop;
-
-      const distanceFromOrigin = scrollTop - groupTop;
-
-      if (distanceFromOrigin > 5000 && groupTop < scrollTop) {
-        header.style.position = 'absolute';
-        header.style.top = `${scrollTop + (index * this.headerHeight)}px`;
-      } else {
+      if (item === currentStickyGroup) {
+        // Make this header sticky
         header.style.position = 'sticky';
-        header.style.top = `${index * this.headerHeight}px`;
+        header.style.top = '0px';
+        header.style.left = '0';
+        header.style.right = '0';
+        header.style.width = '100%';
+        header.style.zIndex = '1000';
+        header.style.backgroundColor = this.getBackgroundColor();
+        header.style.borderTop = 'none';
+        header.style.borderBottom = this.getBorderColor();
+        header.style.setProperty('visibility', 'visible', 'important');
+        header.style.setProperty('display', 'flex', 'important');
+        header.style.setProperty('opacity', '1', 'important');
+        
+        // Ensure consistent height
+        if (this.headerHeight > 0) {
+          header.style.height = `${this.headerHeight}px`;
+          header.style.minHeight = `${this.headerHeight}px`;
+          header.style.maxHeight = `${this.headerHeight}px`;
+        }
+      } else {
+        // Remove sticky positioning from other headers
+        header.style.position = 'static';
+        header.style.zIndex = 'auto';
+        header.style.top = 'auto';
+        header.style.left = 'auto';
+        header.style.right = 'auto';
+        header.style.width = 'auto';
+        header.style.backgroundColor = '';
+        header.style.borderTop = '';
+        header.style.borderBottom = '';
+        header.style.height = '';
+        header.style.minHeight = '';
+        header.style.maxHeight = '';
       }
-
-      const headerStickyTop = index * this.headerHeight;
-
-      const groupItems = group.querySelectorAll('.combobox-option');
-      groupItems.forEach(item => {
-        const itemRect = item.getBoundingClientRect();
-        const itemBottom = itemRect.bottom - scrollRect.top;
-
-        const headerBottom = headerStickyTop + this.headerHeight;
-        const shouldHide = itemBottom < headerBottom - 2;
-
-        item.style.visibility = shouldHide ? 'hidden' : 'visible';
-      });
     });
   },
 };
 
 export default SearchCombobox;
+

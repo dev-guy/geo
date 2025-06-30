@@ -365,7 +365,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             class="combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
             hidden
           >
-            <div class="mt-1 mb-2 mx-1.5">
+            <div class="mt-1 mb-2 mx-1.5 relative">
               <input
                 type="text"
                 role="searchbox"
@@ -373,10 +373,31 @@ defmodule GeoWeb.Components.SearchCombobox do
                 aria-autocomplete="list"
                 aria-activedescendant=""
                 aria-label={@search_placeholder}
-                class="combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                class="combobox-search-input appearance-none bg-transparent px-2 py-1 pr-8 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 data-part="search"
                 placeholder={@search_placeholder}
               />
+              <div
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer opacity-60 hover:opacity-100 transition-opacity hidden"
+                data-part="clear-search-button"
+                role="button"
+                title="Clear search"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="size-3.5"
+                >
+                  <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                </svg>
+              </div>
             </div>
 
             <.scroll_area
@@ -628,7 +649,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             class="combobox-dropdown z-50 absolute w-full px-[3px] py-2 transition-all ease-out duration-[250ms] top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg"
             hidden
           >
-            <div class="mt-1 mb-2 mx-1.5">
+            <div class="mt-1 mb-2 mx-1.5 relative">
               <input
                 type="text"
                 role="searchbox"
@@ -636,10 +657,31 @@ defmodule GeoWeb.Components.SearchCombobox do
                 aria-autocomplete="list"
                 aria-activedescendant=""
                 aria-label={@search_placeholder}
-                class="combobox-search-input appearance-none bg-transparent px-2 py-1 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                class="combobox-search-input appearance-none bg-transparent px-2 py-1 pr-8 w-full focus:outline-none rounded-md text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 data-part="search"
                 placeholder={@search_placeholder}
               />
+              <div
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer opacity-60 hover:opacity-100 transition-opacity hidden"
+                data-part="clear-search-button"
+                role="button"
+                title="Clear search"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="size-3.5"
+                >
+                  <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                </svg>
+              </div>
             </div>
 
             <.scroll_area
@@ -813,7 +855,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             phx-target={@group_event_target}
             data-is-header-button="true"
             class="hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            title={"Toggle #{@group_label} sort order"}
+            title={"Change sort order"}
           >
             <.icon name={get_in(@group_states, [@group_label, :sort_icon])} class="h-4 w-4" />
           </button>
@@ -823,7 +865,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     """
   end
 
-  attr :id, :string, default: nil, doc: "Unique identifire"
+  attr :id, :string, default: nil, doc: "Unique identifier"
   attr :for, :string, default: nil, doc: "Specifies the form which is associated with"
   attr :class, :any, default: nil, doc: "Custom CSS class for additional styling"
   slot :inner_block, required: true, doc: "Inner block that renders HEEx content"

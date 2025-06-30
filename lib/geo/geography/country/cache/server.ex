@@ -67,7 +67,7 @@ defmodule Geo.Geography.Country.Cache.Server do
 
   @impl true
   def handle_call({:get_by_iso_code, iso_code}, _from, state) do
-    country = Map.get(state.countries_map_by_iso_code, String.upcase(iso_code))
+    country = Map.get(state.countries_map_by_iso_code, String.downcase(iso_code))
     {:reply, country, state}
   end
 
@@ -264,8 +264,7 @@ defmodule Geo.Geography.Country.Cache.Server do
 
     updated_name_results = name_results ++ countries_to_add_to_name
 
-    # Return SearchResults struct
-    %Geo.Geography.Country.Cache.SearchResults{
+    %Geo.Geography.Country.Cache.SearchResult{
       by_iso_code: updated_iso_code_results,
       by_name: updated_name_results
     }
@@ -273,7 +272,7 @@ defmodule Geo.Geography.Country.Cache.Server do
 
   defp do_search_all(state) do
     # Return SearchResults struct with all countries
-    %Geo.Geography.Country.Cache.SearchResults{
+    %Geo.Geography.Country.Cache.SearchResult{
       by_iso_code: state.countries_list_by_iso_code,
       by_name: state.countries_list_by_name
     }
