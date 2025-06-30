@@ -855,7 +855,7 @@ defmodule GeoWeb.Components.SearchCombobox do
             phx-target={@group_event_target}
             data-is-header-button="true"
             class="hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            title={"Toggle #{@group_label} sort order"}
+            title={"Change sort order"}
           >
             <.icon name={get_in(@group_states, [@group_label, :sort_icon])} class="h-4 w-4" />
           </button>
@@ -865,7 +865,7 @@ defmodule GeoWeb.Components.SearchCombobox do
     """
   end
 
-  attr :id, :string, default: nil, doc: "Unique identifire"
+  attr :id, :string, default: nil, doc: "Unique identifier"
   attr :for, :string, default: nil, doc: "Specifies the form which is associated with"
   attr :class, :any, default: nil, doc: "Custom CSS class for additional styling"
   slot :inner_block, required: true, doc: "Inner block that renders HEEx content"

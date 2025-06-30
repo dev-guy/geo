@@ -1,4 +1,4 @@
-defmodule Geo.Geography.Country.Cache.SearchResults do
+defmodule Geo.Geography.Country.Cache.SearchResult do
   @moduledoc """
   Search results structure containing countries organized by search criteria.
   """

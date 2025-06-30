@@ -302,7 +302,7 @@ defmodule GeoWeb.CountrySelector do
     end
   end
 
-  def handle_event("country_selected", %{"country" => iso_code}, socket) do
+    def handle_event("country_selected", %{"country" => iso_code}, socket) do
     # Find the selected country by iso_code from current countries
     # Use the iso_code group since both groups contain the same countries
     selected_country =

@@ -5,6 +5,7 @@ defmodule GeoWeb.HomeLive do
   def mount(_params, _session, socket) do
     # Get default country (Australia)
     default_country = Geo.Geography.get_country_by_iso_code!(%{iso_code: "AU"})
+    dbg("Mounting HomeLive")
 
     {:ok, assign(socket,
       page_title: "Home",
@@ -18,21 +19,7 @@ defmodule GeoWeb.HomeLive do
     {:noreply, new_socket}
   end
 
-  @impl true
-  def handle_event("country_selected", %{"country" => iso_code}, socket) do
-    # Find the country by iso_code
-    country =
-      try do
-        Geo.Geography.get_country_by_iso_code!(iso_code)
-      rescue
-        _ ->
-          # Fallback to regular query if cache is not available (e.g., in tests)
-          Geo.Geography.list_countries!(filter: [iso_code: iso_code])
-          |> List.first()
-      end
 
-    {:noreply, assign(socket, :selected_country, country)}
-  end
 
   @impl true
   def handle_event("cycle_theme", _params, socket) do

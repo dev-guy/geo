@@ -42,7 +42,10 @@ const SearchCombobox = {
       this.openDropdown();
     }
 
-    this.initializeSelection();
+    // Delay initialization to ensure LiveView updates are complete
+    setTimeout(() => {
+      this.initializeSelection();
+    }, 0);
 
     if (wasOpen || wasSearching) {
       setTimeout(() => this.initializeStickyHeaders(), 0);
@@ -58,6 +61,7 @@ const SearchCombobox = {
     this.scrollArea = this.el.querySelector('.scroll-viewport');
     this.selectEl = this.el.querySelector('.combobox-select');
     this.clearButton = this.el.querySelector('[data-part="clear-combobox-button"]');
+    this.searchClearButton = this.el.querySelector('[data-part="clear-search-button"]');
     
     if (this.dropdown) {
       this.dropdown.searchCombobox = this;
@@ -99,6 +103,7 @@ const SearchCombobox = {
     }
 
     this.setupClearButton();
+    this.setupSearchClearButton();
     this.setupGroupEventListeners();
 
     this.boundToggle = event => this.toggleDropdown(event);
@@ -133,6 +138,9 @@ const SearchCombobox = {
       document.removeEventListener('mousemove', this.boundMouseMove);
       if (this.clearButton && this.boundClearClick) {
         this.clearButton.removeEventListener('click', this.boundClearClick);
+      }
+      if (this.searchClearButton && this.boundSearchClearClick) {
+        this.searchClearButton.removeEventListener('click', this.boundSearchClearClick);
       }
       if (this.scrollArea && this.scrollHandlerBound) {
         this.scrollArea.removeEventListener('scroll', this.scrollHandlerBound);
@@ -331,6 +339,9 @@ const SearchCombobox = {
   onSearchInput(event) {
     const value = event.target.value;
     this.searchTerm = value;
+
+    // Update search clear button visibility
+    this.updateSearchClearButtonVisibility();
 
     if (this.dropdown.hasAttribute('hidden')) {
       this.openDropdown();
@@ -776,7 +787,8 @@ const SearchCombobox = {
       }
     }
 
-    const selected = this.el.querySelector('.combobox-option[data-combobox-selected]');
+    // Find the selected option, prioritizing the first visible group
+    const selected = this.findSelectedOptionInFirstVisibleGroup();
     if (selected) {
       this.highlight(selected, shouldScroll);
       return;
@@ -786,6 +798,32 @@ const SearchCombobox = {
     if (first) {
       this.highlight(first, shouldScroll);
     }
+  },
+
+  findSelectedOptionInFirstVisibleGroup() {
+    // Get all selected options
+    const selectedOptions = Array.from(this.el.querySelectorAll('.combobox-option[data-combobox-selected]'));
+    if (!selectedOptions.length) return null;
+
+    // If there's only one selected option, return it
+    if (selectedOptions.length === 1) return selectedOptions[0];
+
+    // Multiple selected options found - prioritize the one in the first visible group
+    const visibleGroups = Array.from(this.el.querySelectorAll('.option-group')).filter(group => {
+      const optionsContainer = group.querySelector('.group-label + div');
+      return optionsContainer; // Group is not collapsed
+    });
+
+    // Find the selected option in the first visible group
+    for (const group of visibleGroups) {
+      const selectedInGroup = group.querySelector('.combobox-option[data-combobox-selected]');
+      if (selectedInGroup) {
+        return selectedInGroup;
+      }
+    }
+
+    // Fallback to the first selected option if none found in visible groups
+    return selectedOptions[0];
   },
 
   getFirstVisibleOption() {
@@ -886,9 +924,6 @@ const SearchCombobox = {
     if (this.selectEl) {
       this.selectEl.value = value;
       
-      // Track that the user manually selected this value
-      this.selectEl.setAttribute('data-user-selected-value', value);
-      
       this.selectEl.dispatchEvent(new window.Event('change', { bubbles: true }));
       this.selectEl.dispatchEvent(new window.Event('input', { bubbles: true }));
     }
@@ -932,18 +967,10 @@ const SearchCombobox = {
     }
 
     // Check if user has made a selection by looking at the last clicked option
-    const lastClickedValue = selectEl.getAttribute('data-user-selected-value');
     const justCleared = selectEl.hasAttribute('data-just-cleared');
     
     let currentValue = selectEl.value;
-
-    // If user has manually selected a country and the form value is trying to revert to AU,
-    // preserve the user's selection instead
-    if (lastClickedValue && lastClickedValue !== 'AU' && currentValue === 'AU' && !justCleared) {
-      selectEl.value = lastClickedValue;
-      currentValue = lastClickedValue;
-    }
-
+    
     // Clear the just-cleared flag
     selectEl.removeAttribute('data-just-cleared');
 
@@ -960,15 +987,40 @@ const SearchCombobox = {
     // Find and mark the selected option
     const options = this.el.querySelectorAll('[data-combobox-value]');
     let selectedOption = null;
+    const matchingOptions = [];
 
     options.forEach(option => {
       option.removeAttribute('data-combobox-selected');
       if (option.getAttribute('data-combobox-value') === currentValue) {
-        selectedOption = option;
+        matchingOptions.push(option);
       }
     });
 
-    if (selectedOption) {
+    if (matchingOptions.length > 0) {
+      // If multiple options match (same value in different groups), prioritize the first visible group
+      if (matchingOptions.length === 1) {
+        selectedOption = matchingOptions[0];
+      } else {
+        // Find the option in the first visible group
+        const visibleGroups = Array.from(this.el.querySelectorAll('.option-group')).filter(group => {
+          const optionsContainer = group.querySelector('.group-label + div');
+          return optionsContainer; // Group is not collapsed
+        });
+
+        for (const group of visibleGroups) {
+          const optionInGroup = matchingOptions.find(option => group.contains(option));
+          if (optionInGroup) {
+            selectedOption = optionInGroup;
+            break;
+          }
+        }
+
+        // Fallback to the first matching option if none found in visible groups
+        if (!selectedOption) {
+          selectedOption = matchingOptions[0];
+        }
+      }
+
       selectedOption.setAttribute('data-combobox-selected', 'true');
       
       // Update the display to show the correct selection
@@ -1037,6 +1089,48 @@ const SearchCombobox = {
     this.updateSingleDisplay(null);
 
     this.searchInput?.focus({ preventScroll: true });
+  },
+
+  setupSearchClearButton() {
+    if (!this.searchClearButton) return;
+
+    if (this.boundSearchClearClick) {
+      this.searchClearButton.removeEventListener('click', this.boundSearchClearClick);
+    }
+
+    this.boundSearchClearClick = (event) => this.handleSearchClearClick(event);
+    this.searchClearButton.addEventListener('click', this.boundSearchClearClick);
+  },
+
+  handleSearchClearClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.searchInput) {
+      this.searchInput.value = '';
+      this.searchTerm = '';
+      
+      // Hide the clear button
+      this.updateSearchClearButtonVisibility();
+      
+      // Trigger search to show all options again
+      this.onSearchInput({ target: this.searchInput });
+      
+      // Focus back on the search input
+      this.searchInput.focus({ preventScroll: true });
+    }
+  },
+
+  updateSearchClearButtonVisibility() {
+    if (!this.searchClearButton) return;
+    
+    const hasSearchText = this.searchInput && this.searchInput.value.trim().length > 0;
+    
+    if (hasSearchText) {
+      this.searchClearButton.classList.remove('hidden');
+    } else {
+      this.searchClearButton.classList.add('hidden');
+    }
   },
 
   enablePhxClickHandlers() {
