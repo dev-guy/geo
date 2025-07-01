@@ -6,7 +6,7 @@ defmodule GeoWeb.Components.ThemeToggle do
 
   def theme_toggle(assigns) do
     ~H"""
-    <div class="relative">
+    <div class="relative" phx-hook="ThemeToggle" id="theme-toggle">
       <button
         type="button"
         phx-click="cycle_theme"
