@@ -1,57 +1,67 @@
 <header class="px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 transition-colors duration-200">
-  <div class="flex items-center justify-between border-b border-zinc-100 dark:border-gray-700 py-3 text-sm font-semibold leading-6">
-    <div class="flex items-center gap-4">
-      <a href="https://www.phoenixframework.org/">
-        <img src={~p"/images/logo.svg"} width="36" />
-      </a>
-      <p class="bg-brand/5 dark:bg-brand/10 text-brand rounded-full px-2 font-medium leading-6">
-        v{Application.spec(:phoenix, :vsn)} | v{Application.spec(:geo, :vsn)}
-      </p>
-      <a
-        href="https://github.com/dev-guy/geo"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-        title="View source on GitHub"
-      >
-        <img src={~p"/images/github-mark.png"} alt="GitHub" class="h-5 w-5 dark:invert" />
-      </a>
+  <!-- Mobile-first responsive header -->
+  <div class="border-b border-zinc-100 dark:border-gray-700 py-3 space-y-3 sm:space-y-0">
+    <!-- Top row: Logo and essential controls -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2 sm:gap-4">
+        <a href="https://www.phoenixframework.org/" class="flex-shrink-0">
+          <img src={~p"/images/logo.svg"} width="28" class="sm:w-9" alt="Phoenix Framework" />
+        </a>
+        <p class="bg-brand/5 dark:bg-brand/10 text-brand rounded-full px-2 py-1 font-medium text-xs sm:text-sm leading-tight">
+          v{Application.spec(:phoenix, :vsn)} | v{Application.spec(:geo, :vsn)}
+        </p>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a
+          href="https://github.com/dev-guy/geo"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors flex-shrink-0"
+          title="View source on GitHub"
+        >
+          <img src={~p"/images/github-mark.png"} alt="GitHub" class="h-4 w-4 sm:h-5 sm:w-5 dark:invert" />
+        </a>
+        <GeoWeb.Components.ThemeToggle.theme_toggle theme={assigns[:theme] || "system"} />
+      </div>
+    </div>
+    
+    <!-- Bottom row: Framework and hosting info (stacked on mobile, inline on larger screens) -->
+    <div class="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 text-xs">
       <a
         href="https://ash-hq.org"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         title="Built with Ash Framework"
       >
         <span>Built with</span>
         <img
           src="https://ash-hq.org/images/ash-logo-cropped.svg"
           alt="Ash Framework"
-          class="h-4 w-auto"
+          class="h-3 w-auto sm:h-4"
         />
-        Ash Framework
+        <span class="font-medium">Ash Framework</span>
       </a>
-    </div>
-    <div class="flex items-center gap-4">
+      
       <a
         href="https://fly.io"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        title="Hosted on Fly.io"
       >
         <span>Powered by</span>
         <img
           src="https://fly.io/static/images/brand/logo-landscape.svg"
           alt="Fly.io"
-          class="h-4 w-auto dark:hidden"
+          class="h-3 w-auto sm:h-4 dark:hidden"
         />
         <img
           src="https://fly.io/static/images/brand/logo-landscape-inverted.svg"
           alt="Fly.io"
-          class="h-4 w-auto hidden dark:block"
+          class="h-3 w-auto sm:h-4 hidden dark:block"
         />
       </a>
-      <GeoWeb.Components.ThemeToggle.theme_toggle theme={assigns[:theme] || "system"} />
     </div>
   </div>
 </header>
