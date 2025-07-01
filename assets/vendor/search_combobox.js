@@ -24,6 +24,9 @@ const SearchCombobox = {
     const wasSearching = this.searchTerm && this.searchTerm.length > 0;
     const preservedSearchTerm = this.searchTerm || '';
 
+    // IMPORTANT: Check if search input was focused before update
+    const searchInputWasFocused = this.searchInput && document.activeElement === this.searchInput;
+
     const wasDropdownShouldBeOpen = this.dropdownShouldBeOpen;
 
     this.init();
@@ -45,6 +48,15 @@ const SearchCombobox = {
     // Delay initialization to ensure LiveView updates are complete
     setTimeout(() => {
       this.initializeSelection();
+      
+      // IMPORTANT: Restore focus to search input if it was focused before update
+      // This prevents focus loss during debounced search, especially important on mobile
+      if (searchInputWasFocused && this.searchInput && (wasOpen || wasSearching)) {
+        this.searchInput.focus();
+        // Set cursor position to end of input for better UX
+        const length = this.searchInput.value.length;
+        this.searchInput.setSelectionRange(length, length);
+      }
     }, 0);
 
     if (wasOpen || wasSearching) {
