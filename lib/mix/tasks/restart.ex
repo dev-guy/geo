@@ -6,6 +6,7 @@ defmodule Mix.Tasks.Restart do
   1. Stop any running Phoenix server
   2. Start the server in the background
   3. Redirect both stdout and stderr to geo.log
+  4. Start a background process to periodically trim the log file
 
   ## Examples
 
@@ -15,6 +16,10 @@ defmodule Mix.Tasks.Restart do
   use Mix.Task
 
   @shortdoc "Restarts the Geo service"
+
+  # Configuration for log trimming
+  @trim_interval :timer.minutes(5)
+  @max_log_lines 10_000
 
   @impl Mix.Task
   def run(_args) do
@@ -26,9 +31,13 @@ defmodule Mix.Tasks.Restart do
     # Start server in background with output redirection
     Mix.shell().info("Starting Phoenix server in background...")
     Mix.shell().info("Output will be redirected to #{log_file}")
+    Mix.shell().info("Log will be trimmed every #{div(@trim_interval, 60_000)} minutes to #{@max_log_lines} lines")
 
     # Create or truncate the log file
     File.write!(log_file, "")
+
+    # Start log trimming process in background
+    start_log_trimmer(log_file)
 
     # Use System.cmd with a shell command to properly background the process
     case System.cmd("sh", ["-c", "nohup mix phx.server > #{log_file} 2>&1 &"], cd: File.cwd!()) do
@@ -70,5 +79,65 @@ defmodule Mix.Tasks.Restart do
           "Failed to start server in background: #{error} (exit code: #{exit_code})"
         )
     end
+  end
+
+  defp start_log_trimmer(log_file) do
+    # Create a temporary script file for the log trimmer
+    script_content = """
+    #!/usr/bin/env elixir
+
+    defmodule LogTrimmer do
+      @trim_interval #{@trim_interval}
+      @max_log_lines #{@max_log_lines}
+
+      def run(log_file) do
+        trim_log_periodically(log_file)
+      end
+
+      defp trim_log_periodically(log_file) do
+        Process.sleep(@trim_interval)
+
+        try do
+          trim_log_file(log_file)
+        rescue
+          _ -> :ok
+        end
+
+        trim_log_periodically(log_file)
+      end
+
+      defp trim_log_file(log_file) do
+        if File.exists?(log_file) do
+          content = File.read!(log_file)
+          lines = String.split(content, "\\n")
+
+          if length(lines) > @max_log_lines do
+            # Keep only the last @max_log_lines lines
+            trimmed_lines = lines |> Enum.take(-@max_log_lines)
+            trimmed_content = Enum.join(trimmed_lines, "\\n")
+
+            # Write to a temporary file and rename for atomic operation
+            temp_file = log_file <> ".tmp"
+            File.write!(temp_file, trimmed_content)
+            File.rename!(temp_file, log_file)
+          end
+        end
+      end
+    end
+
+    LogTrimmer.run("#{log_file}")
+    """
+
+    script_file = "log_trimmer_#{System.system_time(:millisecond)}.exs"
+    File.write!(script_file, script_content)
+
+    # Start the log trimmer in the background
+    System.cmd("sh", ["-c", "nohup elixir #{script_file} > /dev/null 2>&1 &"])
+
+    # Clean up the script file after a moment
+    spawn(fn ->
+      Process.sleep(5000)
+      File.rm(script_file)
+    end)
   end
 end

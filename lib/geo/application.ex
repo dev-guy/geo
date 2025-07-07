@@ -37,14 +37,11 @@ defmodule Geo.Application do
             start:
               {:poolboy, :start_link,
                [
-                 [
-                   name: {:local, :country_cache_pool},
-                   worker_module: Geo.Geography.Country.Cache.Server,
-                   # 5 permanent workers
-                   size: 5,
-                   # No overflow workers (fixed pool size)
-                   max_overflow: 0
-                 ]
+                                    [
+                     name: {:local, :country_cache},
+                     worker_module: Geo.Geography.Country.Cache.Server,
+                     size: min(5, System.schedulers_online())
+                   ]
                ]}
           },
           # Start the Finch HTTP client for sending emails

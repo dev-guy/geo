@@ -82,8 +82,8 @@ config :geo, GeoWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :geo, dev_routes: true
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
+# Include ISO8601 timestamps in development logs
+config :logger, :console, format: "$dateT$time [$level] $message\n"
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
