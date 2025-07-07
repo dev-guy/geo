@@ -1,7 +1,5 @@
 ---
-description: All rules from `mix usage_rules.sync`
-globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 <-- usage-rules-start -->
 <-- igniter-start -->

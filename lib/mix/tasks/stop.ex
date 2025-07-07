@@ -1,8 +1,8 @@
 defmodule Mix.Tasks.Stop do
   @moduledoc """
-  Stops the server if it's running.
+  Stops the server and log trimmer if they're running.
 
-  This task will find and stop any running server process.
+  This task will find and stop any running server process and log trimmer.
 
   ## Examples
 
@@ -15,6 +15,12 @@ defmodule Mix.Tasks.Stop do
 
   @impl Mix.Task
   def run(_args) do
+    # Stop log trimmer first
+    stop_log_trimmer()
+
+    # Stop orphaned log trimmer processes
+    stop_orphaned_log_trimmers()
+
     # Function to find the server PID
     find_phoenix_pid = fn ->
       case System.cmd("pgrep", ["-f", "beam.smp.*mix phx.server"], stderr_to_stdout: true) do
@@ -45,7 +51,7 @@ defmodule Mix.Tasks.Stop do
         # Graceful shutdown first
         case System.cmd("kill", ["-TERM", pid], stderr_to_stdout: true) do
           {_, 0} ->
-            wait_for_shutdown(pid, 3)
+            wait_for_shutdown(pid, 5)
 
             # Check if still running and force kill if necessary
             case System.cmd("kill", ["-0", pid], stderr_to_stdout: true) do
@@ -64,6 +70,35 @@ defmodule Mix.Tasks.Stop do
             Mix.shell().error("Failed to stop server: #{error}")
         end
     end
+  end
+
+  defp stop_log_trimmer do
+    try do
+      case Geo.LogTrimmer.stop() do
+        :ok ->
+          Mix.shell().info("Log trimmer stopped.")
+        _ ->
+          # Already stopped or not running
+          nil
+      end
+    rescue
+      _ ->
+        # LogTrimmer module might not be loaded in some contexts
+        nil
+    end
+  end
+
+  # Helper function to stop orphaned log trimmer processes
+  defp stop_orphaned_log_trimmers do
+    {output, _} = System.cmd("pgrep", ["-af", "log_trimmer_.*\\.exs"], stderr_to_stdout: true)
+    output
+    |> String.split("\n")
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.each(fn line ->
+      [pid | _] = String.split(line)
+      Mix.shell().info("Killing orphaned log trimmer with PID #{pid}")
+      System.cmd("kill", ["-TERM", pid])
+    end)
   end
 
   # Helper function to wait for process to stop

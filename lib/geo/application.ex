@@ -59,4 +59,12 @@ defmodule Geo.Application do
     GeoWeb.Endpoint.config_change(changed, removed)
     :ok
   end
+
+  # Add shutdown logging
+  @impl true
+  def stop(reason) do
+    require Logger
+    Logger.info("Geo.Application terminating with reason: #{inspect(reason)}")
+    :ok
+  end
 end

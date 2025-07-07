@@ -54,7 +54,7 @@ defmodule Geo.Geography.Country.Cache.Server do
       timer_ref: nil
     }
 
-    Logger.info("Cache worker started successfully")
+    Logger.info("Cache worker started successfully: #{inspect(self())}")
     {:ok, state}
   end
 
@@ -115,12 +115,11 @@ defmodule Geo.Geography.Country.Cache.Server do
 
   @impl true
   def terminate(reason, state) do
+    Logger.info("Cache worker #{inspect(self())} terminating with reason: #{inspect(reason)}")
     # Cancel stop timer when GenServer is stopping
     if state.timer_ref do
       Process.cancel_timer(state.timer_ref)
     end
-
-    Logger.info("Cache worker exiting with reason: #{inspect(reason)}")
     :ok
   end
 
