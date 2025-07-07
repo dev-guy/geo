@@ -1,12 +1,13 @@
 defmodule Geo.Geography.Country.Cache do
   @moduledoc """
   API for country cache operations. Only used by the Country resource.
-  Uses Poolboy to manage a pool of 5 cache GenServer workers for load balancing.
+  Uses Poolboy to manage a pool of cache GenServer workers for load balancing.
+  Starts with 0 permanent workers and can overflow up to min(8, System.schedulers_online()) workers.
   """
 
   require Logger
 
-  @pool_name :country_cache_pool
+  @pool_name :country_cache
 
   @doc """
   Search for countries using the pooled cache workers.
@@ -54,17 +55,24 @@ defmodule Geo.Geography.Country.Cache do
 
     Logger.info("Refreshing #{worker_count} cache workers")
 
-    # Refresh each worker in the pool
+    # Refresh each worker in the pool (if any are running)
     refresh_results =
-      for _ <- 1..worker_count do
-        :poolboy.transaction(
-          @pool_name,
-          fn worker ->
-            GenServer.call(worker, :refresh)
-          end,
-          # 30 second timeout for refresh
-          30_000
-        )
+      if worker_count > 0 do
+        for _ <- 1..worker_count do
+          :poolboy.transaction(
+            @pool_name,
+            fn worker ->
+              GenServer.call(worker, :refresh)
+            end,
+            # 30 second timeout for refresh
+            30_000
+          )
+        end
+      else
+        # No workers running, trigger a cache load by doing a dummy search
+        # This will create a worker on-demand that will load fresh data
+        search!("")
+        [:ok]
       end
 
     case Enum.all?(refresh_results, &(&1 == :ok)) do
@@ -76,19 +84,6 @@ defmodule Geo.Geography.Country.Cache do
         failed_count = Enum.count(refresh_results, &(&1 != :ok))
         Logger.warning("#{failed_count} cache workers failed to refresh")
         {:error, :partial_refresh_failure}
-    end
-  end
-
-  @doc """
-  Check if the cache pool is running and has workers available.
-  """
-  def running? do
-    try do
-      workers = :poolboy.status(@pool_name)
-      total_workers = Keyword.get(workers, :ready, 0) + Keyword.get(workers, :busy, 0)
-      total_workers > 0
-    rescue
-      _ -> false
     end
   end
 
