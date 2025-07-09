@@ -11,6 +11,7 @@ defmodule Geo.LogTrimmer do
 
   @trim_interval :timer.minutes(5)
   @max_log_lines 10_000
+  @max_file_size "5 MB"
 
   # Client API
 
@@ -63,7 +64,8 @@ defmodule Geo.LogTrimmer do
       trim_count: 0
     }
 
-    Logger.info("LogTrimmer started for #{log_file}, trimming every #{div(@trim_interval, 60_000)} minutes")
+    max_size_bytes = parse_size(@max_file_size)
+    Logger.info("LogTrimmer: Started for #{log_file}, Trimming every #{div(@trim_interval, 60_000)} minutes, Max file size: #{max_size_bytes} bytes (#{@max_file_size}), Trim to #{@max_log_lines} lines")
 
     {:ok, state}
   end
@@ -117,24 +119,32 @@ defmodule Geo.LogTrimmer do
   defp trim_log_file(log_file) do
     try do
       if File.exists?(log_file) do
-        content = File.read!(log_file)
-        lines = String.split(content, "\n")
-        line_count = length(lines)
+        # Check file size first
+        %{size: file_size} = File.stat!(log_file)
+        max_size_bytes = parse_size(@max_file_size)
 
-        if line_count > @max_log_lines do
-          # Keep only the last @max_log_lines lines
-          trimmed_lines = lines |> Enum.take(-@max_log_lines)
-          trimmed_content = Enum.join(trimmed_lines, "\n")
-
-          # Write to a temporary file and rename for atomic operation
-          temp_file = log_file <> ".tmp"
-          File.write!(temp_file, trimmed_content)
-          File.rename!(temp_file, log_file)
-
-          lines_removed = line_count - @max_log_lines
-          {:ok, :trimmed, lines_removed}
-        else
+        if file_size <= max_size_bytes do
           {:ok, :no_trim_needed}
+        else
+          content = File.read!(log_file)
+          lines = String.split(content, "\n")
+          line_count = length(lines)
+
+          if line_count > @max_log_lines do
+            # Keep only the last @max_log_lines lines
+            trimmed_lines = lines |> Enum.take(-@max_log_lines)
+            trimmed_content = Enum.join(trimmed_lines, "\n")
+
+            # Write to a temporary file and rename for atomic operation
+            temp_file = log_file <> ".tmp"
+            File.write!(temp_file, trimmed_content)
+            File.rename!(temp_file, log_file)
+
+            lines_removed = line_count - @max_log_lines
+            {:ok, :trimmed, lines_removed}
+          else
+            {:ok, :no_trim_needed}
+          end
         end
       else
         {:ok, :no_trim_needed}
@@ -142,6 +152,35 @@ defmodule Geo.LogTrimmer do
     rescue
       error ->
         {:error, Exception.message(error)}
+    end
+  end
+
+  defp parse_size(size_string) do
+    # Parse strings like "5 MB", "10 GB", "500 KB", "2 G", "1024 K" into bytes
+    case Regex.run(~r/^(\d+(?:\.\d+)?)\s*(B|K|KB|M|MB|G|GB|T|TB)?$/i, size_string) do
+      [_, number_str, unit] ->
+        number = if String.contains?(number_str, ".") do
+          String.to_float(number_str)
+        else
+          String.to_integer(number_str)
+        end
+
+        multiplier = case String.upcase(unit || "B") do
+          "B" -> 1
+          "K" -> 1_024
+          "KB" -> 1_024
+          "M" -> 1_024 * 1_024
+          "MB" -> 1_024 * 1_024
+          "G" -> 1_024 * 1_024 * 1_024
+          "GB" -> 1_024 * 1_024 * 1_024
+          "T" -> 1_024 * 1_024 * 1_024 * 1_024
+          "TB" -> 1_024 * 1_024 * 1_024 * 1_024
+        end
+
+        round(number * multiplier)
+
+      _ ->
+        raise ArgumentError, "Invalid size format: #{size_string}"
     end
   end
 end
