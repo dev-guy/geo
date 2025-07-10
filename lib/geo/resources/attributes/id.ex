@@ -1,4 +1,4 @@
-defmodule Geo.Resources.Attributes.Id do
+defmodule Geo.Resources.Attributes.Id.Defunct do
   @moduledoc """
   """
 

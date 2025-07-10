@@ -2,10 +2,10 @@ defmodule Geo.Geography.Country do
   use Ash.Resource,
     otp_app: :geo,
     domain: Geo.Geography,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    extensions: [Geo.Resources.Extensions.Id]
 
   # === Attributes ===
-  use Geo.Resources.Attributes.Id
   use Geo.Resources.Attributes.Name, allow_nil?: false, unique?: true
   use Geo.Resources.Attributes.Slug, allow_nil?: false, unique?: true
   use Geo.Resources.Attributes.Timestamps
