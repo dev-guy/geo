@@ -3,7 +3,7 @@ defmodule Geo.Geography.Country do
     otp_app: :geo,
     domain: Geo.Geography,
     data_layer: AshPostgres.DataLayer,
-    extensions: [Geo.Resources.Extensions.Id]
+    extensions: [Geo.Resources.Attributes.Id]
 
   # === Attributes ===
   use Geo.Resources.Attributes.Name, allow_nil?: false, unique?: true
