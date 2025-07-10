@@ -125,33 +125,32 @@ defmodule Geo.LogTrimmer do
         
         Logger.debug("LogTrimmer: Checking #{log_file} - File size: #{file_size} bytes, Max size: #{max_size_bytes} bytes")
 
-        if file_size <= max_size_bytes do
-          Logger.debug("LogTrimmer: File size (#{file_size} bytes) is under limit (#{max_size_bytes} bytes), skipping trim")
-          {:ok, :no_trim_needed}
+        # Read the file content
+        content = File.read!(log_file)
+        lines = String.split(content, "\n")
+        line_count = length(lines)
+        
+        Logger.debug("LogTrimmer: File has #{line_count} lines, max allowed: #{@max_log_lines}")
+
+        # Trim if either file size exceeds limit OR line count exceeds limit
+        needs_trim = file_size > max_size_bytes || line_count > @max_log_lines
+
+        if needs_trim do
+          # Keep only the last @max_log_lines lines
+          trimmed_lines = lines |> Enum.take(-@max_log_lines)
+          trimmed_content = Enum.join(trimmed_lines, "\n")
+
+          # Write to a temporary file and rename for atomic operation
+          temp_file = log_file <> ".tmp"
+          File.write!(temp_file, trimmed_content)
+          File.rename!(temp_file, log_file)
+
+          lines_removed = line_count - length(trimmed_lines)
+          Logger.debug("LogTrimmer: Trimmed #{log_file} - Removed #{lines_removed} lines, kept #{length(trimmed_lines)} lines")
+          {:ok, :trimmed, lines_removed}
         else
-          content = File.read!(log_file)
-          lines = String.split(content, "\n")
-          line_count = length(lines)
-          
-          Logger.debug("LogTrimmer: File has #{line_count} lines, max allowed: #{@max_log_lines}")
-
-          if line_count > @max_log_lines do
-            # Keep only the last @max_log_lines lines
-            trimmed_lines = lines |> Enum.take(-@max_log_lines)
-            trimmed_content = Enum.join(trimmed_lines, "\n")
-
-            # Write to a temporary file and rename for atomic operation
-            temp_file = log_file <> ".tmp"
-            File.write!(temp_file, trimmed_content)
-            File.rename!(temp_file, log_file)
-
-            lines_removed = line_count - @max_log_lines
-            Logger.debug("LogTrimmer: Trimmed #{log_file} - Removed #{lines_removed} lines, kept #{@max_log_lines} lines")
-            {:ok, :trimmed, lines_removed}
-          else
-            Logger.debug("LogTrimmer: Line count (#{line_count}) is under limit (#{@max_log_lines}), no trim needed")
-            {:ok, :no_trim_needed}
-          end
+          Logger.debug("LogTrimmer: File size (#{file_size} bytes) and line count (#{line_count}) are both under limits, no trim needed")
+          {:ok, :no_trim_needed}
         end
       else
         Logger.debug("LogTrimmer: File #{log_file} does not exist")
