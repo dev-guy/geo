@@ -16,18 +16,17 @@ defmodule Geo.Resources.Extensions.Id do
     def before?(_), do: false
 
     def transform(dsl_state) do
-      case Spark.Dsl.Transformer.build_entity(
-             Ash.Resource.Dsl,
-             [:attributes],
-             :uuid_v7_primary_key,
-             [:id]
-           ) do
-        {:ok, attribute} ->
-          {:ok, Spark.Dsl.Transformer.add_entity(dsl_state, [:attributes], attribute)}
+      attribute = %Ash.Resource.Attribute{
+        name: :id,
+        type: :uuid_v7,
+        allow_nil?: false,
+        writable?: false,
+        public?: true,
+        primary_key?: true,
+        default: &Ash.UUIDv7.generate/0
+      }
 
-        {:error, error} ->
-          {:error, error}
-      end
+      {:ok, Spark.Dsl.Transformer.add_entity(dsl_state, [:attributes], attribute)}
     end
   end
 end
