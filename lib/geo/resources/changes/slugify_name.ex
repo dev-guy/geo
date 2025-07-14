@@ -28,12 +28,69 @@ defmodule Geo.Resources.Changes.SlugifyName do
 
       # If we have a name but no slug, generate one
       not is_nil(name) ->
-        generated_slug = slugify(name)
-        Ash.Changeset.force_change_attribute(changeset, :slug, generated_slug)
+        base_slug = slugify(name)
+        unique_slug = ensure_unique_slug(changeset, base_slug)
+        Ash.Changeset.force_change_attribute(changeset, :slug, unique_slug)
 
       # Otherwise, leave as is
       true ->
         changeset
+    end
+  end
+
+  defp ensure_unique_slug(changeset, base_slug) do
+    # Try base slug first
+    if !slug_exists?(changeset, base_slug) do
+      base_slug
+    else
+      find_unique_slug_with_number(changeset, base_slug)
+    end
+  end
+
+  defp find_unique_slug_with_number(changeset, base_slug) do
+    # Range 1: 1-9
+    case find_in_range(changeset, base_slug, 1..9) do
+      {:found, number} -> "#{base_slug}-#{number}"
+      :not_found ->
+        # Range 2: 1-99  
+        case find_in_range(changeset, base_slug, 1..99) do
+          {:found, number} -> "#{base_slug}-#{number}"
+          :not_found ->
+            # Range 3: 1-9999
+            case find_in_range(changeset, base_slug, 1..9999) do
+              {:found, number} -> "#{base_slug}-#{number}"
+              :not_found -> raise "Could not find unique slug after trying up to 9999"
+            end
+        end
+    end
+  end
+
+  defp find_in_range(changeset, base_slug, range) do
+    Enum.find_value(range, :not_found, fn number ->
+      slug_candidate = "#{base_slug}-#{number}"
+      if !slug_exists?(changeset, slug_candidate) do
+        {:found, number}
+      end
+    end)
+  end
+
+  defp slug_exists?(changeset, slug) do
+    resource = changeset.resource
+    query = Ash.Query.filter(resource, slug: slug)
+    
+    # Exclude the current record if it's an update
+    query =
+      case changeset.data do
+        %{id: id} when not is_nil(id) ->
+          Ash.Query.filter(query, id != ^id)
+        _ ->
+          query
+      end
+    
+    case Ash.read(query) do
+      {:ok, []} -> false
+      {:ok, _} -> true
+      {:error, _} -> false
     end
   end
 
