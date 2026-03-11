@@ -49,7 +49,7 @@ This project might be useful if you're curious about the Ash Framework (version 
 ## Custom Mix Tasks
 
 - `geo.seed`: Upserts seed data
-- `geo.start`: Starts the server in a foreground process
+- `geo.start`: Starts the server in a background process
 - `geo.restart`: Starts/restarts server in background process, sends STDOUT and STDERR to geo.log
 - `geo.stop`: Stops server running in background process 
 
